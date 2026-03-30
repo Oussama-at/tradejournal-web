@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const PERIODS = ['All dates', 'Daily', 'Weekly', 'Monthly'];
 const fmt = (v) => (v >= 0 ? '+' : '') + v.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '$';
@@ -12,20 +12,18 @@ export default function Dashboard() {
   const [trades, setTrades] = useState([]);
   const [capital, setCapital] = useState(null);
   const [chartData, setChartData] = useState([]);
-  const [loading, setLoading] = useState(true);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [period]);
 
   async function load() {
-    setLoading(true);
     try {
       const param = { 'Daily': '?period=daily', 'Weekly': '?period=weekly', 'Monthly': '?period=monthly' }[period] || '';
-      const [statsRes, tradesRes, allTradesRes, capRes, chartRes] = await Promise.all([
+      const [statsRes, tradesRes, allTradesRes, capRes] = await Promise.all([
         api.get('/stats' + param),
         api.get('/trades?page=1&limit=10'),
         api.get('/trades?page=1&limit=9999'),
         api.get('/capital/current').catch(() => null),
-        api.get('/stats/chart?period=month').catch(() => null),
       ]);
 
       setStats(statsRes?.data || null);
@@ -47,7 +45,6 @@ export default function Dashboard() {
       });
       setChartData(cd);
     } catch (e) { console.error(e); }
-    setLoading(false);
   }
 
   // Compute real net from trades

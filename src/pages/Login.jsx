@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import './Login.css';
 
 function generateDeviceId() {
   let id = localStorage.getItem('device_id');
@@ -16,10 +15,10 @@ function generateDeviceId() {
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error,    setError]    = useState('');
+  const [loading,  setLoading]  = useState(false);
   const { login } = useAuth();
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -35,13 +34,19 @@ export default function Login() {
         device_id: deviceId,
       });
       if (res.success) {
-        login(res.data.token, username.trim());
+        // Extract role from JWT if available
+        let role = 'user';
+        try {
+          const payload = JSON.parse(atob(res.data.token.split('.')[1]));
+          role = payload.role || 'user';
+        } catch {}
+        login(res.data.token, username.trim(), role);
         navigate('/');
       } else {
         setError(res.message || 'Login failed');
         setPassword('');
       }
-    } catch (e) {
+    } catch {
       setError('Cannot reach server. Please try again.');
     } finally {
       setLoading(false);
@@ -56,7 +61,7 @@ export default function Login() {
       </div>
       <div className="login-box">
         <div className="login-header">
-          <div className="login-logo">TJ</div>
+          <div className="login-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>TJ</div>
           <h1 className="login-title">TradeJournal <span>PRO</span></h1>
           <p className="login-sub">Sign in to your account</p>
         </div>
@@ -86,6 +91,12 @@ export default function Login() {
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
+        <div className="login-footer" style={{ marginTop: 20 }}>
+          Don't have an account?{' '}
+          <button className="link-btn" onClick={() => navigate('/register')}>Get started</button>
+          {' · '}
+          <button className="link-btn" onClick={() => navigate('/')}>Back to home</button>
+        </div>
       </div>
     </div>
   );

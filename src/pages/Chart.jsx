@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -21,22 +21,16 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function Chart() {
   const [period, setPeriod] = useState('month');
-  const [data, setData] = useState(null);
   const [trades, setTrades] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [monthData, setMonthData] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { load(); }, [period]);
-
-  async function load() {
-    setLoading(true);
+  const load = React.useCallback(async () => {
     try {
       const [statsRes, tradesRes] = await Promise.all([
         api.get(`/stats/chart?period=${period}`),
         api.get('/trades?page=1&limit=9999'),
       ]);
-      setData(statsRes?.data || null);
       const allTrades = tradesRes?.data?.trades || [];
       setTrades(allTrades);
 
@@ -63,8 +57,10 @@ export default function Chart() {
       });
       setMonthData(Object.entries(byMonth).sort().map(([m, v]) => ({ month: m.substring(5), value: parseFloat(v.toFixed(2)) })));
     } catch (e) { console.error(e); }
-    setLoading(false);
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period]);
+
+  useEffect(() => { load(); }, [load]);
 
   // Win rate
   const wins   = trades.filter(t => t.status === 'win').length;

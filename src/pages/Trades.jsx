@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
-const MARKETS = ['All', 'NAS100', 'US30', 'SP500', 'XAUUSD', 'EURUSD', 'GBPUSD'];
 const PERIODS = ['All', 'Today', 'This Week', 'This Month', 'Last Month'];
 
 export default function Trades() {

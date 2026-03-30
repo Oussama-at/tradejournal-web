@@ -1,12 +1,12 @@
 const BASE_URL = 'https://trading-api-9trn.onrender.com';
 
-const getToken = () => localStorage.getItem('token');
+const getToken    = () => localStorage.getItem('token');
 const getDeviceId = () => localStorage.getItem('device_id');
 
 const headers = (extra = {}) => ({
   'Content-Type': 'application/json',
-  ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
-  ...(getDeviceId() ? { 'X-Device-Id': getDeviceId() } : {}),
+  ...(getToken()    ? { Authorization: `Bearer ${getToken()}` }   : {}),
+  ...(getDeviceId() ? { 'X-Device-Id': getDeviceId() }            : {}),
   ...extra,
 });
 
@@ -33,14 +33,22 @@ const api = {
     return res.json();
   },
 
+  getNoAuth: async (ep) => {
+    const res = await fetch(`${BASE_URL}${ep}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return res.json();
+  },
+
   uploadFile: async (endpoint, file, fieldName = 'image') => {
     const form = new FormData();
     form.append(fieldName, file);
     const res = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: {
-        ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
-        ...(getDeviceId() ? { 'X-Device-Id': getDeviceId() } : {}),
+        ...(getToken()    ? { Authorization: `Bearer ${getToken()}` }   : {}),
+        ...(getDeviceId() ? { 'X-Device-Id': getDeviceId() }            : {}),
       },
       body: form,
     });

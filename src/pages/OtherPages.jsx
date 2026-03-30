@@ -95,7 +95,7 @@ export function Capital() {
                         {active ? (
                           <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => deactivate(c.id)}>Deactivate</button>
                         ) : (
-                          <button className="btn btn-blue" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => activate(c.id)}>Activate</button>
+                          <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => activate(c.id)}>Activate</button>
                         )}
                         <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => deleteCapital(c.id)}>Delete</button>
                       </div>
@@ -260,7 +260,7 @@ export function Users() {
                         <button className="btn btn-ghost"  style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => toggleLicense(u.id)}>🔑 License</button>
                         <button className="btn btn-ghost"  style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => resetDevice(u.id)}>📱 Device</button>
                         <button className="btn btn-ghost"  style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => resetPassword(u.id, u.user_name)}>🔒 Pwd</button>
-                        <button className={`btn ${blocked ? 'btn-blue' : 'btn-danger'}`} style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => toggleAccess(u.id, blocked)}>{blocked ? 'Unblock' : 'Block'}</button>
+                        <button className={`btn ${blocked ? 'btn-primary' : 'btn-danger'}`} style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => toggleAccess(u.id, blocked)}>{blocked ? 'Unblock' : 'Block'}</button>
                         <button className="btn btn-danger" style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => deleteUser(u.id, u.user_name)}>🗑</button>
                       </div>
                     </td>
@@ -340,7 +340,7 @@ export function Activations() {
     <div>
       <div className="page-header"><div className="page-title">Activations</div></div>
       <div className="grid-4" style={{ marginBottom: 20 }}>
-        {[['Total', data.length, 'blue'], ['Pending', counts.pending || 0, 'orange'], ['Approved', counts.activated || 0 + (counts.approved || 0), 'green'], ['Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
+        {[['Total', data.length, 'blue'], ['Pending', counts.pending || 0, 'orange'], ['Approved', (counts.activated || 0) + (counts.approved || 0), 'green'], ['Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
           <div key={l} className="stat-card"><div className="stat-label">{l}</div><div className={`stat-value ${c}`}>{v}</div></div>
         ))}
       </div>
@@ -440,6 +440,7 @@ export function Profile() {
       const qs = r?.data?.questions || [];
       setQuestions(qs.length ? qs : DEFAULTS);
     }).catch(() => setQuestions(DEFAULTS));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function saveQuestions() {
