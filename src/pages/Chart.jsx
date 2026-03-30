@@ -57,7 +57,7 @@ export default function Chart() {
       });
       setMonthData(Object.entries(byMonth).sort().map(([m, v]) => ({ month: m.substring(5), value: parseFloat(v.toFixed(2)) })));
     } catch (e) { console.error(e); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line
   }, [period]);
 
   useEffect(() => { load(); }, [load]);

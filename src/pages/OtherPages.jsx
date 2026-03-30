@@ -440,7 +440,7 @@ export function Profile() {
       const qs = r?.data?.questions || [];
       setQuestions(qs.length ? qs : DEFAULTS);
     }).catch(() => setQuestions(DEFAULTS));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line
   }, []);
 
   async function saveQuestions() {

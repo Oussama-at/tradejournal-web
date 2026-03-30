@@ -13,7 +13,7 @@ export default function Dashboard() {
   const [capital, setCapital] = useState(null);
   const [chartData, setChartData] = useState([]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line
   useEffect(() => { load(); }, [period]);
 
   async function load() {
