@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
   --bg:        #080c10;
@@ -16,7 +16,7 @@
   --orange:    #ffa726;
   --gold:      #f6d860;
   --font-mono: 'JetBrains Mono', monospace;
-  --font-main: 'Syne', sans-serif;
+  --font-main: 'Plus Jakarta Sans', sans-serif;
   --radius:    8px;
   --sidebar-w: 220px;
 }

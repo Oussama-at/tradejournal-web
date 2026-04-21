@@ -16,46 +16,27 @@ const PACKS = [
     name: '24h Trial',
     price: 'FREE',
     isFree: true,
-    desc: 'Test the full platform for 24 hours. No card required.',
-    features: ['Full app access', 'Trade journal', 'P&L charts', 'Limited to 24 hours', 'Email registration'],
+    desc: 'Tester la plateforme complète pendant 24 heures. Aucune carte requise.',
+    features: ['Accès complet', 'Journal de trades', 'Graphiques P&L', 'Limité à 24 heures', 'Inscription par email'],
     disabledFeatures: [],
-    cta: 'Start Free Trial',
+    cta: 'Démarrer l\'essai gratuit',
     ctaClass: 'btn-ghost',
-  },
-  {
-    key: '6months',
-    name: '6 Months',
-    price: 50,
-    period: '/ 6 mo',
-    desc: 'Perfect for serious traders wanting a mid-term plan.',
-    features: ['Everything in Trial', 'Unlimited trades', 'Capital archive', 'Priority support', 'Email alerts'],
-    disabledFeatures: [],
-    cta: 'Get 6 Months',
-    ctaClass: 'btn-primary',
-    popular: true,
-  },
-  {
-    key: '1year',
-    name: '1 Year',
-    price: 100,
-    period: '/ year',
-    desc: 'Our best value plan for dedicated trading professionals.',
-    features: ['Everything in 6 Months', '12 months access', 'Withdrawal tracking', 'Advanced analytics', 'Email alerts'],
-    disabledFeatures: [],
-    cta: 'Get 1 Year',
-    ctaClass: 'btn-blue',
   },
   {
     key: 'lifetime',
     name: 'Lifetime',
-    price: 300,
-    period: ' once',
-    desc: 'Pay once, use forever. The ultimate trading companion.',
-    features: ['Everything included', 'Lifetime access', 'All future features', 'No renewal ever', 'VIP support'],
+    price: '490',
+    originalPrice: '700',
+    discount: '-30%',
+    currency: 'DH',
+    period: ' une fois',
+    desc: 'Payer une fois, utiliser pour toujours. Le compagnon de trading ultime.',
+    features: ['Tout inclus', 'Accès à vie', 'Toutes les futures fonctionnalités', 'Aucun renouvellement', 'Support VIP'],
     disabledFeatures: [],
-    cta: 'Get Lifetime',
+    cta: 'Profiter de la promo',
     ctaClass: 'btn-gold',
     lifetime: true,
+    bestValue: true,
   },
 ];
 
@@ -154,13 +135,20 @@ export default function Landing() {
             No hidden fees. Cancel anytime.
           </p>
         </div>
-        <div className="land-pricing-grid">
+        <div className="land-pricing-grid" style={{ maxWidth: 720, margin: '48px auto 0', gridTemplateColumns: 'repeat(2,1fr)' }}>
           {PACKS.map(pack => (
-            <PackCard key={pack.key} pack={pack} onSelect={() => navigate(`/register?pack=${pack.key}`)} />
+            <PackCard key={pack.key} pack={pack} onSelect={() => {
+              if (pack.isFree) {
+                navigate(`/register?pack=${pack.key}`);
+              } else {
+                window.open('https://wa.me/212635925986?text=Bonjour%2C+je+veux+souscrire+au+pack+Lifetime+490DH+%28promo+-30%25%29', '_blank');
+              }
+            }} />
+          ))}
           ))}
         </div>
         <div style={{ textAlign: 'center', marginTop: 32, fontSize: 13, color: 'var(--muted)' }}>
-          💳 Accepted: Visa, Mastercard, Bitcoin, USDT, Ethereum &amp; more
+          💬 Paiement Lifetime via WhatsApp : <a href="https://wa.me/212635925986" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--green)', fontWeight: 700 }}>+212 635 925 986</a>
         </div>
       </section>
 
@@ -467,28 +455,35 @@ function DemoPlayer() {
 
     /* 5 — Packs */
     <div key={5} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
         {[
-          { name:'24h Trial', price:'FREE', priceColor:'var(--green)', border:'var(--border)', ctaBg:'var(--bg4)', ctaColor:'var(--text)', note:'' },
-          { name:'6 Mois',   price:'$50',  priceColor:'var(--text)',  border:'var(--green)', ctaBg:'var(--green)', ctaColor:'#080c10', note:'POPULAIRE', noteColor:'var(--green)' },
-          { name:'1 An',     price:'$100', priceColor:'var(--blue)',  border:'var(--border)', ctaBg:'rgba(92,156,245,0.15)', ctaColor:'var(--blue)', note:'' },
-          { name:'Lifetime', price:'$300', priceColor:'var(--gold)',  border:'var(--gold)', ctaBg:'linear-gradient(135deg,#f6d860,#e6b800)', ctaColor:'#080c10', note:'À VIE', noteColor:'var(--gold)' },
+          { name:'24h Trial', price:'FREE', priceColor:'var(--green)', border:'var(--border)', ctaBg:'var(--bg4)', ctaColor:'var(--text)', note:'', sub:'Accès complet · 24h · Sans carte' },
+          { name:'Lifetime',  price:'490 DH', originalPrice:'700 DH', priceColor:'var(--gold)', border:'var(--gold)', ctaBg:'linear-gradient(135deg,#f6d860,#e6b800)', ctaColor:'#080c10', note:'MEILLEURE VALEUR', noteColor:'var(--gold)', sub:'Accès à vie · Tout inclus · Une seule fois' },
         ].map(p => (
-          <div key={p.name} style={{ background: 'var(--bg3)', border: `1px solid ${p.border}`, borderRadius: 10, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div key={p.name} style={{ background: 'var(--bg3)', border: `1px solid ${p.border}`, borderRadius: 10, padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
             {p.note && <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, color: p.noteColor }}>{p.note}</div>}
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--muted)' }}>{p.name}</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 20, color: p.priceColor }}>{p.price}</div>
-            <div style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.5, flex: 1 }}>✓ Accès complet<br/>✓ Trades illimités<br/>✓ Analytics</div>
-            <div style={{ padding: '6px', borderRadius: 5, fontSize: 11, fontWeight: 700, textAlign: 'center', background: p.ctaBg, color: p.ctaColor }}>Choisir</div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--muted)' }}>{p.name}</div>
+            {p.originalPrice && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: -4 }}>
+                <span style={{ background: 'var(--red)', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 99 }}>🔥 -30%</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--dim)', textDecoration: 'line-through' }}>{p.originalPrice}</span>
+              </div>
+            )}
+            <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 24, color: p.priceColor }}>{p.price}</div>
+            <div style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.5, flex: 1 }}>✓ Accès complet<br/>✓ Trades illimités<br/>✓ Analytics avancés</div>
+            <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 2 }}>{p.sub}</div>
+            <div style={{ padding: '7px', borderRadius: 5, fontSize: 11, fontWeight: 700, textAlign: 'center', background: p.ctaBg, color: p.ctaColor }}>
+              {p.name === 'Lifetime' ? '💬 Via WhatsApp' : 'Commencer'}
+            </div>
           </div>
         ))}
       </div>
       <div style={s.card3}>
-        <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Paiements acceptés</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {[['💳 Carte bancaire','var(--text)'],['₿ Bitcoin','#f7931a'],['₮ USDT TRC20','#26a17b'],['Ξ Ethereum','#627eea']].map(([l,c]) => (
-            <span key={l} style={{ padding: '5px 12px', background: 'var(--bg4)', borderRadius: 6, fontSize: 11, fontWeight: 600, color: c }}>{l}</span>
-          ))}
+        <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Paiement Lifetime</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
+          <span style={{ fontSize: 16 }}>💬</span>
+          <span>WhatsApp : </span>
+          <span style={{ color: 'var(--gold)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>+212 635 925 986</span>
         </div>
       </div>
       <div style={{ padding: '10px 14px', background: 'rgba(0,230,118,0.06)', border: '1px solid rgba(0,230,118,0.15)', borderRadius: 8, fontSize: 11, color: 'var(--muted)' }}>
@@ -569,17 +564,33 @@ function DemoPlayer() {
 function PackCard({ pack, onSelect }) {
   return (
     <div className={`pack-card ${pack.popular ? 'popular' : ''} ${pack.lifetime ? 'lifetime' : ''}`}>
-      {pack.popular  && <div className="pack-popular-tag">MOST POPULAR</div>}
-      {pack.lifetime && <div className="pack-lifetime-tag">BEST VALUE</div>}
+      {pack.popular   && <div className="pack-popular-tag">MOST POPULAR</div>}
+      {pack.bestValue && <div className="pack-lifetime-tag">MEILLEURE VALEUR</div>}
 
       <div className="pack-name">{pack.name}</div>
+
+      {/* Promo badge + ancien prix barré */}
+      {pack.discount && (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <span style={{
+            background: 'var(--red)', color: '#fff',
+            fontSize: 11, fontWeight: 800, padding: '3px 10px',
+            borderRadius: 99, letterSpacing: '0.5px',
+          }}>🔥 {pack.discount}</span>
+          <span style={{
+            fontFamily: 'var(--font-mono)', fontSize: 15,
+            color: 'var(--dim)', textDecoration: 'line-through',
+          }}>{pack.originalPrice} {pack.currency}</span>
+        </div>
+      )}
 
       <div className={`pack-price ${pack.isFree ? 'free' : ''} ${pack.lifetime ? 'gold' : ''}`}>
         {pack.isFree ? (
           'FREE'
         ) : (
           <>
-            <sup>$</sup>{pack.price}
+            {pack.price}
+            <span style={{ fontSize: 18, fontWeight: 600, marginLeft: 4 }}>{pack.currency || '$'}</span>
             <span className="pack-period">{pack.period}</span>
           </>
         )}
@@ -591,6 +602,14 @@ function PackCard({ pack, onSelect }) {
         {pack.features.map(f => <li key={f}>{f}</li>)}
         {(pack.disabledFeatures || []).map(f => <li key={f} className="no">{f}</li>)}
       </ul>
+
+      {pack.lifetime && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '10px 12px', background: 'rgba(246,216,96,0.06)', border: '1px solid rgba(246,216,96,0.2)', borderRadius: 8, fontSize: 12, color: 'var(--muted)' }}>
+          💬 Paiement via WhatsApp
+          <a href="https://wa.me/212635925986" target="_blank" rel="noopener noreferrer"
+            style={{ color: 'var(--gold)', fontWeight: 700, marginLeft: 4 }}>+212 635 925 986</a>
+        </div>
+      )}
 
       <button className={`btn ${pack.ctaClass} pack-btn`} onClick={onSelect}>
         {pack.cta}

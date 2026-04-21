@@ -19,11 +19,26 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+const DailyPnLTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 14px', minWidth: 140 }}>
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>{label}</div>
+      {payload.map((p, i) => (
+        <div key={i} style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: p.color, fontSize: 13, marginBottom: 2 }}>
+          {p.name === 'profit' ? 'Profit' : 'Loss'}: {p.value > 0 ? '+' : ''}{Math.abs(p.value).toFixed(2)}$
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function Chart() {
   const [period, setPeriod] = useState('month');
   const [trades, setTrades] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [monthData, setMonthData] = useState([]);
+  const [dailyPnL, setDailyPnL] = useState([]);
 
   const load = React.useCallback(async () => {
     try {
@@ -56,6 +71,24 @@ export default function Chart() {
         byMonth[m] += t.status === 'win' ? t.montant : -Math.abs(t.montant);
       });
       setMonthData(Object.entries(byMonth).sort().map(([m, v]) => ({ month: m.substring(5), value: parseFloat(v.toFixed(2)) })));
+
+      // Daily P&L Win vs Loss
+      const dailyMap = {};
+      allTrades.forEach(t => {
+        const day = (t.date_trade || '').substring(0, 10);
+        if (!dailyMap[day]) dailyMap[day] = { profit: 0, loss: 0 };
+        if (t.status === 'win') {
+          dailyMap[day].profit += t.montant;
+        } else {
+          dailyMap[day].loss += Math.abs(t.montant);
+        }
+      });
+      const dl = Object.entries(dailyMap).sort().map(([day, { profit, loss }]) => ({
+        day: day.substring(5),
+        profit: parseFloat(profit.toFixed(2)),
+        loss: parseFloat((-loss).toFixed(2)),
+      }));
+      setDailyPnL(dl);
     } catch (e) { console.error(e); }
   // eslint-disable-next-line
   }, [period]);
@@ -140,6 +173,34 @@ export default function Chart() {
               <Area type="monotone" dataKey="cumul" stroke={totalPnl >= 0 ? 'var(--green)' : 'var(--red)'}
                 strokeWidth={2} fill="url(#grad1)" dot={false} />
             </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Daily P&L Win vs Loss */}
+      {dailyPnL.length > 0 && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ fontWeight: 700 }}>Daily P&L (Win vs Loss)</div>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
+                <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--green)' }} />
+                Profit
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
+                <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--red)' }} />
+                Loss
+              </div>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={dailyPnL} barCategoryGap="30%" barGap={4}>
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${Math.abs(v)}`} />
+              <Tooltip content={<DailyPnLTooltip />} />
+              <Bar dataKey="profit" name="profit" radius={[4, 4, 0, 0]} fill="var(--green)" />
+              <Bar dataKey="loss" name="loss" radius={[4, 4, 0, 0]} fill="var(--red)" />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       )}
