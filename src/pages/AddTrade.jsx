@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
+
+const FREE_TRADE_LIMIT = 5;
 
 const MARKETS = { 'Indices': ['NAS100','US30','SP500','UK100','GER40'], 'Forex': ['EURUSD','GBPUSD','USDJPY','AUDUSD'], 'Commodities': ['XAUUSD','XAGUSD','USOIL'] };
 const SESSIONS = ['LON', 'NY', 'ASI'];
 
 export default function AddTrade() {
+  const { sub } = useAuth();
+  const isLifetime = sub?.plan === 'lifetime';
+  const [tradeCount, setTradeCount] = useState(null);
   const [form, setForm] = useState({
     marcher: '', type_trd: 'buy', point_entree: '', point_sortie: '', montant: '',
     nbr_contrat: 1, qty_type: 'contract mini', status: 'win', type_close: 'Target',
@@ -17,6 +23,15 @@ export default function AddTrade() {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  // Load trade count for free plan limit check
+  useEffect(() => {
+    if (!isLifetime) {
+      api.get('/trades?page=1&limit=1').then(r => {
+        setTradeCount(r?.data?.total ?? 0);
+      }).catch(() => setTradeCount(0));
+    }
+  }, [isLifetime]);
+
   const calcPnl = () => {
     const e = parseFloat(form.point_entree), c = parseFloat(form.point_sortie);
     if (isNaN(e) || isNaN(c)) return null;
@@ -28,6 +43,11 @@ export default function AddTrade() {
   async function onSave(e) {
     e.preventDefault();
     setMsg(null);
+    // Free plan: max 5 trades
+    if (!isLifetime && tradeCount !== null && tradeCount >= FREE_TRADE_LIMIT) {
+      setMsg({ type: 'error', text: `Pack gratuit limité à ${FREE_TRADE_LIMIT} trades. Passez au pack Lifetime pour des trades illimités.` });
+      return;
+    }
     if (!form.marcher) { setMsg({ type: 'error', text: 'Select a market' }); return; }
     if (!form.point_entree || !form.point_sortie || !form.montant) {
       setMsg({ type: 'error', text: 'Entry, close and amount are required' }); return;
@@ -49,6 +69,7 @@ export default function AddTrade() {
         setMsg({ type: 'success', text: '✓ Trade saved!' });
         setForm(f => ({ ...f, point_entree: '', point_sortie: '', montant: '', signal: '' }));
         setImage(null); setPreview(null);
+        if (!isLifetime) setTradeCount(c => (c ?? 0) + 1);
       } else {
         setMsg({ type: 'error', text: res?.message || 'Save failed' });
       }
@@ -65,6 +86,32 @@ export default function AddTrade() {
         <div className="page-sub">Record a new trade entry</div>
       </div>
       <form onSubmit={onSave}>
+        {/* Free plan limit banner */}
+        {!isLifetime && tradeCount !== null && (
+          <div style={{
+            marginBottom: 16,
+            padding: '10px 14px',
+            borderRadius: 8,
+            fontSize: 13,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: tradeCount >= FREE_TRADE_LIMIT ? 'rgba(255,71,87,0.1)' : 'rgba(246,216,96,0.07)',
+            border: `1px solid ${tradeCount >= FREE_TRADE_LIMIT ? 'rgba(255,71,87,0.3)' : 'rgba(246,216,96,0.25)'}`,
+            color: 'var(--muted)',
+          }}>
+            <span>
+              {tradeCount >= FREE_TRADE_LIMIT
+                ? `🔒 Limite du pack gratuit atteinte (${FREE_TRADE_LIMIT}/${FREE_TRADE_LIMIT} trades). Passez au pack Lifetime pour continuer.`
+                : `⚠️ Pack gratuit : ${tradeCount}/${FREE_TRADE_LIMIT} trades utilisés`}
+            </span>
+            {tradeCount >= FREE_TRADE_LIMIT && (
+              <a href="/pricing" style={{ color: 'var(--gold)', fontWeight: 700, marginLeft: 12, whiteSpace: 'nowrap' }}>
+                Passer Lifetime →
+              </a>
+            )}
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
 
           {/* Left - main form */}
@@ -233,7 +280,7 @@ export default function AddTrade() {
             </div>
 
             {msg && <div className={`alert alert-${msg.type}`}>{msg.text}</div>}
-            <button className="btn btn-primary" type="submit" disabled={loading}
+            <button className="btn btn-primary" type="submit" disabled={loading || (!isLifetime && tradeCount !== null && tradeCount >= FREE_TRADE_LIMIT)}
               style={{ padding: '14px', fontSize: 15, justifyContent: 'center' }}>
               {loading ? 'Saving...' : '💾 Save Trade'}
             </button>

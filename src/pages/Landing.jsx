@@ -148,7 +148,7 @@ export default function Landing() {
           ))}
         </div>
         <div style={{ textAlign: 'center', marginTop: 32, fontSize: 13, color: 'var(--muted)' }}>
-          💬 Paiement Lifetime via WhatsApp : <a href="https://wa.me/212635925986" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--green)', fontWeight: 700 }}>+212 635 925 986</a>
+          💬 Paiement Lifetime via WhatsApp
         </div>
       </section>
 
@@ -482,8 +482,7 @@ function DemoPlayer() {
         <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Paiement Lifetime</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
           <span style={{ fontSize: 16 }}>💬</span>
-          <span>WhatsApp : </span>
-          <span style={{ color: 'var(--gold)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>+212 635 925 986</span>
+          <span>WhatsApp (contactez-nous)</span>
         </div>
       </div>
       <div style={{ padding: '10px 14px', background: 'rgba(0,230,118,0.06)', border: '1px solid rgba(0,230,118,0.15)', borderRadius: 8, fontSize: 11, color: 'var(--muted)' }}>
@@ -605,9 +604,7 @@ function PackCard({ pack, onSelect }) {
 
       {pack.lifetime && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '10px 12px', background: 'rgba(246,216,96,0.06)', border: '1px solid rgba(246,216,96,0.2)', borderRadius: 8, fontSize: 12, color: 'var(--muted)' }}>
-          💬 Paiement via WhatsApp
-          <a href="https://wa.me/212635925986" target="_blank" rel="noopener noreferrer"
-            style={{ color: 'var(--gold)', fontWeight: 700, marginLeft: 4 }}>+212 635 925 986</a>
+          💬 Paiement via WhatsApp — contactez-nous pour payer
         </div>
       )}
 
