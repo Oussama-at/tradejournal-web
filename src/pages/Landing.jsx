@@ -25,8 +25,8 @@ const PACKS = [
   {
     key: 'lifetime',
     name: 'Lifetime',
-    price: '490',
-    originalPrice: '700',
+    price: '700',
+    originalPrice: '1000',
     discount: '-30%',
     currency: 'DH',
     period: ' une fois',
@@ -141,7 +141,7 @@ export default function Landing() {
               if (pack.isFree) {
                 navigate(`/register?pack=${pack.key}`);
               } else {
-                window.open('https://wa.me/212635925986?text=Bonjour%2C+je+veux+souscrire+au+pack+Lifetime+490DH+%28promo+-30%25%29', '_blank');
+                window.open('https://wa.me/212635925986?text=Bonjour%2C+je+veux+souscrire+au+pack+Lifetime+700DH+%28promo+-30%25%29', '_blank');
               }
             }} />
           ))}
@@ -458,7 +458,7 @@ function DemoPlayer() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
         {[
           { name:'24h Trial', price:'FREE', priceColor:'var(--green)', border:'var(--border)', ctaBg:'var(--bg4)', ctaColor:'var(--text)', note:'', sub:'Accès complet · 24h · Sans carte' },
-          { name:'Lifetime',  price:'490 DH', originalPrice:'700 DH', priceColor:'var(--gold)', border:'var(--gold)', ctaBg:'linear-gradient(135deg,#f6d860,#e6b800)', ctaColor:'#080c10', note:'MEILLEURE VALEUR', noteColor:'var(--gold)', sub:'Accès à vie · Tout inclus · Une seule fois' },
+          { name:'Lifetime',  price:'700 DH', originalPrice:'1000 DH', priceColor:'var(--gold)', border:'var(--gold)', ctaBg:'linear-gradient(135deg,#f6d860,#e6b800)', ctaColor:'#080c10', note:'MEILLEURE VALEUR', noteColor:'var(--gold)', sub:'Accès à vie · Tout inclus · Une seule fois' },
         ].map(p => (
           <div key={p.name} style={{ background: 'var(--bg3)', border: `1px solid ${p.border}`, borderRadius: 10, padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
             {p.note && <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, color: p.noteColor }}>{p.note}</div>}
