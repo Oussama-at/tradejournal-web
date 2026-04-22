@@ -145,7 +145,6 @@ export default function Landing() {
               }
             }} />
           ))}
-          ))}
         </div>
         <div style={{ textAlign: 'center', marginTop: 32, fontSize: 13, color: 'var(--muted)' }}>
           💬 Paiement Lifetime via WhatsApp

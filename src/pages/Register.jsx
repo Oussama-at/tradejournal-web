@@ -4,7 +4,7 @@ import api from '../services/api';
 
 const PACKS = {
   trial:    { label: '24h Trial', price: 0,   isFree: true,  currency: '' },
-  lifetime: { label: 'Lifetime', price: 490, originalPrice: 700, discount: '-30%', isFree: false, currency: 'DH' },
+  lifetime: { label: 'Lifetime', price: 700, originalPrice: 1000, discount: '-30%', isFree: false, currency: 'DH' },
 };
 
 const CRYPTO_OPTIONS = [
@@ -208,8 +208,8 @@ export default function Register() {
               <div style={{ fontWeight: 700 }}>Paiement</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ background: 'var(--red)', color: '#fff', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 99 }}>🔥 -30%</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--dim)', textDecoration: 'line-through' }}>700 DH</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--gold)', fontSize: 20 }}>490 DH</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--dim)', textDecoration: 'line-through' }}>1000 DH</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--gold)', fontSize: 20 }}>700 DH</span>
               </div>
             </div>
 
@@ -222,7 +222,7 @@ export default function Register() {
                 </div>
               </div>
               <a
-                href={`https://wa.me/212635925986?text=Bonjour%2C+je+veux+souscrire+au+pack+Lifetime+490DH+%28promo+-30%25%29.+Mon+email+est+${encodeURIComponent(email)}`}
+                href={`https://wa.me/212635925986?text=Bonjour%2C+je+veux+souscrire+au+pack+Lifetime+700DH+%28promo+-30%25%29.+Mon+email+est+${encodeURIComponent(email)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
