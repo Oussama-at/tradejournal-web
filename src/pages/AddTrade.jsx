@@ -4,7 +4,16 @@ import { useAuth } from '../context/AuthContext';
 
 const FREE_TRADE_LIMIT = 6;
 
-const MARKETS = { 'Indices': ['NAS100','US30','SP500','UK100','GER40'], 'Forex': ['EURUSD','GBPUSD','USDJPY','AUDUSD'], 'Commodities': ['XAUUSD','XAGUSD','USOIL'] };
+const MARKETS = {
+  'TREASURY': ['ZT','Z3N','ZF','ZN','TN','ZB','UB','ZQ','SR1','SR3','2YY','5YY','10Y','30Y'],
+  'FUTURES':  ['NQ','ES','YM','RTY','NKD','DAX','FDAX','CAC','FTSE','HSI','KOSPI200','IBEX35','MIB','ASX200','SPI200'],
+  'MICROS':   ['MNQ','MES','MYM','M2K','MGC','MCL','MHG','MSI','MBTC','METH'],
+  'METALS':   ['GC','SI','HG','PL','PA','MGC','SIL'],
+  'ENERGY':   ['CL','BZ','NG','RB','HO','UGA','UNL'],
+  'AGRI':     ['ZC','ZW','ZS','ZL','ZM','ZO','ZR','KE','DC'],
+  'FOREX':    ['EUR/USD','USD/JPY','GBP/USD','USD/CHF','AUD/USD','USD/CAD','NZD/USD','EUR/GBP','EUR/JPY','EUR/AUD','EUR/CAD','EUR/CHF','EUR/NZD','GBP/JPY','GBP/AUD','GBP/CAD','GBP/CHF','GBP/NZD','AUD/JPY','AUD/CAD','AUD/CHF','AUD/NZD','CAD/JPY','CAD/CHF','NZD/JPY','NZD/CAD','NZD/CHF','CHF/JPY','USD/TRY','USD/ZAR','USD/MXN','USD/SEK','USD/NOK','USD/DKK','USD/SGD','USD/HKD','USD/CNH','USD/PLN','USD/CZK','USD/HUF','USD/THB','USD/ILS','EUR/TRY','EUR/ZAR','EUR/NOK','EUR/SEK','GBP/TRY','GBP/ZAR'],
+  'CRYPTO':   ['BTC','ETH','SOL','XRP','BNB','ADA','DOGE','AVAX','LINK','LTC','DOT','MATIC','UNI','ATOM','NEAR','FTM','ALGO','XLM','TRX','SHIB'],
+};
 const SESSIONS = ['LON', 'NY', 'ASI'];
 
 /* ─────────────────────────────────────────────
