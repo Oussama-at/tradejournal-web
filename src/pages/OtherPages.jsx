@@ -117,6 +117,7 @@ export function Capital() {
 
 // Withdraw
 export function Withdraw() {
+  const showConfirm = useConfirm();
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [history, setHistory] = useState([]);
