@@ -4,8 +4,8 @@ import React, { useState, useCallback } from 'react';
    ConfirmDialog — drop-in replacement for window.confirm()
 
    Usage:
-     const confirm = useConfirm();
-     const ok = await confirm({ title: 'Delete trade?', message: 'This cannot be undone.', type: 'danger' });
+     const showConfirm = useConfirm();
+     const ok = await showConfirm({ title: 'Delete trade?', message: 'This cannot be undone.', type: 'danger' });
      if (ok) { ... }
 
    Types: 'danger' | 'warning' | 'info'  (default: 'danger')
@@ -16,7 +16,7 @@ const ConfirmContext = React.createContext(null);
 export function ConfirmProvider({ children }) {
   const [dialog, setDialog] = useState(null); // { title, message, type, resolve }
 
-  const confirm = useCallback(({ title, message, confirmLabel, cancelLabel, type = 'danger' }) => {
+  const showConfirm = useCallback(({ title, message, confirmLabel, cancelLabel, type = 'danger' }) => {
     return new Promise(resolve => {
       setDialog({ title, message, confirmLabel, cancelLabel, type, resolve });
     });
@@ -35,7 +35,7 @@ export function ConfirmProvider({ children }) {
   const col = COLORS[dialog?.type] || COLORS.danger;
 
   return (
-    <ConfirmContext.Provider value={confirm}>
+    <ConfirmContext.Provider value={showConfirm}>
       {children}
 
       {dialog && (

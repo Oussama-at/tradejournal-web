@@ -5,7 +5,7 @@ import { useConfirm } from '../components/ConfirmDialog';
 const PERIODS = ['All', 'Today', 'This Week', 'This Month', 'Last Month'];
 
 export default function Trades() {
-  const confirm = useConfirm();
+  const showConfirm = useConfirm();
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -37,7 +37,7 @@ export default function Trades() {
   }
 
   async function deleteTrade(id) {
-    const ok = await confirm({ title: `Delete Trade #${id}?`, message: 'This trade will be permanently removed.', type: 'danger', confirmLabel: 'Delete', cancelLabel: 'Cancel' });
+    const ok = await showConfirm({ title: `Delete Trade #${id}?`, message: 'This trade will be permanently removed.', type: 'danger', confirmLabel: 'Delete', cancelLabel: 'Cancel' });
     if (!ok) return;
     await api.delete(`/trades/${id}`);
     load();

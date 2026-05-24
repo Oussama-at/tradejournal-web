@@ -17,7 +17,7 @@ function daysLeft(dateStr) {
 }
 
 export default function Subscriptions() {
-  const confirm = useConfirm();
+  const showConfirm = useConfirm();
   const [subs,    setSubs]    = useState([]);
   const [users,   setUsers]   = useState([]);
   const [search,  setSearch]  = useState('');
@@ -59,7 +59,7 @@ export default function Subscriptions() {
   }
 
   async function revokeSub(id) {
-    const ok = await confirm({ title: 'Revoke Subscription?', message: 'The user will lose access immediately.', type: 'danger', confirmLabel: 'Revoke', cancelLabel: 'Cancel' });
+    const ok = await showConfirm({ title: 'Revoke Subscription?', message: 'The user will lose access immediately.', type: 'danger', confirmLabel: 'Revoke', cancelLabel: 'Cancel' });
     if (!ok) return;
     await api.delete(`/admin/subscriptions/${id}`);
     load();
