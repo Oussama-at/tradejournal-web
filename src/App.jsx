@@ -18,6 +18,7 @@ import {
 } from './pages/OtherPages';
 import api from './services/api';
 import './index.css';
+import { LangProvider } from './lang/LangContext';
 
 // ── Helpers ─────────────────────────────────────────────
 function daysLeft(dateStr) {
@@ -120,6 +121,7 @@ function RootRoute() {
 // ── App root ─────────────────────────────────────────────
 export default function App() {
   return (
+    <LangProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -134,5 +136,6 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </LangProvider>
   );
 }

@@ -2,15 +2,123 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-const FREE_TRADE_LIMIT = 5;
+const FREE_TRADE_LIMIT = 6;
 
 const MARKETS = { 'Indices': ['NAS100','US30','SP500','UK100','GER40'], 'Forex': ['EURUSD','GBPUSD','USDJPY','AUDUSD'], 'Commodities': ['XAUUSD','XAGUSD','USOIL'] };
 const SESSIONS = ['LON', 'NY', 'ASI'];
 
+/* ─────────────────────────────────────────────
+   Upgrade Modal
+───────────────────────────────────────────── */
+function UpgradeModal({ onClose }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.75)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 16,
+    }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        background: '#111820',
+        border: '1px solid rgba(0,230,118,0.25)',
+        borderRadius: 16,
+        padding: '36px 32px',
+        maxWidth: 440,
+        width: '100%',
+        boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+        textAlign: 'center',
+        position: 'relative',
+      }}>
+        {/* Close */}
+        <button onClick={onClose} style={{
+          position: 'absolute', top: 14, right: 16,
+          background: 'none', border: 'none', color: '#5a7a9a',
+          fontSize: 20, cursor: 'pointer', lineHeight: 1,
+        }}>✕</button>
+
+        {/* Icon */}
+        <div style={{
+          width: 64, height: 64, borderRadius: '50%',
+          background: 'rgba(0,230,118,0.1)',
+          border: '2px solid rgba(0,230,118,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 28, margin: '0 auto 20px',
+        }}>🔒</div>
+
+        {/* Title */}
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#e8edf3', marginBottom: 6 }}>
+          Free Plan Limit Reached
+        </div>
+        <div style={{ fontSize: 14, color: '#5a7a9a', marginBottom: 24 }}>
+          You have used all {FREE_TRADE_LIMIT} free trades
+        </div>
+
+        {/* Features */}
+        <div style={{
+          background: '#0d1117',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 10,
+          padding: '16px 20px',
+          marginBottom: 24,
+          textAlign: 'left',
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#00e676', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
+            PRO includes everything:
+          </div>
+          {[
+            'Unlimited trades — no restrictions',
+            'Full analytics & performance charts',
+            'Advanced statistics & win rate tracking',
+            'Screenshot attachments per trade',
+            'Multi-device sync',
+            'Priority support',
+          ].map(f => (
+            <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, fontSize: 13, color: '#a8bece' }}>
+              <span style={{ color: '#00e676', fontSize: 15 }}>✓</span>
+              {f}
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <a
+          href="/pricing"
+          style={{
+            display: 'block',
+            background: 'linear-gradient(135deg,#00e676,#00c853)',
+            color: '#080c10',
+            fontWeight: 800,
+            fontSize: 15,
+            borderRadius: 10,
+            padding: '14px 0',
+            textDecoration: 'none',
+            marginBottom: 12,
+            letterSpacing: 0.3,
+          }}
+        >
+          Upgrade to PRO →
+        </a>
+        <button onClick={onClose} style={{
+          background: 'none', border: 'none', color: '#5a7a9a',
+          fontSize: 13, cursor: 'pointer', padding: '6px 0',
+        }}>
+          Maybe later
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   AddTrade Page
+───────────────────────────────────────────── */
 export default function AddTrade() {
   const { sub } = useAuth();
   const isLifetime = sub?.plan === 'lifetime';
   const [tradeCount, setTradeCount] = useState(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [form, setForm] = useState({
     marcher: '', type_trd: 'buy', point_entree: '', point_sortie: '', montant: '',
     nbr_contrat: 1, qty_type: 'contract mini', status: 'win', type_close: 'Target',
@@ -43,11 +151,13 @@ export default function AddTrade() {
   async function onSave(e) {
     e.preventDefault();
     setMsg(null);
-    // Free plan: max 5 trades
+
+    // Free plan: max 6 trades — show upgrade modal
     if (!isLifetime && tradeCount !== null && tradeCount >= FREE_TRADE_LIMIT) {
-      setMsg({ type: 'error', text: `Pack gratuit limité à ${FREE_TRADE_LIMIT} trades. Passez au pack Lifetime pour des trades illimités.` });
+      setShowUpgrade(true);
       return;
     }
+
     if (!form.marcher) { setMsg({ type: 'error', text: 'Select a market' }); return; }
     if (!form.point_entree || !form.point_sortie || !form.montant) {
       setMsg({ type: 'error', text: 'Entry, close and amount are required' }); return;
@@ -70,6 +180,8 @@ export default function AddTrade() {
         setForm(f => ({ ...f, point_entree: '', point_sortie: '', montant: '', signal: '' }));
         setImage(null); setPreview(null);
         if (!isLifetime) setTradeCount(c => (c ?? 0) + 1);
+      } else if (res?.message === 'FREE_LIMIT_REACHED') {
+        setShowUpgrade(true);
       } else {
         setMsg({ type: 'error', text: res?.message || 'Save failed' });
       }
@@ -81,6 +193,9 @@ export default function AddTrade() {
 
   return (
     <div>
+      {/* Upgrade modal */}
+      {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+
       <div className="page-header">
         <div className="page-title">Add Trade</div>
         <div className="page-sub">Record a new trade entry</div>
@@ -102,13 +217,14 @@ export default function AddTrade() {
           }}>
             <span>
               {tradeCount >= FREE_TRADE_LIMIT
-                ? `🔒 Limite du pack gratuit atteinte (${FREE_TRADE_LIMIT}/${FREE_TRADE_LIMIT} trades). Passez au pack Lifetime pour continuer.`
-                : `⚠️ Pack gratuit : ${tradeCount}/${FREE_TRADE_LIMIT} trades utilisés`}
+                ? `🔒 Free plan limit reached (${FREE_TRADE_LIMIT}/${FREE_TRADE_LIMIT} trades). Upgrade to PRO for unlimited trades.`
+                : `⚠️ Free plan: ${tradeCount}/${FREE_TRADE_LIMIT} trades used`}
             </span>
             {tradeCount >= FREE_TRADE_LIMIT && (
-              <a href="/pricing" style={{ color: 'var(--gold)', fontWeight: 700, marginLeft: 12, whiteSpace: 'nowrap' }}>
-                Passer Lifetime →
-              </a>
+              <button type="button" onClick={() => setShowUpgrade(true)}
+                style={{ background: 'linear-gradient(135deg,#00e676,#00c853)', color: '#080c10', fontWeight: 800, fontSize: 12, border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', marginLeft: 12, whiteSpace: 'nowrap' }}>
+                Upgrade to PRO →
+              </button>
             )}
           </div>
         )}
@@ -280,7 +396,8 @@ export default function AddTrade() {
             </div>
 
             {msg && <div className={`alert alert-${msg.type}`}>{msg.text}</div>}
-            <button className="btn btn-primary" type="submit" disabled={loading || (!isLifetime && tradeCount !== null && tradeCount >= FREE_TRADE_LIMIT)}
+            <button className="btn btn-primary" type="submit"
+              disabled={loading}
               style={{ padding: '14px', fontSize: 15, justifyContent: 'center' }}>
               {loading ? 'Saving...' : '💾 Save Trade'}
             </button>

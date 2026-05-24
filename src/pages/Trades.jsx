@@ -148,17 +148,41 @@ function EditModal({ trade, onClose, onSave }) {
     type_close: trade.type_close || 'Target',
     sessions: trade.sessions || 'LON',
   });
+  const [newImage, setNewImage]     = useState(null);   // File selected by user
+  const [preview, setPreview]       = useState(null);   // blob URL for preview
+  const [uploading, setUploading]   = useState(false);
+  // Existing image from the trade record
+  const existingImg = trade.path || trade.image || null;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  async function handleSave() {
+    let body = { ...form };
+    if (newImage) {
+      setUploading(true);
+      try {
+        const upRes = await api.uploadFile('/upload', newImage);
+        if (upRes?.success) {
+          body.image      = upRes.data.url;
+          body.image_name = upRes.data.image_name || newImage.name;
+        }
+      } catch (e) { console.error('Image upload failed:', e); }
+      setUploading(false);
+    }
+    onSave(body);
+  }
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div className="card" style={{ width: 500, maxHeight: '90vh', overflowY: 'auto' }}>
+      alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="card" style={{ width: 560, maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
           <div style={{ fontWeight: 700 }}>Edit Trade #{trade.id_trade || trade.id}</div>
           <button className="btn btn-ghost" style={{ padding: '3px 8px' }} onClick={onClose}>✕</button>
         </div>
+
+        {/* Trade fields */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {[
             ['Market', 'marcher', 'text'],
@@ -187,9 +211,76 @@ function EditModal({ trade, onClose, onSave }) {
             </div>
           ))}
         </div>
+
+        {/* Screenshot section */}
+        <div style={{ marginTop: 20 }}>
+          <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>
+            📷 Screenshot
+          </label>
+
+          {/* Show existing image if present and no new one selected */}
+          {existingImg && !preview && (
+            <div style={{ marginBottom: 10, position: 'relative' }}>
+              <img
+                src={existingImg}
+                alt="Trade screenshot"
+                style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8,
+                  border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
+                onClick={() => window.open(existingImg, '_blank')}
+              />
+              <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 4 }}>
+                Current screenshot — click to open full size
+              </div>
+            </div>
+          )}
+
+          {/* Preview of newly selected image */}
+          {preview && (
+            <div style={{ marginBottom: 10, position: 'relative' }}>
+              <img
+                src={preview}
+                alt="New screenshot"
+                style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8,
+                  border: '1px solid rgba(0,230,118,0.3)' }}
+              />
+              <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4 }}>
+                ✓ New image selected: {newImage?.name}
+              </div>
+            </div>
+          )}
+
+          {/* Upload button */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <label style={{ cursor: 'pointer', flex: 1 }}>
+              <div className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }}
+                onClick={() => document.getElementById('edit-img-input').click()}>
+                {newImage ? '🔄 Change image' : existingImg ? '🔄 Replace screenshot' : '📎 Add screenshot'}
+              </div>
+              <input id="edit-img-input" type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => {
+                  const f = e.target.files[0];
+                  if (f) { setNewImage(f); setPreview(URL.createObjectURL(f)); }
+                }} />
+            </label>
+            {(newImage || (existingImg && !preview)) && (
+              <button className="btn btn-danger" style={{ padding: '6px 12px', fontSize: 12 }}
+                onClick={() => {
+                  setNewImage(null);
+                  setPreview(null);
+                  // Signal server to remove image
+                  setForm(f => ({ ...f, image: '', image_name: '' }));
+                }}>
+                ✕ Remove
+              </button>
+            )}
+          </div>
+        </div>
+
         <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
           <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={() => onSave(form)}>Save Changes</button>
+          <button className="btn btn-primary" disabled={uploading} onClick={handleSave}>
+            {uploading ? 'Uploading...' : 'Save Changes'}
+          </button>
         </div>
       </div>
     </div>

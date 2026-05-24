@@ -634,3 +634,73 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   display: inline;
 }
 .link-btn:hover { color: var(--text); }
+
+/* ─── RTL / Arabic support ──────────────────────────── */
+[dir="rtl"] {
+  text-align: right;
+}
+[dir="rtl"] .sidebar {
+  left: auto;
+  right: 0;
+  border-left: none;
+  border-right: 1px solid var(--border, #1e2d3d);
+}
+[dir="rtl"] .main-content {
+  margin-left: 0;
+  margin-right: 240px;
+}
+[dir="rtl"] .nav-item {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+[dir="rtl"] .nav-icon {
+  margin-right: 0;
+  margin-left: 10px;
+}
+[dir="rtl"] .admin-tag {
+  margin-left: 0;
+  margin-right: auto;
+}
+[dir="rtl"] .sidebar-user {
+  flex-direction: row-reverse;
+}
+[dir="rtl"] .page-header {
+  text-align: right;
+}
+[dir="rtl"] .card {
+  text-align: right;
+}
+[dir="rtl"] .form-label {
+  text-align: right;
+}
+[dir="rtl"] .table-wrap th,
+[dir="rtl"] .table-wrap td {
+  text-align: right;
+}
+[dir="rtl"] .pagination {
+  flex-direction: row-reverse;
+}
+[dir="rtl"] .stat-card {
+  text-align: right;
+}
+[dir="rtl"] select,
+[dir="rtl"] input {
+  text-align: right;
+  direction: rtl;
+}
+[dir="rtl"] .btn {
+  flex-direction: row-reverse;
+}
+[dir="rtl"] .alert {
+  text-align: right;
+}
+[dir="rtl"] .sidebar-brand {
+  flex-direction: row-reverse;
+}
+[dir="rtl"] .brand-name,
+[dir="rtl"] .brand-sub {
+  text-align: right;
+}
+[dir="rtl"] .user-info {
+  text-align: right;
+}
