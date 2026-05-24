@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,6 +15,113 @@ const MARKETS = {
   'CRYPTO':   ['BTC','ETH','SOL','XRP','BNB','ADA','DOGE','AVAX','LINK','LTC','DOT','MATIC','UNI','ATOM','NEAR','FTM','ALGO','XLM','TRX','SHIB'],
 };
 const SESSIONS = ['LON', 'NY', 'ASI'];
+
+/* ─────────────────────────────────────────────
+   MarketSelector component
+───────────────────────────────────────────── */
+function MarketSelector({ value, onChange }) {
+  const [activeCat, setActiveCat] = React.useState('FUTURES');
+  const [query, setQuery] = React.useState('');
+
+  const filteredList = React.useMemo(() => {
+    if (query.trim()) {
+      return Object.values(MARKETS).flat().filter(m =>
+        m.toLowerCase().includes(query.toLowerCase())
+      );
+    }
+    return MARKETS[activeCat] || [];
+  }, [activeCat, query]);
+
+  const handleSearch = (e) => {
+    const q = e.target.value;
+    setQuery(q);
+    if (!q) setActiveCat('FUTURES');
+  };
+
+  return (
+    <div>
+      {/* Search */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        background: 'var(--bg2)', border: '1px solid var(--border)',
+        borderRadius: 8, padding: '0 10px', marginBottom: 10,
+      }}>
+        <span style={{ color: 'var(--muted)', fontSize: 14 }}>🔍</span>
+        <input
+          style={{
+            flex: 1, border: 'none', background: 'transparent',
+            padding: '9px 0', fontSize: 13, color: 'var(--text)',
+            outline: 'none',
+          }}
+          placeholder="Search symbol..."
+          value={query}
+          onChange={handleSearch}
+        />
+        {value && (
+          <span style={{
+            padding: '2px 8px', borderRadius: 12,
+            background: 'rgba(0,230,118,0.12)', border: '1px solid rgba(0,230,118,0.4)',
+            color: '#00e676', fontSize: 12, fontWeight: 700,
+          }}>{value}</span>
+        )}
+      </div>
+
+      {/* Category tabs */}
+      {!query && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+          {Object.keys(MARKETS).map(cat => (
+            <button
+              key={cat} type="button"
+              onClick={() => setActiveCat(cat)}
+              style={{
+                padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                cursor: 'pointer', border: 'none',
+                background: activeCat === cat ? '#00e676' : 'var(--bg3)',
+                color: activeCat === cat ? '#080c10' : 'var(--muted)',
+                transition: 'all 0.15s',
+              }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Market grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
+        gap: 5,
+        maxHeight: 180,
+        overflowY: 'auto',
+        paddingRight: 2,
+      }}>
+        {filteredList.length === 0 ? (
+          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '1.5rem', color: 'var(--muted)', fontSize: 13 }}>
+            No results
+          </div>
+        ) : filteredList.map(m => (
+          <button
+            key={m} type="button"
+            onClick={() => { onChange(m); }}
+            style={{
+              padding: '6px 4px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+              cursor: 'pointer', textAlign: 'center', overflow: 'hidden',
+              textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              border: value === m ? '1px solid rgba(0,230,118,0.5)' : '1px solid var(--border)',
+              background: value === m ? 'rgba(0,230,118,0.12)' : 'var(--bg2)',
+              color: value === m ? '#00e676' : 'var(--text)',
+              transition: 'all 0.12s',
+            }}
+            title={m}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /* ─────────────────────────────────────────────
    Upgrade Modal
@@ -244,22 +351,8 @@ export default function AddTrade() {
 
             {/* Market selector */}
             <div className="card">
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>Market</div>
-              <input className="input" placeholder="Type or select market..." value={form.marcher}
-                onChange={e => set('marcher', e.target.value)} style={{ marginBottom: 12 }} />
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {Object.entries(MARKETS).map(([cat, mkts]) => [
-                  <div key={cat} style={{ width: '100%', fontSize: 11, color: 'var(--dim)', fontWeight: 700, marginTop: 4, textTransform: 'uppercase' }}>{cat}</div>,
-                  ...mkts.map(m => (
-                    <button key={m} type="button"
-                      className={`btn ${form.marcher === m ? 'btn-primary' : 'btn-ghost'}`}
-                      style={{ padding: '4px 10px', fontSize: 12 }}
-                      onClick={() => set('marcher', m)}>
-                      {m}
-                    </button>
-                  ))
-                ])}
-              </div>
+              <div style={{ fontWeight: 700, marginBottom: 10 }}>Market</div>
+              <MarketSelector value={form.marcher} onChange={v => set('marcher', v)} />
             </div>
 
             {/* Direction & Result */}
