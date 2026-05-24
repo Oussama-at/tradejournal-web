@@ -126,7 +126,7 @@ export function Withdraw() {
     const [wRes, capRes] = await Promise.all([api.get('/withdraw'), api.get('/capital/current').catch(() => null)]);
     const ws = wRes?.data?.withdrawals || [];
     setHistory(ws);
-    setTotalW(ws.reduce((s, w) => s + w.amount, 0));
+    setTotalW(ws.reduce((s, w) => s + parseFloat(w.amount || 0), 0));
     setCapNow(capRes?.data?.capital_now || 0);
   }
 
@@ -143,7 +143,7 @@ export function Withdraw() {
       <div className="page-header"><div className="page-title">Withdraw</div></div>
       <div className="grid-2" style={{ marginBottom: 20 }}>
         <div className="stat-card"><div className="stat-label">Available Capital</div><div className="stat-value green mono">{capNow.toLocaleString()}$</div></div>
-        <div className="stat-card"><div className="stat-label">Total Withdrawn</div><div className="stat-value red mono">{totalW.toLocaleString()}$</div></div>
+        <div className="stat-card"><div className="stat-label">Total Withdrawn</div><div className="stat-value red mono">{parseFloat(totalW).toFixed(2)}$</div></div>
       </div>
       <div className="grid-2" style={{ marginBottom: 20 }}>
         <div className="card">
