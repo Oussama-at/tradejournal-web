@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useConfirm } from '../components/ConfirmDialog';
 
 const PACK_OPTIONS = ['trial', '6months', '1year', 'lifetime'];
 const PACK_LABELS  = { trial: '24h Trial', '6months': '6 Months', '1year': '1 Year', lifetime: 'Lifetime' };
@@ -16,6 +17,7 @@ function daysLeft(dateStr) {
 }
 
 export default function Subscriptions() {
+  const confirm = useConfirm();
   const [subs,    setSubs]    = useState([]);
   const [users,   setUsers]   = useState([]);
   const [search,  setSearch]  = useState('');
@@ -57,7 +59,8 @@ export default function Subscriptions() {
   }
 
   async function revokeSub(id) {
-    if (!window.confirm('Revoke this subscription?')) return;
+    const ok = await confirm({ title: 'Revoke Subscription?', message: 'The user will lose access immediately.', type: 'danger', confirmLabel: 'Revoke', cancelLabel: 'Cancel' });
+    if (!ok) return;
     await api.delete(`/admin/subscriptions/${id}`);
     load();
   }

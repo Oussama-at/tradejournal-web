@@ -19,6 +19,7 @@ import {
 import api from './services/api';
 import './index.css';
 import { LangProvider } from './lang/LangContext';
+import { ConfirmProvider } from './components/ConfirmDialog';
 
 // ── Helpers ─────────────────────────────────────────────
 function daysLeft(dateStr) {
@@ -122,6 +123,7 @@ function RootRoute() {
 export default function App() {
   return (
     <LangProvider>
+    <ConfirmProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -136,6 +138,7 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ConfirmProvider>
     </LangProvider>
   );
 }

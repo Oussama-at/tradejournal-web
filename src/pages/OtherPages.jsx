@@ -1,6 +1,7 @@
 // Capital Archive
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useConfirm } from '../components/ConfirmDialog';
 
 export function Capital() {
   const [capitals, setCapitals] = useState([]);
@@ -23,8 +24,10 @@ export function Capital() {
     else setMsg({ type: 'error', text: res?.message || 'Failed' });
   }
 
+  const confirm = useConfirm();
   async function deactivate(id) {
-    if (!window.confirm('Deactivate this capital?')) return;
+    const ok = await confirm({ title: 'Deactivate Capital?', message: 'This will mark the capital as inactive.', type: 'warning', confirmLabel: 'Deactivate', cancelLabel: 'Cancel' });
+    if (!ok) return;
     await api.put(`/capital/${id}/status`, { status: 'disabled' });
     load();
   }
@@ -35,7 +38,8 @@ export function Capital() {
   }
 
   async function deleteCapital(id) {
-    if (!window.confirm('Delete this capital?')) return;
+    const ok2 = await confirm({ title: 'Delete Capital?', message: 'This action cannot be undone.', type: 'danger', confirmLabel: 'Delete', cancelLabel: 'Cancel' });
+    if (!ok2) return;
     await api.delete(`/capital/${id}`);
     load();
   }
@@ -132,7 +136,8 @@ export function Withdraw() {
 
   async function doWithdraw() {
     if (!amount || +amount <= 0) { setMsg({ type: 'error', text: 'Enter a valid amount' }); return; }
-    if (!window.confirm(`Withdraw ${amount}$ from ${capNow.toLocaleString()}$?`)) return;
+    const ok = await confirm({ title: 'Confirm Withdrawal', message: `Withdraw ${amount}$ from your available capital of ${parseFloat(capNow||0).toLocaleString()}$?`, type: 'warning', confirmLabel: 'Withdraw', cancelLabel: 'Cancel' });
+    if (!ok) return;
     const res = await api.post('/withdraw', { amount: +amount, ...(note ? { note } : {}) });
     if (res?.success) { setMsg({ type: 'success', text: '✓ Withdrawal successful!' }); setAmount(''); setNote(''); load(); }
     else setMsg({ type: 'error', text: res?.message || 'Failed' });
@@ -205,8 +210,9 @@ export function Users() {
   }
 
   async function toggleLicense(id) { await api.post(`/admin/users/${id}/toggle-license`, {}); load(); }
-  async function resetDevice(id)  { if (window.confirm('Reset device?')) { await api.post(`/admin/users/${id}/reset-device`, {}); load(); } }
-  async function deleteUser(id, name) { if (window.confirm(`Delete user ${name}?`)) { await api.delete(`/admin/users/${id}`); load(); } }
+  const confirm = useConfirm();
+  async function resetDevice(id)  { const ok = await confirm({ title: 'Reset Device?', message: 'This will log the user out of their current device.', type: 'warning', confirmLabel: 'Reset', cancelLabel: 'Cancel' }); if (ok) { await api.post(`/admin/users/${id}/reset-device`, {}); load(); } }
+  async function deleteUser(id, name) { const ok = await confirm({ title: `Delete ${name}?`, message: 'This will permanently delete the user and all their data.', type: 'danger', confirmLabel: 'Delete', cancelLabel: 'Cancel' }); if (ok) { await api.delete(`/admin/users/${id}`); load(); } }
   async function toggleAccess(id, blocked) { await api.put(`/admin/users/${id}/access`, { blocked: !blocked }); load(); }
   async function resetPassword(id, name) {
     const pw = window.prompt(`New password for ${name}:`);
@@ -386,7 +392,8 @@ export function PasswordReset() {
     const res = await api.post(`/admin/password-resets/${id}/approve`, { new_password: pw });
     alert(res?.success ? '✓ Password set' : res?.message); load();
   }
-  async function reject(id) { if (window.confirm('Reject this request?')) { await api.post(`/admin/password-resets/${id}/reject`, {}); load(); } }
+  const confirm = useConfirm();
+  async function reject(id) { const ok = await confirm({ title: 'Reject Request?', message: 'The user will need to submit a new password reset request.', type: 'danger', confirmLabel: 'Reject', cancelLabel: 'Cancel' }); if (ok) { await api.post(`/admin/password-resets/${id}/reject`, {}); load(); } }
   const counts = reqs.reduce((a, r) => { a[r.status] = (a[r.status] || 0) + 1; return a; }, {});
   return (
     <div>
