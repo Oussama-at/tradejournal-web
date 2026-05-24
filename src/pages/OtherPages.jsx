@@ -52,8 +52,8 @@ export function Capital() {
       <div className="grid-4" style={{ marginBottom: 20 }}>
         {[['Current Capital', now.toLocaleString() + '$', now >= dep ? 'green' : 'red'],
           ['Starting Capital', dep.toLocaleString() + '$', 'muted'],
-          ['Net P&L', (net >= 0 ? '+' : '') + net.toFixed(2) + '$', net >= 0 ? 'green' : 'red'],
-          ['ROI', (roi >= 0 ? '+' : '') + roi.toFixed(2) + '%', roi >= 0 ? 'green' : 'red'],
+          ['Net P&L', (net >= 0 ? '+' : '') + parseFloat(net || 0).toFixed(2) + '$', net >= 0 ? 'green' : 'red'],
+          ['ROI', (roi >= 0 ? '+' : '') + parseFloat(roi || 0).toFixed(2) + '%', roi >= 0 ? 'green' : 'red'],
         ].map(([label, value, cls]) => (
           <div key={label} className="stat-card">
             <div className="stat-label">{label}</div>
@@ -86,8 +86,8 @@ export function Capital() {
                   <tr key={c.id}>
                     <td className="mono">{cd.toLocaleString()}$</td>
                     <td className="mono">{cn.toLocaleString()}$</td>
-                    <td className={`mono ${cn2 >= 0 ? 'green' : 'red'}`}>{(cn2 >= 0 ? '+' : '')}{cn2.toFixed(2)}$</td>
-                    <td className={roi2 >= 0 ? 'green' : 'red'}>{roi2.toFixed(2)}%</td>
+                    <td className={`mono ${cn2 >= 0 ? 'green' : 'red'}`}>{(cn2 >= 0 ? '+' : '')}{parseFloat(cn2 || 0).toFixed(2)}$</td>
+                    <td className={roi2 >= 0 ? 'green' : 'red'}>{parseFloat(roi2 || 0).toFixed(2)}%</td>
                     <td className="muted">{(c.date_creation || '').substring(0, 10)}</td>
                     <td><span className={`badge ${active ? 'badge-green' : 'badge-red'}`}>{active ? 'Active' : 'Closed'}</span></td>
                     <td>
@@ -170,7 +170,7 @@ export function Withdraw() {
               {history.map((w, i) => (
                 <tr key={i}>
                   <td className="muted">{(w.created_at || '').substring(0, 10)}</td>
-                  <td className="mono red bold">{w.amount.toFixed(2)}$</td>
+                  <td className="mono red bold">{parseFloat(w.amount || 0).toFixed(2)}$</td>
                   <td className="muted">{w.note || '—'}</td>
                 </tr>
               ))}
