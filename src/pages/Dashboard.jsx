@@ -7,6 +7,7 @@ const fmt = (v) => (v >= 0 ? '+' : '') + v.toLocaleString('en', { minimumFractio
 const pClass = (v) => v >= 0 ? 'green' : 'red';
 
 export default function Dashboard() {
+  const { t } = useLang();
   const [period, setPeriod] = useState('All dates');
   const [stats, setStats] = useState(null);
   const [trades, setTrades] = useState([]);
@@ -79,8 +80,8 @@ export default function Dashboard() {
     <div>
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div className="page-title">Dashboard</div>
-          <div className="page-sub">Overview of your trading performance</div>
+          <div className="page-title">{t('dashboard_title')}</div>
+          <div className="page-sub">{t('dashboard_overview')}</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>Period:</span>
@@ -133,7 +134,7 @@ export default function Dashboard() {
       {/* Recent trades */}
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontWeight: 700 }}>Recent Trades</div>
+          <div style={{ fontWeight: 700 }}>{t('recent_trades')}</div>
         </div>
         <div className="table-wrap">
           <table>

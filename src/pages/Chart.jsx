@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLang } from '../lang/LangContext';
 import api from '../services/api';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -34,6 +35,7 @@ const DailyPnLTooltip = ({ active, payload, label }) => {
 };
 
 export default function Chart() {
+  const { t } = useLang();
   const [period, setPeriod] = useState('month');
   const [trades, setTrades] = useState([]);
   const [chartData, setChartData] = useState([]);
@@ -123,7 +125,7 @@ export default function Chart() {
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div><div className="page-title">P&L Chart</div></div>
+        <div><div className="page-title">{t('chart_title')}</div></div>
         <div style={{ display: 'flex', gap: 6 }}>
           {PERIODS.map(p => (
             <button key={p.val} className={`btn ${period === p.val ? 'btn-primary' : 'btn-ghost'}`}
@@ -137,20 +139,20 @@ export default function Chart() {
       {/* Top stats */}
       <div className="grid-4" style={{ marginBottom: 20 }}>
         <div className="stat-card">
-          <div className="stat-label">Total P&L</div>
+          <div className="stat-label">{t('total_pnl')}</div>
           <div className={`stat-value mono ${totalPnl >= 0 ? 'green' : 'red'}`}>{fmt(totalPnl)}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Win Rate</div>
+          <div className="stat-label">{t('win_rate')}</div>
           <div className={`stat-value ${wr >= 50 ? 'green' : 'red'}`}>{wr.toFixed(1)}%</div>
           <div className="stat-sub">{wins}W / {losses}L / {total} total</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Best Day</div>
+          <div className="stat-label">{t('best_day')}</div>
           <div className="stat-value blue mono">{chartData.length ? fmt(Math.max(...chartData.map(d => d.net))) : '—'}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Worst Day</div>
+          <div className="stat-label">{t('worst_day')}</div>
           <div className="stat-value red mono">{chartData.length ? fmt(Math.min(...chartData.map(d => d.net))) : '—'}</div>
         </div>
       </div>
@@ -158,7 +160,7 @@ export default function Chart() {
       {/* Cumulative P&L */}
       {chartData.length > 1 && (
         <div className="card" style={{ marginBottom: 20 }}>
-          <div style={{ fontWeight: 700, marginBottom: 16 }}>Cumulative P&L</div>
+          <div style={{ fontWeight: 700, marginBottom: 16 }}>{t('cumulative_pnl')}</div>
           <ResponsiveContainer width="100%" height={240}>
             <AreaChart data={chartData}>
               <defs>
@@ -181,7 +183,7 @@ export default function Chart() {
       {dailyPnL.length > 0 && (
         <div className="card" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ fontWeight: 700 }}>Daily P&L (Win vs Loss)</div>
+            <div style={{ fontWeight: 700 }}>{t('daily_pnl')}</div>
             <div style={{ display: 'flex', gap: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
                 <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--green)' }} />
@@ -208,7 +210,7 @@ export default function Chart() {
       {/* Monthly Bar + Session/Market */}
       <div className="grid-2" style={{ marginBottom: 20 }}>
         <div className="card">
-          <div style={{ fontWeight: 700, marginBottom: 16 }}>Monthly P&L</div>
+          <div style={{ fontWeight: 700, marginBottom: 16 }}>{t('monthly_chart')}</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={monthData}>
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} />
@@ -224,7 +226,7 @@ export default function Chart() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Session */}
           <div className="card">
-            <div style={{ fontWeight: 700, marginBottom: 12 }}>By Session</div>
+            <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('by_session')}</div>
             {Object.entries(sessMap).map(([sess, pnl]) => (
               <div key={sess} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
@@ -240,7 +242,7 @@ export default function Chart() {
 
           {/* Top markets */}
           <div className="card">
-            <div style={{ fontWeight: 700, marginBottom: 12 }}>Top Markets</div>
+            <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('top_markets')}</div>
             {topMarkets.map(([mkt, pnl], i) => {
               const colors = ['var(--blue)', 'var(--green)', 'var(--orange)', 'var(--purple)', 'var(--muted)'];
               return (

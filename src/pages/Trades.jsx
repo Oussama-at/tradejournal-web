@@ -5,6 +5,7 @@ import { useConfirm } from '../components/ConfirmDialog';
 const PERIODS = ['All', 'Today', 'This Week', 'This Month', 'Last Month'];
 
 export default function Trades() {
+  const { t } = useLang();
   const showConfirm = useConfirm();
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +53,7 @@ export default function Trades() {
   return (
     <div>
       <div className="page-header">
-        <div className="page-title">Trades</div>
+        <div className="page-title">{t('trades_title')}</div>
         <div className="page-sub">{total} total trades</div>
       </div>
 

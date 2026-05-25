@@ -129,6 +129,94 @@ const translations = {
     confirm_password:   'Confirm Password',
     update_password:    'Update Password',
 
+
+    // Capital page
+    capital_archive:      'Capital Archive',
+    add_new_capital:      'Add New Capital',
+    current_capital:      'Current Capital',
+    starting_capital:     'Starting Capital',
+    net_pnl:              'Net P&L',
+    roi:                  'ROI',
+    col_starting:         'Starting',
+    col_current:          'Current',
+    col_created:          'Created',
+    col_status:           'Status',
+    col_actions:          'Actions',
+    col_net_pnl:          'Net P&L',
+    col_roi:              'ROI',
+
+    // Withdraw page
+    withdraw_title:       'Withdraw',
+    available_capital:    'Available Capital',
+    total_withdrawn:      'Total Withdrawn',
+    new_withdrawal:       'New Withdrawal',
+    withdraw_btn:         'Withdraw',
+    withdrawal_history:   'Withdrawal History',
+    col_note:             'Note',
+    col_amount:           'Amount',
+    col_date:             'Date',
+    confirm_withdrawal:   'Confirm Withdrawal',
+
+    // Users page
+    users_title:          'Manage Users',
+    add_user:             '+ Add User',
+    search_users:         'Search users...',
+    col_user:             'User',
+    col_role:             'Role',
+    col_license:          'License',
+    col_access:           'Access',
+    users_count:          'users',
+
+    // Logs page
+    logs_title:           'Activity Logs',
+    search_logs:          'Search logs...',
+
+    // Activations page
+    activations_title:    'Activations',
+    col_device:           'Device',
+    col_id:               'ID',
+    total:                'Total',
+    approved:             'Approved',
+    pending:              'Pending',
+    rejected:             'Rejected',
+
+    // Password Resets page
+    pwd_resets_title:     'Password Resets',
+
+    // Profile page
+    my_profile:           'My Profile',
+    member_since:         'Member since',
+    change_photo:         '📷 Change Photo',
+    security_questions:   'Security Questions',
+    question_1:           'Question 1',
+    answer_1:             'Answer 1',
+    question_2:           'Question 2',
+    answer_2:             'Answer 2',
+    select_question:      'Select...',
+    your_answer:          'Your answer...',
+    save_questions:       'Save Security Questions',
+
+    // Update Password page
+    change_password:      'Change Password',
+
+    // Dashboard page
+    dashboard_overview:   'Overview of your trading performance',
+    recent_trades:        'Recent Trades',
+
+    // Chart page
+    chart_title:          'P&L Chart',
+    cumulative_pnl:       'Cumulative P&L',
+    daily_pnl:            'Daily P&L (Win vs Loss)',
+    by_session:           'By Session',
+    top_markets:          'Top Markets',
+    monthly_chart:        'Monthly P&L',
+    best_day:             'Best Day',
+    worst_day:            'Worst Day',
+    all_time:             'All',
+    week:                 'Week',
+    month:                'Month',
+    today_btn:            'Today',
+
     // Language toggle
     language:           'Language',
     lang_en:            'English',
@@ -261,6 +349,94 @@ const translations = {
     new_password:       'كلمة المرور الجديدة',
     confirm_password:   'تأكيد كلمة المرور',
     update_password:    'تحديث كلمة المرور',
+
+
+    // Capital page
+    capital_archive:      'أرشيف رأس المال',
+    add_new_capital:      'إضافة رأس مال جديد',
+    current_capital:      'رأس المال الحالي',
+    starting_capital:     'رأس المال الابتدائي',
+    net_pnl:              'صافي الربح/الخسارة',
+    roi:                  'العائد على الاستثمار',
+    col_starting:         'البداية',
+    col_current:          'الحالي',
+    col_created:          'تاريخ الإنشاء',
+    col_status:           'الحالة',
+    col_actions:          'الإجراءات',
+    col_net_pnl:          'صافي الربح/الخسارة',
+    col_roi:              'العائد',
+
+    // Withdraw page
+    withdraw_title:       'سحب',
+    available_capital:    'رأس المال المتاح',
+    total_withdrawn:      'إجمالي المسحوب',
+    new_withdrawal:       'سحب جديد',
+    withdraw_btn:         'سحب',
+    withdrawal_history:   'سجل السحوبات',
+    col_note:             'ملاحظة',
+    col_amount:           'المبلغ',
+    col_date:             'التاريخ',
+    confirm_withdrawal:   'تأكيد السحب',
+
+    // Users page
+    users_title:          'إدارة المستخدمين',
+    add_user:             '+ إضافة مستخدم',
+    search_users:         'ابحث عن مستخدم...',
+    col_user:             'المستخدم',
+    col_role:             'الدور',
+    col_license:          'الترخيص',
+    col_access:           'الوصول',
+    users_count:          'مستخدمين',
+
+    // Logs page
+    logs_title:           'سجل النشاط',
+    search_logs:          'ابحث في السجلات...',
+
+    // Activations page
+    activations_title:    'التفعيلات',
+    col_device:           'الجهاز',
+    col_id:               'المعرف',
+    total:                'الإجمالي',
+    approved:             'موافق عليه',
+    pending:              'قيد الانتظار',
+    rejected:             'مرفوض',
+
+    // Password Resets page
+    pwd_resets_title:     'إعادة كلمة المرور',
+
+    // Profile page
+    my_profile:           'ملفي الشخصي',
+    member_since:         'عضو منذ',
+    change_photo:         '📷 تغيير الصورة',
+    security_questions:   'أسئلة الأمان',
+    question_1:           'السؤال الأول',
+    answer_1:             'الإجابة الأولى',
+    question_2:           'السؤال الثاني',
+    answer_2:             'الإجابة الثانية',
+    select_question:      'اختر...',
+    your_answer:          'إجابتك...',
+    save_questions:       'حفظ أسئلة الأمان',
+
+    // Update Password page
+    change_password:      'تغيير كلمة المرور',
+
+    // Dashboard page
+    dashboard_overview:   'نظرة عامة على أدائك التداولي',
+    recent_trades:        'الصفقات الأخيرة',
+
+    // Chart page
+    chart_title:          'مخطط الأرباح',
+    cumulative_pnl:       'الربح/الخسارة التراكمي',
+    daily_pnl:            'الربح/الخسارة اليومي (فوز مقابل خسارة)',
+    by_session:           'حسب الجلسة',
+    top_markets:          'أبرز الأسواق',
+    monthly_chart:        'الربح/الخسارة الشهري',
+    best_day:             'أفضل يوم',
+    worst_day:            'أسوأ يوم',
+    all_time:             'الكل',
+    week:                 'أسبوع',
+    month:                'شهر',
+    today_btn:            'اليوم',
 
     // Language toggle
     language:           'اللغة',

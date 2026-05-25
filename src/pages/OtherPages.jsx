@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
+import { useLang } from '../lang/LangContext';
 
 export function Capital() {
   const [capitals, setCapitals] = useState([]);
@@ -51,13 +52,13 @@ export function Capital() {
 
   return (
     <div>
-      <div className="page-header"><div className="page-title">Capital Archive</div></div>
+      <div className="page-header">{t('capital_archive')}</div>
 
       <div className="grid-4" style={{ marginBottom: 20 }}>
-        {[['Current Capital', now.toLocaleString() + '$', now >= dep ? 'green' : 'red'],
-          ['Starting Capital', dep.toLocaleString() + '$', 'muted'],
-          ['Net P&L', (net >= 0 ? '+' : '') + parseFloat(net || 0).toFixed(2) + '$', net >= 0 ? 'green' : 'red'],
-          ['ROI', (roi >= 0 ? '+' : '') + parseFloat(roi || 0).toFixed(2) + '%', roi >= 0 ? 'green' : 'red'],
+        {[[t('current_capital'), now.toLocaleString() + '$', now >= dep ? 'green' : 'red'],
+          [t('starting_capital'), dep.toLocaleString() + '$', 'muted'],
+          [t('net_pnl'), (net >= 0 ? '+' : '') + parseFloat(net || 0).toFixed(2) + '$', net >= 0 ? 'green' : 'red'],
+          [t('roi'), (roi >= 0 ? '+' : '') + parseFloat(roi || 0).toFixed(2) + '%', roi >= 0 ? 'green' : 'red'],
         ].map(([label, value, cls]) => (
           <div key={label} className="stat-card">
             <div className="stat-label">{label}</div>
@@ -68,7 +69,7 @@ export function Capital() {
 
       <div className="grid-2" style={{ marginBottom: 20 }}>
         <div className="card">
-          <div style={{ fontWeight: 700, marginBottom: 12 }}>Add New Capital</div>
+          <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('add_new_capital')}</div>
           <div style={{ display: 'flex', gap: 8 }}>
             <input className="input" type="number" placeholder="Amount ($)" value={newCap} onChange={e => setNewCap(e.target.value)} />
             <button className="btn btn-primary" onClick={addCapital}>Add</button>
@@ -80,7 +81,7 @@ export function Capital() {
       <div className="card">
         <div className="table-wrap">
           <table>
-            <thead><tr>{['Starting', 'Current', 'Net P&L', 'ROI', 'Created', 'Status', 'Actions'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+            <thead><tr>{[t('col_starting'), t('col_current'), t('col_net_pnl'), t('col_roi'), t('col_created'), t('col_status'), t('col_actions')].map(h => <th key={h}>{h}</th>)}</tr></thead>
             <tbody>
               {capitals.map(c => {
                 const cn = c.capital_now || 0, cd = c.capital_depart || c.capital_initial || 0;
@@ -118,6 +119,7 @@ export function Capital() {
 // Withdraw
 export function Withdraw() {
   const showConfirm = useConfirm();
+  const { t } = useLang();
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [history, setHistory] = useState([]);
@@ -137,23 +139,23 @@ export function Withdraw() {
 
   async function doWithdraw() {
     if (!amount || +amount <= 0) { setMsg({ type: 'error', text: 'Enter a valid amount' }); return; }
-    const ok = await showConfirm({ title: 'Confirm Withdrawal', message: `Withdraw ${amount}$ from your available capital of ${parseFloat(capNow||0).toLocaleString()}$?`, type: 'warning', confirmLabel: 'Withdraw', cancelLabel: 'Cancel' });
+    const ok = await showConfirm({ title: t('confirm_withdrawal'), message: `${t('withdraw_btn')} ${amount}$ ?`, type: 'warning', confirmLabel: t('withdraw_btn'), cancelLabel: t('cancel') });
     if (!ok) return;
     const res = await api.post('/withdraw', { amount: +amount, ...(note ? { note } : {}) });
-    if (res?.success) { setMsg({ type: 'success', text: '✓ Withdrawal successful!' }); setAmount(''); setNote(''); load(); }
+    if (res?.success) { setMsg({ type: 'success', text: '✓ ' + t('withdrawal_history') }); setAmount(''); setNote(''); load(); }
     else setMsg({ type: 'error', text: res?.message || 'Failed' });
   }
 
   return (
     <div>
-      <div className="page-header"><div className="page-title">Withdraw</div></div>
+      <div className="page-header"><div className="page-title">{t('withdraw_title')}</div></div>
       <div className="grid-2" style={{ marginBottom: 20 }}>
-        <div className="stat-card"><div className="stat-label">Available Capital</div><div className="stat-value green mono">{capNow.toLocaleString()}$</div></div>
-        <div className="stat-card"><div className="stat-label">Total Withdrawn</div><div className="stat-value red mono">{parseFloat(totalW).toFixed(2)}$</div></div>
+        <div className="stat-card"><div className="stat-label">{t('available_capital')}</div><div className="stat-value green mono">{capNow.toLocaleString()}$</div></div>
+        <div className="stat-card"><div className="stat-label">{t('total_withdrawn')}</div><div className="stat-value red mono">{parseFloat(totalW).toFixed(2)}$</div></div>
       </div>
       <div className="grid-2" style={{ marginBottom: 20 }}>
         <div className="card">
-          <div style={{ fontWeight: 700, marginBottom: 12 }}>New Withdrawal</div>
+          <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('new_withdrawal')}</div>
           <div className="form-group" style={{ marginBottom: 10 }}>
             <label className="form-label">Amount ($)</label>
             <input className="input" type="number" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} />
@@ -163,14 +165,14 @@ export function Withdraw() {
             <input className="input" placeholder="Reason..." value={note} onChange={e => setNote(e.target.value)} />
           </div>
           {msg && <div className={`alert alert-${msg.type}`} style={{ marginBottom: 8 }}>{msg.text}</div>}
-          <button className="btn btn-primary" onClick={doWithdraw} style={{ width: '100%', justifyContent: 'center' }}>Withdraw</button>
+          <button className="btn btn-primary" onClick={doWithdraw} style={{ width: '100%', justifyContent: 'center' }}>{t('withdraw_btn')}</button>
         </div>
       </div>
       <div className="card">
-        <div style={{ fontWeight: 700, marginBottom: 12 }}>Withdrawal History</div>
+        <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('withdrawal_history')}</div>
         <div className="table-wrap">
           <table>
-            <thead><tr>{['Date', 'Amount', 'Note'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+            <thead><tr>{[t('col_date'), t('col_amount'), t('col_note')].map(h => <th key={h}>{h}</th>)}</tr></thead>
             <tbody>
               {history.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--dim)', padding: 24 }}>No withdrawals</td></tr>}
               {history.map((w, i) => (
@@ -225,12 +227,12 @@ export function Users() {
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div><div className="page-title">Manage Users</div><div className="page-sub">{users.length} users</div></div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ Add User</button>
+        <div><div className="page-title">{t('users_title')}</div><div className="page-sub">{users.length} {t('users_count')}</div></div>
+        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>{t('add_user')}</button>
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <input className="input" placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="input" placeholder={t('search_users')} value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       {showAdd && (
@@ -249,7 +251,7 @@ export function Users() {
       <div className="card">
         <div className="table-wrap">
           <table>
-            <thead><tr>{['User', 'Role', 'License', 'Access', 'Created', 'Actions'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+            <thead><tr>{[t('col_user'), t('col_role'), t('col_license'), t('col_access'), t('col_created'), t('col_actions')].map(h => <th key={h}>{h}</th>)}</tr></thead>
             <tbody>
               {filtered.map(u => {
                 const active = u.is_active;
@@ -284,6 +286,7 @@ export function Users() {
 
 // Activity Logs
 export function Logs() {
+  const { t } = useLang();
   const [logs, setLogs] = useState([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
@@ -301,7 +304,7 @@ export function Logs() {
 
   return (
     <div>
-      <div className="page-header"><div className="page-title">Activity Logs</div></div>
+      <div className="page-header"><div className="page-title">{t('logs_title')}</div></div>
       <div className="card" style={{ marginBottom: 16 }}>
         <input className="input" placeholder="Search logs..." value={search} onChange={e => { setSearch(e.target.value.toLowerCase()); setPage(0); }} />
       </div>
@@ -331,6 +334,7 @@ export function Logs() {
 
 // Activations
 export function Activations() {
+  const { t } = useLang();
   const [data, setData] = useState([]);
   useEffect(() => { load(); }, []);
   async function load() {
@@ -345,7 +349,7 @@ export function Activations() {
   const counts = data.reduce((a, r) => { a[r.status] = (a[r.status] || 0) + 1; return a; }, {});
   return (
     <div>
-      <div className="page-header"><div className="page-title">Activations</div></div>
+      <div className="page-header"><div className="page-title">{t('activations_title')}</div></div>
       <div className="grid-4" style={{ marginBottom: 20 }}>
         {[['Total', data.length, 'blue'], ['Pending', counts.pending || 0, 'orange'], ['Approved', (counts.activated || 0) + (counts.approved || 0), 'green'], ['Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
           <div key={l} className="stat-card"><div className="stat-label">{l}</div><div className={`stat-value ${c}`}>{v}</div></div>
@@ -354,7 +358,7 @@ export function Activations() {
       <div className="card">
         <div className="table-wrap">
           <table>
-            <thead><tr>{['ID', 'User', 'Device', 'Date', 'Status', 'Actions'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+            <thead><tr>{[t('col_id'), t('col_user'), t('col_device'), t('col_date'), t('col_status'), t('col_actions')].map(h => <th key={h}>{h}</th>)}</tr></thead>
             <tbody>
               {data.map(r => (
                 <tr key={r.id}>
@@ -381,6 +385,7 @@ export function Activations() {
 
 // Password Reset Requests
 export function PasswordReset() {
+  const { t } = useLang();
   const [reqs, setReqs] = useState([]);
   useEffect(() => { load(); }, []);
   async function load() {
@@ -398,7 +403,7 @@ export function PasswordReset() {
   const counts = reqs.reduce((a, r) => { a[r.status] = (a[r.status] || 0) + 1; return a; }, {});
   return (
     <div>
-      <div className="page-header"><div className="page-title">Password Resets</div></div>
+      <div className="page-header"><div className="page-title">{t('pwd_resets_title')}</div></div>
       <div className="grid-4" style={{ marginBottom: 20 }}>
         {[['Total', reqs.length, 'blue'], ['Pending', counts.pending || 0, 'orange'], ['Approved', counts.approved || 0, 'green'], ['Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
           <div key={l} className="stat-card"><div className="stat-label">{l}</div><div className={`stat-value ${c}`}>{v}</div></div>
@@ -407,7 +412,7 @@ export function PasswordReset() {
       <div className="card">
         <div className="table-wrap">
           <table>
-            <thead><tr>{['ID', 'User', 'Date', 'Status', 'Actions'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+            <thead><tr>{[t('col_id'), t('col_user'), t('col_date'), t('col_status'), t('col_actions')].map(h => <th key={h}>{h}</th>)}</tr></thead>
             <tbody>
               {reqs.map(r => (
                 <tr key={r.id}>
@@ -433,6 +438,7 @@ export function PasswordReset() {
 
 // My Profile
 export function Profile() {
+  const { t } = useLang();
   const [profile, setProfile] = useState(null);
   const [q1, setQ1] = useState('');
   const [a1, setA1] = useState('');
@@ -467,7 +473,7 @@ export function Profile() {
 
   return (
     <div>
-      <div className="page-header"><div className="page-title">My Profile</div></div>
+      <div className="page-header"><div className="page-title">{t('my_profile')}</div></div>
       <div className="grid-2">
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
@@ -477,19 +483,19 @@ export function Profile() {
             <div>
               <div style={{ fontWeight: 700, fontSize: 18 }}>{profile?.user_name}</div>
               <span className={`badge ${profile?.role === 'admin' ? 'badge-purple' : 'badge-blue'}`}>{profile?.role}</span>
-              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Member since {(profile?.created_at || '').substring(0, 10)}</div>
+              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{t('member_since')} {(profile?.created_at || '').substring(0, 10)}</div>
             </div>
           </div>
           <label>
             <div className="btn btn-ghost" style={{ cursor: 'pointer' }} onClick={() => document.getElementById('pic-input').click()}>
-              📷 Change Photo
+              {t('change_photo')}
             </div>
             <input id="pic-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={e => changePhoto(e.target.files[0])} />
           </label>
         </div>
 
         <div className="card">
-          <div style={{ fontWeight: 700, marginBottom: 16 }}>Security Questions</div>
+          <div style={{ fontWeight: 700, marginBottom: 16 }}>{t('security_questions')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div className="form-group">
               <label className="form-label">Question 1</label>
@@ -514,7 +520,7 @@ export function Profile() {
               <input className="input" placeholder="Your answer..." value={a2} onChange={e => setA2(e.target.value)} />
             </div>
             {msg && <div className={`alert alert-${msg.type}`}>{msg.text}</div>}
-            <button className="btn btn-primary" onClick={saveQuestions}>Save Security Questions</button>
+            <button className="btn btn-primary" onClick={saveQuestions}>{t('save_questions')}</button>
           </div>
         </div>
       </div>
@@ -524,6 +530,7 @@ export function Profile() {
 
 // Update Password
 export function Password() {
+  const { t } = useLang();
   const [cur, setCur] = useState('');
   const [np, setNp] = useState('');
   const [conf, setConf] = useState('');
@@ -541,17 +548,17 @@ export function Password() {
 
   return (
     <div>
-      <div className="page-header"><div className="page-title">Update Password</div></div>
+      <div className="page-header"><div className="page-title">{t('password_title')}</div></div>
       <div style={{ maxWidth: 420 }}>
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {[['Current Password', cur, setCur], ['New Password', np, setNp], ['Confirm New Password', conf, setConf]].map(([label, val, setter]) => (
+          {[[t('current_password'), cur, setCur], [t('new_password'), np, setNp], [t('confirm_password'), conf, setConf]].map(([label, val, setter]) => (
             <div key={label} className="form-group">
               <label className="form-label">{label}</label>
               <input className="input" type="password" value={val} onChange={e => setter(e.target.value)} />
             </div>
           ))}
           {msg && <div className={`alert alert-${msg.type}`}>{msg.text}</div>}
-          <button className="btn btn-primary" onClick={change} style={{ justifyContent: 'center' }}>Change Password</button>
+          <button className="btn btn-primary" onClick={change} style={{ justifyContent: 'center' }}>{t('change_password')}</button>
         </div>
       </div>
     </div>

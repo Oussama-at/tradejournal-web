@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
+import { useLang } from '../lang/LangContext';
 import { useAuth } from '../context/AuthContext';
 
 const FREE_TRADE_LIMIT = 6;
@@ -231,6 +232,7 @@ function UpgradeModal({ onClose }) {
    AddTrade Page
 ───────────────────────────────────────────── */
 export default function AddTrade() {
+  const { t } = useLang();
   const { sub } = useAuth();
   const isLifetime = sub?.plan === 'lifetime';
   const [tradeCount, setTradeCount] = useState(null);
@@ -313,7 +315,7 @@ export default function AddTrade() {
       {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
 
       <div className="page-header">
-        <div className="page-title">Add Trade</div>
+        <div className="page-title">{t('add_trade_title')}</div>
         <div className="page-sub">Record a new trade entry</div>
       </div>
       <form onSubmit={onSave}>
@@ -351,7 +353,7 @@ export default function AddTrade() {
 
             {/* Market selector */}
             <div className="card">
-              <div style={{ fontWeight: 700, marginBottom: 10 }}>Market</div>
+              <div style={{ fontWeight: 700, marginBottom: 10 }}>{t('market')}</div>
               <MarketSelector value={form.marcher} onChange={v => set('marcher', v)} />
             </div>
 
@@ -359,7 +361,7 @@ export default function AddTrade() {
             <div className="card">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
-                  <div style={{ fontWeight: 700, marginBottom: 8 }}>Direction</div>
+                  <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('direction')}</div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {['buy', 'sell'].map(d => (
                       <button key={d} type="button"
@@ -373,7 +375,7 @@ export default function AddTrade() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, marginBottom: 8 }}>Result</div>
+                  <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('result')}</div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {['win', 'lose'].map(s => (
                       <button key={s} type="button"
@@ -391,7 +393,7 @@ export default function AddTrade() {
 
             {/* Prices */}
             <div className="card">
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>Prices & Amount</div>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('prices_amount')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 {[['Entry Price', 'point_entree'], ['Close Price', 'point_sortie'], ['Amount ($)', 'montant']].map(([label, key]) => (
                   <div key={key} className="form-group">
@@ -412,7 +414,7 @@ export default function AddTrade() {
 
             {/* Details */}
             <div className="card">
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>Trade Details</div>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('trade_details')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <div className="form-group">
                   <label className="form-label">Session</label>
@@ -481,7 +483,7 @@ export default function AddTrade() {
             </div>
 
             <div className="card">
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>Summary</div>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('summary')}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
                 {[
                   ['Market', form.marcher || '—'],
