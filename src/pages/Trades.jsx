@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLang } from '../lang/LangContext';
 import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
 

@@ -5,6 +5,7 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { useLang } from '../lang/LangContext';
 
 export function Capital() {
+  const { t } = useLang();
   const [capitals, setCapitals] = useState([]);
   const [current, setCurrent] = useState(null);
   const [newCap, setNewCap] = useState('');
@@ -192,6 +193,7 @@ export function Withdraw() {
 
 // Manage Users
 export function Users() {
+  const { t } = useLang();
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [msg, setMsg] = useState(null);
