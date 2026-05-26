@@ -230,6 +230,16 @@ export function Users() {
         ? '✓ License created & activated'
         : newState ? '✓ License activated' : '✓ License disabled';
       setLicenseMsg({ userId: id, text, type: newState ? 'success' : 'warning' });
+      // Optimistically update local state so badge reflects change immediately
+      setUsers(prev => prev.map(u => {
+        if (u.id !== id) return u;
+        return {
+          ...u,
+          is_active: newState,
+          // If a license was just created, set a placeholder so pending=false
+          license_key: u.license_key || (wasCreated ? '__assigned__' : u.license_key),
+        };
+      }));
       load();
       setTimeout(() => setLicenseMsg(null), 2500);
     } else {
@@ -251,15 +261,34 @@ export function Users() {
     if (!ok) return;
     setLoggingInAs(u.id);
     try {
-      const res = await api.post(`/admin/users/${u.id}/generate-token`, {});
-      if (res?.success && res.data?.token) {
-        login(res.data.token, u.user_name, u.role || 'user');
-        navigate('/');
+      // Try multiple possible endpoint names the backend may expose
+      const endpoints = [
+        `/admin/users/${u.id}/login-as`,
+        `/admin/users/${u.id}/impersonate`,
+        `/admin/users/${u.id}/token`,
+        `/admin/login-as/${u.id}`,
+      ];
+      let res = null;
+      for (const ep of endpoints) {
+        res = await api.post(ep, {});
+        // Stop if we got a valid token back (not a 404/error HTML)
+        if (res?.success && res.data?.token) break;
+        if (res?.success && res.data?.access_token) break;
+        res = null;
+      }
+      const token = res?.data?.token || res?.data?.access_token;
+      if (res?.success && token) {
+        // Clear device binding so the user's account isn't stuck on admin device
+        localStorage.removeItem('device_id');
+        login(token, u.user_name, u.role || 'user');
+        navigate('/dashboard');
       } else {
-        setMsg({ type: 'error', text: res?.message || 'Failed to login as user' });
+        const errText = res?.message || 'Login as user failed — endpoint not available on this server';
+        setMsg({ type: 'error', text: errText });
+        setLoggingInAs(null);
       }
     } catch {
-      setMsg({ type: 'error', text: 'Server error' });
+      setMsg({ type: 'error', text: 'Server error while trying to login as user' });
     }
     setLoggingInAs(null);
   }
@@ -285,6 +314,13 @@ export function Users() {
         <input className="input" placeholder={t('search_users')} value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
+      {/* Global error message (e.g. login-as failed) */}
+      {msg && !showAdd && (
+        <div className={`alert alert-${msg.type}`} style={{ marginBottom: 12, cursor: 'pointer' }} onClick={() => setMsg(null)}>
+          {msg.text} <span style={{ float: 'right', opacity: 0.6 }}>✕</span>
+        </div>
+      )}
+
       {showAdd && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 700, marginBottom: 12 }}>Add New User</div>
@@ -305,7 +341,10 @@ export function Users() {
             <tbody>
               {filtered.map(u => {
                 const active = u.is_active;
-                const pending = !u.license_key || !u.device_id;
+                // "Pending" = no license has ever been assigned (no key at all)
+                // "Active" / "Disabled" = license exists, is_active determines state
+                const hasLicense = !!u.license_key;
+                const pending = !hasLicense;
                 const blocked = u.blocked;
                 return (
                   <tr key={u.id}>
