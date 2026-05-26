@@ -261,38 +261,22 @@ export function Users() {
     if (!ok) return;
     setLoggingInAs(u.id);
     try {
-      // Try multiple possible endpoint names the backend may expose
-      const endpoints = [
-        `/admin/users/${u.id}/login-as`,
-        `/admin/users/${u.id}/impersonate`,
-        `/admin/users/${u.id}/token`,
-        `/admin/login-as/${u.id}`,
-      ];
-      let res = null;
-      for (const ep of endpoints) {
-        res = await api.post(ep, {});
-        // Stop if we got a valid token back (not a 404/error HTML)
-        if (res?.success && res.data?.token) break;
-        if (res?.success && res.data?.access_token) break;
-        res = null;
-      }
-      const token = res?.data?.token || res?.data?.access_token;
-      if (res?.success && token) {
-        // Clear device binding so the user's account isn't stuck on admin device
-        localStorage.removeItem('device_id');
-        login(token, u.user_name, u.role || 'user');
-        navigate('/dashboard');
+      // Generate a fresh device_id for this user session
+      const deviceId = 'web-adm-' + Math.random().toString(36).slice(2, 9) + '-' + Date.now().toString(36);
+      const res = await api.post(`/admin/users/${u.id}/generate-token`, { device_id: deviceId });
+      if (res?.success && res.data?.token) {
+        localStorage.setItem('device_id', deviceId);
+        login(res.data.token, u.user_name, u.role || 'user');
+        navigate('/');
       } else {
-        const errText = res?.message || 'Login as user failed — endpoint not available on this server';
-        setMsg({ type: 'error', text: errText });
+        setMsg({ type: 'error', text: res?.message || 'Failed to login as user' });
         setLoggingInAs(null);
       }
     } catch {
       setMsg({ type: 'error', text: 'Server error while trying to login as user' });
+      setLoggingInAs(null);
     }
-    setLoggingInAs(null);
   }
-
   async function resetDevice(id)  { const ok = await showConfirm({ title: 'Reset Device?', message: 'This will log the user out of their current device.', type: 'warning', confirmLabel: 'Reset', cancelLabel: 'Cancel' }); if (ok) { await api.post(`/admin/users/${id}/reset-device`, {}); load(); } }
   async function deleteUser(id, name) { const ok = await showConfirm({ title: `Delete ${name}?`, message: 'This will permanently delete the user and all their data.', type: 'danger', confirmLabel: 'Delete', cancelLabel: 'Cancel' }); if (ok) { await api.delete(`/admin/users/${id}`); load(); } }
   async function toggleAccess(id, blocked) { await api.put(`/admin/users/${id}/access`, { blocked: !blocked }); load(); }
