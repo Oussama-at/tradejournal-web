@@ -30,6 +30,7 @@ export default function Subscriptions() {
   const { t } = useLang();
   const [subs,    setSubs]    = useState([]);
   const [users,   setUsers]   = useState([]);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [search,  setSearch]  = useState('');
   const [msg,     setMsg]     = useState(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -37,15 +38,29 @@ export default function Subscriptions() {
 
   const [newSub, setNewSub] = useState({ user_id: '', pack: 'trial', payment_method: 'manual' });
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadSubs(); loadUsers(); }, []);
 
-  async function load() {
-    const [subRes, userRes] = await Promise.all([
-      api.get('/admin/subscriptions'),
-      api.get('/admin/users?page=1&limit=9999'),
-    ]);
-    setSubs(subRes?.data?.subscriptions || []);
-    setUsers(userRes?.data?.users || []);
+  async function load() { loadSubs(); loadUsers(); }
+
+  async function loadSubs() {
+    try {
+      const subRes = await api.get('/admin/subscriptions');
+      setSubs(subRes?.data?.subscriptions || []);
+    } catch (e) { console.error('subs load error', e); }
+  }
+
+  async function loadUsers() {
+    setUsersLoading(true);
+    try {
+      const userRes = await api.get('/admin/users');
+      const list =
+        userRes?.data?.users ||
+        userRes?.data ||
+        userRes?.users ||
+        (Array.isArray(userRes) ? userRes : []);
+      setUsers(Array.isArray(list) ? list : []);
+    } catch (e) { console.error('users load error', e); }
+    setUsersLoading(false);
   }
 
   // When pack changes, reset payment_method to first valid option (or '' if free)
@@ -110,7 +125,7 @@ export default function Subscriptions() {
           <div className="page-title">{t('subs_title') || 'Subscriptions'}</div>
           <div className="page-sub">{subs.length} {t('total_subscriptions') || 'total subscriptions'}</div>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ {t('assign_pack') || 'Assign Pack'}</button>
+        <button className="btn btn-primary" onClick={() => { setShowAdd(true); loadUsers(); }}>+ {t('assign_pack') || 'Assign Pack'}</button>
       </div>
 
       {/* Stats */}
@@ -141,7 +156,9 @@ export default function Subscriptions() {
               <label className="form-label">{t('col_user') || 'User'}</label>
               <select className="select" value={newSub.user_id}
                 onChange={e => setNewSub(s => ({ ...s, user_id: e.target.value }))}>
-                <option value="">{t('select_user_placeholder') || 'Select user...'}</option>
+                <option value="">
+                  {usersLoading ? (t('loading') || 'Loading...') : (t('select_user_placeholder') || 'Select user...')}
+                </option>
                 {users.map(u => <option key={u.id} value={u.id}>{u.user_name}</option>)}
               </select>
             </div>
