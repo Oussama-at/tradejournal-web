@@ -71,14 +71,56 @@ const CumulWithdrawTooltip = ({ active, payload, label }) => {
   );
 };
 
-// Custom dot for withdrawal markers on the chart
+// Custom crosshair cursor: vertical line + horizontal price line with value label
+const CustomCrosshair = ({ points, width, height, top, left, payload }) => {
+  if (!points || !points.length) return null;
+  const { x, y } = points[0];
+  const chartValue = payload?.[0]?.value;
+  const label = chartValue != null ? (chartValue >= 0 ? '+' : '') + chartValue.toFixed(2) + '$' : null;
+  const labelWidth = label ? label.length * 7.5 + 16 : 0;
+  const labelX = x + 8;
+  const labelFits = labelX + labelWidth < (left + width - 4);
+  const finalLabelX = labelFits ? labelX : x - labelWidth - 8;
+  return (
+    <g>
+      {/* Vertical line */}
+      <line x1={x} y1={top} x2={x} y2={top + height}
+        stroke="rgba(255,255,255,0.2)" strokeWidth={1} strokeDasharray="4 3" />
+      {/* Horizontal price line */}
+      <line x1={left} y1={y} x2={left + width} y2={y}
+        stroke="rgba(255,255,255,0.18)" strokeWidth={1} strokeDasharray="3 3" />
+      {/* Price label pill on the right */}
+      {label && (
+        <g>
+          <rect x={finalLabelX - 2} y={y - 10} width={labelWidth} height={20}
+            rx={4} fill="rgba(30,30,40,0.92)" stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
+          <text x={finalLabelX + labelWidth / 2 - 2} y={y + 4.5}
+            textAnchor="middle" fill={chartValue >= 0 ? 'var(--green, #22c55e)' : 'var(--red, #ef4444)'}
+            fontSize={11} fontWeight={700} fontFamily="monospace">
+            {label}
+          </text>
+        </g>
+      )}
+    </g>
+  );
+};
+
+// Custom dot for withdrawal markers — rendered ON the cumul (P&L) line
+// props.cy comes from the cumul series; payload.withdrawAmount is the withdrawal value
 const WithdrawDot = (props) => {
   const { cx, cy, payload } = props;
   if (!payload?.withdrawAmount || payload.withdrawAmount <= 0) return null;
   return (
     <g>
-      <circle cx={cx} cy={cy} r={7} fill="var(--orange)" opacity={0.2} />
-      <circle cx={cx} cy={cy} r={4} fill="var(--orange)" stroke="#fff" strokeWidth={1.5} />
+      {/* Outer pulse ring */}
+      <circle cx={cx} cy={cy} r={10} fill="var(--orange)" opacity={0.12} />
+      {/* Mid ring */}
+      <circle cx={cx} cy={cy} r={6} fill="var(--orange)" opacity={0.25} />
+      {/* Core dot */}
+      <circle cx={cx} cy={cy} r={4} fill="var(--orange)" stroke="var(--bg2)" strokeWidth={2} />
+      {/* Down-arrow indicator */}
+      <line x1={cx} y1={cy + 6} x2={cx} y2={cy + 14} stroke="var(--orange)" strokeWidth={1.5} strokeLinecap="round" />
+      <polyline points={`${cx - 4},${cy + 11} ${cx},${cy + 16} ${cx + 4},${cy + 11}`} fill="none" stroke="var(--orange)" strokeWidth={1.5} strokeLinejoin="round" />
     </g>
   );
 };
@@ -269,32 +311,52 @@ export default function Chart() {
               </div>
             )}
           </div>
-          <ResponsiveContainer width="100%" height={260}>
-            <ComposedChart data={combinedData}>
+          <ResponsiveContainer width="100%" height={280}>
+            <ComposedChart data={combinedData} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
               <defs>
                 <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={totalPnl >= 0 ? 'var(--green)' : 'var(--red)'} stopOpacity={0.25} />
-                  <stop offset="95%" stopColor={totalPnl >= 0 ? 'var(--green)' : 'var(--red)'} stopOpacity={0} />
+                  <stop offset="5%" stopColor={totalPnl >= 0 ? 'var(--green)' : 'var(--red)'} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={totalPnl >= 0 ? 'var(--green)' : 'var(--red)'} stopOpacity={0.02} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} />
-              <Tooltip content={<CumulWithdrawTooltip />} />
-              {/* Zero line */}
-              <ReferenceLine y={0} stroke="var(--border)" strokeDasharray="4 4" />
-              {/* Trading P&L area */}
-              <Area type="monotone" dataKey="cumul" stroke={totalPnl >= 0 ? 'var(--green)' : 'var(--red)'}
-                strokeWidth={2} fill="url(#grad1)" dot={false} />
-              {/* Net Capital line (P&L minus withdrawals) */}
+              <YAxis
+                tick={{ fontSize: 11, fill: 'var(--muted)' }}
+                axisLine={false} tickLine={false}
+                tickFormatter={v => `$${v}`}
+                width={64}
+              />
+              <Tooltip
+                content={<CumulWithdrawTooltip />}
+                cursor={<CustomCrosshair />}
+              />
+              {/* Zero reference line */}
+              <ReferenceLine y={0} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4" />
+              {/* Trading P&L area — withdrawal dots rendered here on the correct line position */}
+              <Area
+                type="monotone"
+                dataKey="cumul"
+                stroke={totalPnl >= 0 ? 'var(--green)' : 'var(--red)'}
+                strokeWidth={2.5}
+                fill="url(#grad1)"
+                dot={(dotProps) => {
+                  const { payload } = dotProps;
+                  if (payload?.withdrawAmount > 0) return <WithdrawDot key={`wd-${dotProps.index}`} {...dotProps} />;
+                  return <g key={`empty-${dotProps.index}`} />;
+                }}
+                activeDot={{ r: 5, strokeWidth: 2, stroke: 'var(--bg2)', fill: totalPnl >= 0 ? 'var(--green)' : 'var(--red)' }}
+              />
+              {/* Net Capital dashed line */}
               {hasWithdrawals && (
-                <Line type="monotone" dataKey="netCapital" stroke="var(--blue)"
-                  strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
-              )}
-              {/* Withdrawal markers as scatter dots */}
-              {hasWithdrawals && (
-                <Area type="monotone" dataKey="withdrawAmount"
-                  stroke="transparent" fill="transparent"
-                  dot={<WithdrawDot />} activeDot={false} />
+                <Line
+                  type="monotone"
+                  dataKey="netCapital"
+                  stroke="var(--blue)"
+                  strokeWidth={1.5}
+                  strokeDasharray="5 3"
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--bg2)', fill: 'var(--blue)' }}
+                />
               )}
             </ComposedChart>
           </ResponsiveContainer>

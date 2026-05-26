@@ -234,8 +234,9 @@ function UpgradeModal({ onClose }) {
 ───────────────────────────────────────────── */
 export default function AddTrade() {
   const { t } = useLang();
-  const { sub } = useAuth();
-  const isLifetime = sub?.plan === 'lifetime';
+  const { sub, user } = useAuth();
+  const isAdmin    = user?.role === 'admin';
+  const isLifetime = isAdmin || sub?.pack === 'lifetime';
   const [tradeCount, setTradeCount] = useState(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [form, setForm] = useState({
