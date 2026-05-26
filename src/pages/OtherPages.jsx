@@ -225,7 +225,11 @@ export function Users() {
     const res = await api.post(`/admin/users/${id}/toggle-license`, {});
     if (res?.success) {
       const newState = res.data?.is_active;
-      setLicenseMsg({ userId: id, text: newState ? '✓ License activated' : '✓ License disabled', type: newState ? 'success' : 'warning' });
+      const wasCreated = res.data?.created;
+      const text = wasCreated
+        ? '✓ License created & activated'
+        : newState ? '✓ License activated' : '✓ License disabled';
+      setLicenseMsg({ userId: id, text, type: newState ? 'success' : 'warning' });
       load();
       setTimeout(() => setLicenseMsg(null), 2500);
     } else {
@@ -314,10 +318,11 @@ export function Users() {
                       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                           <button
-                            className={`btn ${licenseMsg?.userId === u.id && licenseMsg.type === 'success' ? 'btn-primary' : licenseMsg?.userId === u.id && licenseMsg.type === 'warning' ? 'btn-danger' : 'btn-ghost'}`}
+                            className={`btn ${active ? 'btn-danger' : 'btn-primary'} ${licenseMsg?.userId === u.id ? 'btn-ghost' : ''}`}
                             style={{ fontSize: 10, padding: '2px 7px' }}
                             onClick={() => toggleLicense(u.id, u.is_active)}
-                          >🔑 {licenseMsg?.userId === u.id ? '...' : 'License'}</button>
+                            title={pending ? 'Create & assign a license' : active ? 'Disable license' : 'Re-activate license'}
+                          >🔑 {licenseMsg?.userId === u.id ? '...' : pending ? 'Assign' : active ? 'Disable' : 'Enable'}</button>
                           {licenseMsg?.userId === u.id && (
                             <span style={{ fontSize: 9, color: licenseMsg.type === 'success' ? 'var(--green)' : licenseMsg.type === 'warning' ? 'var(--orange)' : 'var(--red)', whiteSpace: 'nowrap' }}>
                               {licenseMsg.text}
