@@ -1,8 +1,10 @@
 // Capital Archive
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useLang } from '../lang/LangContext';
+import { useAuth } from '../context/AuthContext';
 
 export function Capital() {
   const { t } = useLang();
@@ -194,11 +196,15 @@ export function Withdraw() {
 // Manage Users
 export function Users() {
   const { t } = useLang();
+  const { login } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [msg, setMsg] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [newUser, setNewUser] = useState({ user_name: '', password: '', role: 'user' });
+  const [licenseMsg, setLicenseMsg] = useState(null); // { userId, text, type }
+  const [loggingInAs, setLoggingInAs] = useState(null);
 
   useEffect(() => { load(); }, []);
 
@@ -214,8 +220,46 @@ export function Users() {
     else setMsg({ type: 'error', text: res?.message || 'Failed' });
   }
 
-  async function toggleLicense(id) { await api.post(`/admin/users/${id}/toggle-license`, {}); load(); }
+  async function toggleLicense(id, currentActive) {
+    setLicenseMsg({ userId: id, text: 'Updating...', type: 'info' });
+    const res = await api.post(`/admin/users/${id}/toggle-license`, {});
+    if (res?.success) {
+      const newState = res.data?.is_active;
+      setLicenseMsg({ userId: id, text: newState ? '✓ License activated' : '✓ License disabled', type: newState ? 'success' : 'warning' });
+      load();
+      setTimeout(() => setLicenseMsg(null), 2500);
+    } else {
+      setLicenseMsg({ userId: id, text: res?.message || 'Failed to toggle license', type: 'error' });
+      setTimeout(() => setLicenseMsg(null), 3000);
+    }
+  }
+
   const showConfirm = useConfirm();
+
+  async function loginAsUser(u) {
+    const ok = await showConfirm({
+      title: `Login as ${u.user_name}?`,
+      message: 'You will be logged in as this user. Only this device will connect to that account. Your admin session will end.',
+      type: 'warning',
+      confirmLabel: 'Login as user',
+      cancelLabel: 'Cancel'
+    });
+    if (!ok) return;
+    setLoggingInAs(u.id);
+    try {
+      const res = await api.post(`/admin/users/${u.id}/generate-token`, {});
+      if (res?.success && res.data?.token) {
+        login(res.data.token, u.user_name, u.role || 'user');
+        navigate('/');
+      } else {
+        setMsg({ type: 'error', text: res?.message || 'Failed to login as user' });
+      }
+    } catch {
+      setMsg({ type: 'error', text: 'Server error' });
+    }
+    setLoggingInAs(null);
+  }
+
   async function resetDevice(id)  { const ok = await showConfirm({ title: 'Reset Device?', message: 'This will log the user out of their current device.', type: 'warning', confirmLabel: 'Reset', cancelLabel: 'Cancel' }); if (ok) { await api.post(`/admin/users/${id}/reset-device`, {}); load(); } }
   async function deleteUser(id, name) { const ok = await showConfirm({ title: `Delete ${name}?`, message: 'This will permanently delete the user and all their data.', type: 'danger', confirmLabel: 'Delete', cancelLabel: 'Cancel' }); if (ok) { await api.delete(`/admin/users/${id}`); load(); } }
   async function toggleAccess(id, blocked) { await api.put(`/admin/users/${id}/access`, { blocked: !blocked }); load(); }
@@ -268,10 +312,30 @@ export function Users() {
                     <td className="muted">{(u.created_at || '').substring(0, 10)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                        <button className="btn btn-ghost"  style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => toggleLicense(u.id)}>🔑 License</button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          <button
+                            className={`btn ${licenseMsg?.userId === u.id && licenseMsg.type === 'success' ? 'btn-primary' : licenseMsg?.userId === u.id && licenseMsg.type === 'warning' ? 'btn-danger' : 'btn-ghost'}`}
+                            style={{ fontSize: 10, padding: '2px 7px' }}
+                            onClick={() => toggleLicense(u.id, u.is_active)}
+                          >🔑 {licenseMsg?.userId === u.id ? '...' : 'License'}</button>
+                          {licenseMsg?.userId === u.id && (
+                            <span style={{ fontSize: 9, color: licenseMsg.type === 'success' ? 'var(--green)' : licenseMsg.type === 'warning' ? 'var(--orange)' : 'var(--red)', whiteSpace: 'nowrap' }}>
+                              {licenseMsg.text}
+                            </span>
+                          )}
+                        </div>
                         <button className="btn btn-ghost"  style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => resetDevice(u.id)}>📱 Device</button>
                         <button className="btn btn-ghost"  style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => resetPassword(u.id, u.user_name)}>🔒 Pwd</button>
                         <button className={`btn ${blocked ? 'btn-primary' : 'btn-danger'}`} style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => toggleAccess(u.id, blocked)}>{blocked ? 'Unblock' : 'Block'}</button>
+                        {u.role !== 'admin' && (
+                          <button
+                            className="btn btn-ghost"
+                            style={{ fontSize: 10, padding: '2px 7px', borderColor: 'var(--blue)', color: 'var(--blue)' }}
+                            onClick={() => loginAsUser(u)}
+                            disabled={loggingInAs === u.id}
+                            title="Login as this user (admin only)"
+                          >{loggingInAs === u.id ? '...' : '👤 Login As'}</button>
+                        )}
                         <button className="btn btn-danger" style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => deleteUser(u.id, u.user_name)}>🗑</button>
                       </div>
                     </td>
