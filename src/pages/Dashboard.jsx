@@ -3,24 +3,30 @@ import { useLang } from '../lang/LangContext';
 import api from '../services/api';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-const PERIODS = ['All dates', 'Daily', 'Weekly', 'Monthly'];
 const fmt = (v) => (v >= 0 ? '+' : '') + v.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '$';
 const pClass = (v) => v >= 0 ? 'green' : 'red';
 
 export default function Dashboard() {
   const { t } = useLang();
-  const [period, setPeriod] = useState('All dates');
+  const [period, setPeriod] = useState('all');
   const [stats, setStats] = useState(null);
   const [trades, setTrades] = useState([]);
   const [capital, setCapital] = useState(null);
   const [chartData, setChartData] = useState([]);
+
+  const PERIODS = [
+    { key: 'all',     label: t('all_dates')   || 'All dates' },
+    { key: 'daily',   label: t('today')       || 'Daily' },
+    { key: 'weekly',  label: t('this_week')   || 'Weekly' },
+    { key: 'monthly', label: t('this_month')  || 'Monthly' },
+  ];
 
   // eslint-disable-next-line
   useEffect(() => { load(); }, [period]);
 
   async function load() {
     try {
-      const param = { 'Daily': '?period=daily', 'Weekly': '?period=weekly', 'Monthly': '?period=monthly' }[period] || '';
+      const param = period !== 'all' ? `?period=${period}` : '';
       const [statsRes, tradesRes, allTradesRes, capRes] = await Promise.all([
         api.get('/stats' + param),
         api.get('/trades?page=1&limit=10'),
@@ -32,13 +38,12 @@ export default function Dashboard() {
       setTrades(tradesRes?.data?.trades || []);
       setCapital(capRes?.data || null);
 
-      // Build chart data from all trades
       const allT = allTradesRes?.data?.trades || [];
       const byDay = {};
-      allT.forEach(t => {
-        const day = (t.date_trade || '').substring(0, 10);
+      allT.forEach(tr => {
+        const day = (tr.date_trade || '').substring(0, 10);
         if (!byDay[day]) byDay[day] = 0;
-        byDay[day] += t.status === 'win' ? t.montant : -Math.abs(t.montant);
+        byDay[day] += tr.status === 'win' ? tr.montant : -Math.abs(tr.montant);
       });
       let cum = 0;
       const cd = Object.entries(byDay).sort().map(([day, net]) => {
@@ -49,10 +54,9 @@ export default function Dashboard() {
     } catch (e) { console.error(e); }
   }
 
-  // Compute real net from trades
-  const allSums = trades.reduce((acc, t) => {
-    if (t.status === 'win') { acc.wins++; acc.sumWin += t.montant; }
-    else { acc.losses++; acc.sumLose += t.montant; }
+  const allSums = trades.reduce((acc, tr) => {
+    if (tr.status === 'win') { acc.wins++; acc.sumWin += tr.montant; }
+    else { acc.losses++; acc.sumLose += tr.montant; }
     return acc;
   }, { wins: 0, losses: 0, sumWin: 0, sumLose: 0 });
 
@@ -77,6 +81,11 @@ export default function Dashboard() {
     );
   };
 
+  const tableHeaders = [
+    t('col_date'),  t('col_market'), t('col_type'), t('col_status'),
+    t('col_entry'), t('col_close'), t('col_amount'), t('col_session'),
+  ];
+
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -85,22 +94,23 @@ export default function Dashboard() {
           <div className="page-sub">{t('dashboard_overview')}</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--muted)' }}>Period:</span>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{t('period') || 'Period'}:</span>
           <select className="select" style={{ width: 'auto' }} value={period} onChange={e => setPeriod(e.target.value)}>
-            {PERIODS.map(p => <option key={p}>{p}</option>)}
+            {PERIODS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
           </select>
-          <button className="btn btn-ghost" onClick={load}>↺ Refresh</button>
+          <button className="btn btn-ghost" onClick={load}>↺ {t('refresh') || 'Refresh'}</button>
         </div>
       </div>
 
       {/* Stat cards */}
       <div className="grid-4" style={{ marginBottom: 20 }}>
-        <StatCard label="Today P&L" value={todayPnl} fmt={fmt} pClass={pClass} sub="Today's performance" />
-        <StatCard label="Win Rate" value={winRate} fmt={v => v.toFixed(1) + '%'} pClass={v => v >= 50 ? 'green' : 'red'}
+        <StatCard label={t('today_pnl') || 'Today P&L'} value={todayPnl} fmt={fmt} pClass={pClass}
+          sub={t('todays_performance') || "Today's performance"} />
+        <StatCard label={t('win_rate')} value={winRate} fmt={v => v.toFixed(1) + '%'} pClass={v => v >= 50 ? 'green' : 'red'}
           sub={`${allSums.wins}W / ${allSums.losses}L (${allSums.wins + allSums.losses} total)`} />
-        <StatCard label="Total Profit" value={capNet} fmt={fmt} pClass={pClass}
-          sub={`${allSums.wins + allSums.losses} trades`} />
-        <StatCard label="Capital" value={capNow} fmt={v => v.toLocaleString() + '$'} pClass={v => v >= capDep ? 'green' : 'red'}
+        <StatCard label={t('total_pnl')} value={capNet} fmt={fmt} pClass={pClass}
+          sub={`${allSums.wins + allSums.losses} ${t('total_trades_label') || 'trades'}`} />
+        <StatCard label={t('capital')} value={capNow} fmt={v => v.toLocaleString() + '$'} pClass={v => v >= capDep ? 'green' : 'red'}
           sub={`${roi >= 0 ? '+' : ''}${roi.toFixed(2)}% ROI`} mono />
       </div>
 
@@ -108,7 +118,7 @@ export default function Dashboard() {
       {chartData.length > 1 && (
         <div className="card" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ fontWeight: 700 }}>Cumulative P&L</div>
+            <div style={{ fontWeight: 700 }}>{t('cumulative_pnl')}</div>
             <div className={`mono bold ${pClass(chartData[chartData.length - 1]?.cumul || 0)}`} style={{ fontSize: 16 }}>
               {fmt(chartData[chartData.length - 1]?.cumul || 0)}
             </div>
@@ -141,34 +151,32 @@ export default function Dashboard() {
           <table>
             <thead>
               <tr>
-                {['Date', 'Market', 'Type', 'Status', 'Entry', 'Close', 'Amount', 'Session'].map(h =>
-                  <th key={h}>{h}</th>
-                )}
+                {tableHeaders.map(h => <th key={h}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {trades.length === 0 && (
-                <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--dim)', padding: 32 }}>No trades</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--dim)', padding: 32 }}>{t('no_trades')}</td></tr>
               )}
-              {trades.map(t => (
-                <tr key={t.id_trade || t.id}
-                  style={{ background: t.status === 'win' ? 'rgba(0,230,118,0.03)' : 'rgba(255,71,87,0.03)' }}>
-                  <td className="muted">{t.date_trade}</td>
-                  <td style={{ fontWeight: 600 }}>{t.marcher}</td>
-                  <td className={t.type_trd === 'buy' ? 'green bold' : 'red bold'}>
-                    {t.type_trd?.toUpperCase()}
+              {trades.map(tr => (
+                <tr key={tr.id_trade || tr.id}
+                  style={{ background: tr.status === 'win' ? 'rgba(0,230,118,0.03)' : 'rgba(255,71,87,0.03)' }}>
+                  <td className="muted">{tr.date_trade}</td>
+                  <td style={{ fontWeight: 600 }}>{tr.marcher}</td>
+                  <td className={tr.type_trd === 'buy' ? 'green bold' : 'red bold'}>
+                    {tr.type_trd?.toUpperCase()}
                   </td>
                   <td>
-                    <span className={`badge ${t.status === 'win' ? 'badge-green' : 'badge-red'}`}>
-                      {t.status?.toUpperCase()}
+                    <span className={`badge ${tr.status === 'win' ? 'badge-green' : 'badge-red'}`}>
+                      {tr.status === 'win' ? t('win')?.toUpperCase() : t('lose')?.toUpperCase()}
                     </span>
                   </td>
-                  <td className="mono">{t.point_entree}</td>
-                  <td className="mono">{t.point_sortie}</td>
-                  <td className={`mono bold ${t.status === 'win' ? 'green' : 'red'}`}>
-                    {t.status === 'win' ? '+' : '-'}{Math.abs(t.montant).toFixed(2)}$
+                  <td className="mono">{tr.point_entree}</td>
+                  <td className="mono">{tr.point_sortie}</td>
+                  <td className={`mono bold ${tr.status === 'win' ? 'green' : 'red'}`}>
+                    {tr.status === 'win' ? '+' : '-'}{Math.abs(tr.montant).toFixed(2)}$
                   </td>
-                  <td className="muted">{t.sessions}</td>
+                  <td className="muted">{tr.sessions}</td>
                 </tr>
               ))}
             </tbody>

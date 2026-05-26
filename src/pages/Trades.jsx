@@ -3,8 +3,6 @@ import { useLang } from '../lang/LangContext';
 import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
 
-const PERIODS = ['All', 'Today', 'This Week', 'This Month', 'Last Month'];
-
 export default function Trades() {
   const { t } = useLang();
   const showConfirm = useConfirm();
@@ -15,6 +13,14 @@ export default function Trades() {
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFilters] = useState({ type: 'All', status: 'All', period: 'All', search: '' });
   const [editTrade, setEditTrade] = useState(null);
+
+  const PERIODS = [
+    { val: 'All',        label: t('all') },
+    { val: 'Today',      label: t('today') },
+    { val: 'This Week',  label: t('this_week') },
+    { val: 'This Month', label: t('this_month') },
+    { val: 'Last Month', label: t('last_month') },
+  ];
 
   useEffect(() => { load(); }, [page, filters]);
 
@@ -39,7 +45,11 @@ export default function Trades() {
   }
 
   async function deleteTrade(id) {
-    const ok = await showConfirm({ title: `Delete Trade #${id}?`, message: 'This trade will be permanently removed.', type: 'danger', confirmLabel: 'Delete', cancelLabel: 'Cancel' });
+    const ok = await showConfirm({
+      title: `${t('delete')} #${id}?`,
+      message: t('delete_trade_confirm') || 'This trade will be permanently removed.',
+      type: 'danger', confirmLabel: t('delete'), cancelLabel: t('cancel'),
+    });
     if (!ok) return;
     await api.delete(`/trades/${id}`);
     load();
@@ -51,32 +61,39 @@ export default function Trades() {
     load();
   }
 
+  const tableHeaders = ['#', t('col_date'), t('col_market'), t('col_type'), t('col_entry'),
+    t('col_close'), t('col_qty'), t('col_status'), t('col_amount'), t('col_session'), t('col_actions')];
+
   return (
     <div>
       <div className="page-header">
         <div className="page-title">{t('trades_title')}</div>
-        <div className="page-sub">{total} total trades</div>
+        <div className="page-sub">{total} {t('total_trades_label')}</div>
       </div>
 
       {/* Filters */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ flex: 1, minWidth: 180 }}>
-            <input className="input" placeholder="Search market..." value={filters.search}
+            <input className="input" placeholder={t('search_market')} value={filters.search}
               onChange={e => { setFilters(f => ({ ...f, search: e.target.value })); setPage(1); }} />
           </div>
-          {[
-            { key: 'type', opts: ['All', 'Buy', 'Sell'] },
-            { key: 'status', opts: ['All', 'Win', 'Lose'] },
-            { key: 'period', opts: PERIODS },
-          ].map(({ key, opts }) => (
-            <select key={key} className="select" style={{ width: 'auto' }}
-              value={filters[key]} onChange={e => { setFilters(f => ({ ...f, [key]: e.target.value })); setPage(1); }}>
-              {opts.map(o => <option key={o}>{o}</option>)}
-            </select>
-          ))}
+          <select className="select" style={{ width: 'auto' }} value={filters.type}
+            onChange={e => { setFilters(f => ({ ...f, type: e.target.value })); setPage(1); }}>
+            {[{ val: 'All', lbl: t('all') }, { val: 'Buy', lbl: t('buy') }, { val: 'Sell', lbl: t('sell') }]
+              .map(o => <option key={o.val} value={o.val}>{o.lbl}</option>)}
+          </select>
+          <select className="select" style={{ width: 'auto' }} value={filters.status}
+            onChange={e => { setFilters(f => ({ ...f, status: e.target.value })); setPage(1); }}>
+            {[{ val: 'All', lbl: t('all') }, { val: 'Win', lbl: t('win') }, { val: 'Lose', lbl: t('lose') }]
+              .map(o => <option key={o.val} value={o.val}>{o.lbl}</option>)}
+          </select>
+          <select className="select" style={{ width: 'auto' }} value={filters.period}
+            onChange={e => { setFilters(f => ({ ...f, period: e.target.value })); setPage(1); }}>
+            {PERIODS.map(p => <option key={p.val} value={p.val}>{p.label}</option>)}
+          </select>
           <button className="btn btn-ghost" onClick={() => { setFilters({ type: 'All', status: 'All', period: 'All', search: '' }); setPage(1); }}>
-            ↺ Reset
+            {t('reset')}
           </button>
         </div>
       </div>
@@ -85,41 +102,37 @@ export default function Trades() {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr>
-                {['#', 'Date', 'Market', 'Type', 'Entry', 'Close', 'Qty', 'Status', 'Amount', 'Session', 'Actions'].map(h =>
-                  <th key={h}>{h}</th>
-                )}
-              </tr>
+              <tr>{tableHeaders.map(h => <th key={h}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {loading && <tr><td colSpan={11} style={{ textAlign: 'center', padding: 32 }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>}
-              {!loading && trades.length === 0 && <tr><td colSpan={11} style={{ textAlign: 'center', color: 'var(--dim)', padding: 32 }}>No trades found</td></tr>}
-              {!loading && trades.map(t => {
-                const id = t.id_trade || t.id;
+              {!loading && trades.length === 0 && <tr><td colSpan={11} style={{ textAlign: 'center', color: 'var(--dim)', padding: 32 }}>{t('no_trades_found')}</td></tr>}
+              {!loading && trades.map(tr => {
+                const id = tr.id_trade || tr.id;
                 return (
-                  <tr key={id} style={{ background: t.status === 'win' ? 'rgba(0,230,118,0.025)' : 'rgba(255,71,87,0.025)' }}>
+                  <tr key={id} style={{ background: tr.status === 'win' ? 'rgba(0,230,118,0.025)' : 'rgba(255,71,87,0.025)' }}>
                     <td className="muted mono" style={{ fontSize: 12 }}>{id}</td>
-                    <td className="muted">{t.date_trade}</td>
-                    <td style={{ fontWeight: 700 }}>{t.marcher}</td>
-                    <td className={t.type_trd === 'buy' ? 'green bold' : 'red bold'}>{t.type_trd?.toUpperCase()}</td>
-                    <td className="mono">{t.point_entree}</td>
-                    <td className="mono">{t.point_sortie}</td>
-                    <td className="mono muted">{t.nbr_contrat} {t.qty_type?.includes('lot') ? 'L' : ''}</td>
+                    <td className="muted">{tr.date_trade}</td>
+                    <td style={{ fontWeight: 700 }}>{tr.marcher}</td>
+                    <td className={tr.type_trd === 'buy' ? 'green bold' : 'red bold'}>{tr.type_trd?.toUpperCase()}</td>
+                    <td className="mono">{tr.point_entree}</td>
+                    <td className="mono">{tr.point_sortie}</td>
+                    <td className="mono muted">{tr.nbr_contrat} {tr.qty_type?.includes('lot') ? 'L' : ''}</td>
                     <td>
-                      <span className={`badge ${t.status === 'win' ? 'badge-green' : 'badge-red'}`}>
-                        {t.status?.toUpperCase()}
+                      <span className={`badge ${tr.status === 'win' ? 'badge-green' : 'badge-red'}`}>
+                        {tr.status === 'win' ? t('win')?.toUpperCase() : t('lose')?.toUpperCase()}
                       </span>
                     </td>
-                    <td className={`mono bold ${t.status === 'win' ? 'green' : 'red'}`}>
-                      {t.status === 'win' ? '+' : '-'}{Math.abs(t.montant).toFixed(2)}$
+                    <td className={`mono bold ${tr.status === 'win' ? 'green' : 'red'}`}>
+                      {tr.status === 'win' ? '+' : '-'}{Math.abs(tr.montant).toFixed(2)}$
                     </td>
-                    <td className="muted">{t.sessions}</td>
+                    <td className="muted">{tr.sessions}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-ghost" style={{ padding: '3px 8px', fontSize: 11 }}
-                          onClick={() => setEditTrade(t)}>Edit</button>
+                          onClick={() => setEditTrade(tr)}>{t('edit')}</button>
                         <button className="btn btn-danger" style={{ padding: '3px 8px', fontSize: 11 }}
-                          onClick={() => deleteTrade(id)}>Del</button>
+                          onClick={() => deleteTrade(id)}>{t('delete')}</button>
                       </div>
                     </td>
                   </tr>
@@ -129,9 +142,9 @@ export default function Trades() {
           </table>
         </div>
         <div className="pagination">
-          <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>← Prev</button>
-          <span className="page-info">Page {page} / {totalPages} · {total} trades</span>
-          <button className="btn btn-ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next →</button>
+          <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>{t('prev')}</button>
+          <span className="page-info">{t('page_of')} {page} {t('of')} {totalPages} · {total} {t('total_trades_label')}</span>
+          <button className="btn btn-ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>{t('next')}</button>
         </div>
       </div>
 
@@ -141,6 +154,7 @@ export default function Trades() {
 }
 
 function EditModal({ trade, onClose, onSave }) {
+  const { t } = useLang();
   const [form, setForm] = useState({
     marcher: trade.marcher || '',
     type_trd: trade.type_trd || 'buy',
@@ -153,10 +167,9 @@ function EditModal({ trade, onClose, onSave }) {
     type_close: trade.type_close || 'Target',
     sessions: trade.sessions || 'LON',
   });
-  const [newImage, setNewImage]     = useState(null);   // File selected by user
-  const [preview, setPreview]       = useState(null);   // blob URL for preview
-  const [uploading, setUploading]   = useState(false);
-  // Existing image from the trade record
+  const [newImage, setNewImage]   = useState(null);
+  const [preview, setPreview]     = useState(null);
+  const [uploading, setUploading] = useState(false);
   const existingImg = trade.path || trade.image || null;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -183,18 +196,17 @@ function EditModal({ trade, onClose, onSave }) {
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="card" style={{ width: 560, maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-          <div style={{ fontWeight: 700 }}>Edit Trade #{trade.id_trade || trade.id}</div>
+          <div style={{ fontWeight: 700 }}>{t('edit_trade')} #{trade.id_trade || trade.id}</div>
           <button className="btn btn-ghost" style={{ padding: '3px 8px' }} onClick={onClose}>✕</button>
         </div>
 
-        {/* Trade fields */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {[
-            ['Market', 'marcher', 'text'],
-            ['Entry', 'point_entree', 'number'],
-            ['Close', 'point_sortie', 'number'],
-            ['Amount ($)', 'montant', 'number'],
-            ['Qty', 'nbr_contrat', 'number'],
+            [t('market'), 'marcher', 'text'],
+            [t('entry'),  'point_entree', 'number'],
+            [t('col_close'), 'point_sortie', 'number'],
+            [t('amount'), 'montant', 'number'],
+            [t('qty'),    'nbr_contrat', 'number'],
           ].map(([label, key, type]) => (
             <div key={key} className="form-group">
               <label className="form-label">{label}</label>
@@ -203,10 +215,10 @@ function EditModal({ trade, onClose, onSave }) {
             </div>
           ))}
           {[
-            ['Type', 'type_trd', ['buy', 'sell']],
-            ['Status', 'status', ['win', 'lose']],
-            ['Close By', 'type_close', ['Target', 'Stop Loss', 'Manual']],
-            ['Session', 'sessions', ['LON', 'NY', 'ASI']],
+            [t('type'),     'type_trd',   ['buy', 'sell']],
+            [t('status'),   'status',     ['win', 'lose']],
+            [t('close_by'), 'type_close', [t('target'), t('stop_loss'), t('manual')]],
+            [t('session'),  'sessions',   ['LON', 'NY', 'ASI']],
           ].map(([label, key, opts]) => (
             <div key={key} className="form-group">
               <label className="form-label">{label}</label>
@@ -217,49 +229,34 @@ function EditModal({ trade, onClose, onSave }) {
           ))}
         </div>
 
-        {/* Screenshot section */}
         <div style={{ marginTop: 20 }}>
           <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>
-            📷 Screenshot
+            {t('screenshot')}
           </label>
-
-          {/* Show existing image if present and no new one selected */}
           {existingImg && !preview && (
-            <div style={{ marginBottom: 10, position: 'relative' }}>
-              <img
-                src={existingImg}
-                alt="Trade screenshot"
+            <div style={{ marginBottom: 10 }}>
+              <img src={existingImg} alt="Trade screenshot"
                 style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8,
                   border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
-                onClick={() => window.open(existingImg, '_blank')}
-              />
-              <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 4 }}>
-                Current screenshot — click to open full size
-              </div>
+                onClick={() => window.open(existingImg, '_blank')} />
+              <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 4 }}>{t('current_screenshot')}</div>
             </div>
           )}
-
-          {/* Preview of newly selected image */}
           {preview && (
-            <div style={{ marginBottom: 10, position: 'relative' }}>
-              <img
-                src={preview}
-                alt="New screenshot"
+            <div style={{ marginBottom: 10 }}>
+              <img src={preview} alt="New screenshot"
                 style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8,
-                  border: '1px solid rgba(0,230,118,0.3)' }}
-              />
+                  border: '1px solid rgba(0,230,118,0.3)' }} />
               <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4 }}>
-                ✓ New image selected: {newImage?.name}
+                {t('new_img_selected')}: {newImage?.name}
               </div>
             </div>
           )}
-
-          {/* Upload button */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <label style={{ cursor: 'pointer', flex: 1 }}>
               <div className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }}
                 onClick={() => document.getElementById('edit-img-input').click()}>
-                {newImage ? '🔄 Change image' : existingImg ? '🔄 Replace screenshot' : '📎 Add screenshot'}
+                {newImage ? t('change_image') : existingImg ? t('replace_screenshot') : t('add_screenshot')}
               </div>
               <input id="edit-img-input" type="file" accept="image/*" style={{ display: 'none' }}
                 onChange={e => {
@@ -269,22 +266,17 @@ function EditModal({ trade, onClose, onSave }) {
             </label>
             {(newImage || (existingImg && !preview)) && (
               <button className="btn btn-danger" style={{ padding: '6px 12px', fontSize: 12 }}
-                onClick={() => {
-                  setNewImage(null);
-                  setPreview(null);
-                  // Signal server to remove image
-                  setForm(f => ({ ...f, image: '', image_name: '' }));
-                }}>
-                ✕ Remove
+                onClick={() => { setNewImage(null); setPreview(null); setForm(f => ({ ...f, image: '', image_name: '' })); }}>
+                {t('remove')}
               </button>
             )}
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-ghost" onClick={onClose}>{t('cancel')}</button>
           <button className="btn btn-primary" disabled={uploading} onClick={handleSave}>
-            {uploading ? 'Uploading...' : 'Save Changes'}
+            {uploading ? t('uploading') : t('save_changes')}
           </button>
         </div>
       </div>

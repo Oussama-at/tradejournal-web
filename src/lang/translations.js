@@ -221,6 +221,40 @@ const translations = {
     language:           'Language',
     lang_en:            'English',
     lang_ar:            'العربية',
+
+    // Dashboard extras
+    period:             'Period',
+    refresh:            'Refresh',
+    all_dates:          'All dates',
+    today_pnl:          'Today P&L',
+    todays_performance: "Today's performance",
+
+    // Subscriptions extras
+    subs_title:              'Subscriptions',
+    total_subscriptions:     'total subscriptions',
+    assign_pack:             'Assign Pack',
+    assign_sub_title:        'Assign Subscription to User',
+    pack:                    'Pack',
+    payment:                 'Payment',
+    assign:                  'Assign',
+    select_user_placeholder: 'Select user...',
+    free_pack:               'Free — No Payment',
+    expires:                 'Expires',
+    days_left:               'Days Left',
+    active:                  'Active',
+    expired:                 'Expired',
+    revoke:                  'Revoke',
+    revoke_sub_title:        'Revoke Subscription?',
+    revoke_sub_msg:          'The user will lose access immediately.',
+    no_subscriptions:        'No subscriptions',
+    search_by_username:      'Search by username...',
+
+    // Status badges
+    closed:              'Closed',
+    deactivate:          'Deactivate',
+    activate:            'Activate',
+    delete_trade_confirm:'This trade will be permanently removed.',
+    maybe_later:         'Maybe later',
   },
 
   ar: {
@@ -442,6 +476,40 @@ const translations = {
     language:           'اللغة',
     lang_en:            'English',
     lang_ar:            'العربية',
+
+    // Dashboard extras
+    period:             'الفترة',
+    refresh:            'تحديث',
+    all_dates:          'كل التواريخ',
+    today_pnl:          'ربح/خسارة اليوم',
+    todays_performance: 'أداء اليوم',
+
+    // Subscriptions extras
+    subs_title:              'الاشتراكات',
+    total_subscriptions:     'إجمالي الاشتراكات',
+    assign_pack:             'تعيين باقة',
+    assign_sub_title:        'تعيين اشتراك للمستخدم',
+    pack:                    'الباقة',
+    payment:                 'الدفع',
+    assign:                  'تعيين',
+    select_user_placeholder: 'اختر مستخدم...',
+    free_pack:               'مجاني — بدون دفع',
+    expires:                 'تاريخ الانتهاء',
+    days_left:               'الأيام المتبقية',
+    active:                  'نشط',
+    expired:                 'منتهي',
+    revoke:                  'إلغاء',
+    revoke_sub_title:        'إلغاء الاشتراك؟',
+    revoke_sub_msg:          'سيفقد المستخدم الوصول فوراً.',
+    no_subscriptions:        'لا توجد اشتراكات',
+    search_by_username:      'ابحث باسم المستخدم...',
+
+    // Status badges
+    closed:              'مغلق',
+    deactivate:          'إلغاء التفعيل',
+    activate:            'تفعيل',
+    delete_trade_confirm:'سيتم حذف الصفقة نهائياً.',
+    maybe_later:         'ربما لاحقاً',
   },
 };
 

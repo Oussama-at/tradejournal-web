@@ -128,6 +128,7 @@ function MarketSelector({ value, onChange }) {
    Upgrade Modal
 ───────────────────────────────────────────── */
 function UpgradeModal({ onClose }) {
+  const { t } = useLang();
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
@@ -215,13 +216,13 @@ function UpgradeModal({ onClose }) {
             letterSpacing: 0.3,
           }}
         >
-          Upgrade to PRO →
+          {t('upgrade_pro')}
         </a>
         <button onClick={onClose} style={{
           background: 'none', border: 'none', color: '#5a7a9a',
           fontSize: 13, cursor: 'pointer', padding: '6px 0',
         }}>
-          Maybe later
+          {t('maybe_later') || 'Maybe later'}
         </button>
       </div>
     </div>
@@ -335,13 +336,13 @@ export default function AddTrade() {
           }}>
             <span>
               {tradeCount >= FREE_TRADE_LIMIT
-                ? `🔒 Free plan limit reached (${FREE_TRADE_LIMIT}/${FREE_TRADE_LIMIT} trades). Upgrade to PRO for unlimited trades.`
-                : `⚠️ Free plan: ${tradeCount}/${FREE_TRADE_LIMIT} trades used`}
+                ? `🔒 ${t('free_limit_reached')} (${FREE_TRADE_LIMIT}/${FREE_TRADE_LIMIT}). ${t('upgrade_pro')}`
+                : `⚠️ ${t('free_limit_banner')} ${tradeCount}/${FREE_TRADE_LIMIT} ${t('trades_used')}`}
             </span>
             {tradeCount >= FREE_TRADE_LIMIT && (
               <button type="button" onClick={() => setShowUpgrade(true)}
                 style={{ background: 'linear-gradient(135deg,#00e676,#00c853)', color: '#080c10', fontWeight: 800, fontSize: 12, border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', marginLeft: 12, whiteSpace: 'nowrap' }}>
-                Upgrade to PRO →
+{t('upgrade_pro')}
               </button>
             )}
           </div>

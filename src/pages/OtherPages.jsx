@@ -95,13 +95,13 @@ export function Capital() {
                     <td className={`mono ${cn2 >= 0 ? 'green' : 'red'}`}>{(cn2 >= 0 ? '+' : '')}{parseFloat(cn2 || 0).toFixed(2)}$</td>
                     <td className={roi2 >= 0 ? 'green' : 'red'}>{parseFloat(roi2 || 0).toFixed(2)}%</td>
                     <td className="muted">{(c.date_creation || '').substring(0, 10)}</td>
-                    <td><span className={`badge ${active ? 'badge-green' : 'badge-red'}`}>{active ? 'Active' : 'Closed'}</span></td>
+                    <td><span className={`badge ${active ? 'badge-green' : 'badge-red'}`}>{active ? t('active') || 'Active' : t('closed') || 'Closed'}</span></td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         {active ? (
-                          <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => deactivate(c.id)}>Deactivate</button>
+                          <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => deactivate(c.id)}>{ t('deactivate') || 'Deactivate' }</button>
                         ) : (
-                          <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => activate(c.id)}>Activate</button>
+                          <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => activate(c.id)}>{ t('activate') || 'Activate' }</button>
                         )}
                         <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => deleteCapital(c.id)}>Delete</button>
                       </div>
@@ -263,7 +263,7 @@ export function Users() {
                   <tr key={u.id}>
                     <td style={{ fontWeight: 600 }}>{u.user_name}</td>
                     <td><span className={`badge ${u.role === 'admin' ? 'badge-purple' : 'badge-blue'}`}>{u.role}</span></td>
-                    <td><span className={`badge ${pending ? 'badge-orange' : active ? 'badge-green' : 'badge-red'}`}>{pending ? 'Pending' : active ? 'Active' : 'Expired'}</span></td>
+                    <td><span className={`badge ${pending ? 'badge-orange' : active ? 'badge-green' : 'badge-red'}`}>{pending ? t('pending') : active ? t('active') || 'Active' : t('expired') || 'Expired'}</span></td>
                     <td><span className={`badge ${blocked ? 'badge-red' : 'badge-green'}`}>{blocked ? 'Blocked' : 'OK'}</span></td>
                     <td className="muted">{(u.created_at || '').substring(0, 10)}</td>
                     <td>
@@ -353,7 +353,7 @@ export function Activations() {
     <div>
       <div className="page-header"><div className="page-title">{t('activations_title')}</div></div>
       <div className="grid-4" style={{ marginBottom: 20 }}>
-        {[['Total', data.length, 'blue'], ['Pending', counts.pending || 0, 'orange'], ['Approved', (counts.activated || 0) + (counts.approved || 0), 'green'], ['Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
+        {[[t('total') || 'Total', data.length, 'blue'], [t('pending') || 'Pending', counts.pending || 0, 'orange'], [t('approved') || 'Approved', (counts.activated || 0) + (counts.approved || 0), 'green'], [t('rejected') || 'Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
           <div key={l} className="stat-card"><div className="stat-label">{l}</div><div className={`stat-value ${c}`}>{v}</div></div>
         ))}
       </div>
@@ -407,7 +407,7 @@ export function PasswordReset() {
     <div>
       <div className="page-header"><div className="page-title">{t('pwd_resets_title')}</div></div>
       <div className="grid-4" style={{ marginBottom: 20 }}>
-        {[['Total', reqs.length, 'blue'], ['Pending', counts.pending || 0, 'orange'], ['Approved', counts.approved || 0, 'green'], ['Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
+        {[[t('total') || 'Total', reqs.length, 'blue'], [t('pending') || 'Pending', counts.pending || 0, 'orange'], [t('approved') || 'Approved', counts.approved || 0, 'green'], [t('rejected') || 'Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
           <div key={l} className="stat-card"><div className="stat-label">{l}</div><div className={`stat-value ${c}`}>{v}</div></div>
         ))}
       </div>

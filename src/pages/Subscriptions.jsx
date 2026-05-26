@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
+import { useLang } from '../lang/LangContext';
 
 const PACK_OPTIONS = ['trial', '6months', '1year', 'lifetime'];
 const PACK_LABELS  = { trial: '24h Trial', '6months': '6 Months', '1year': '1 Year', lifetime: 'Lifetime' };
+
+// Payment options per pack
+const PAYMENT_OPTIONS = {
+  trial:    null,                                // free — no payment
+  '6months': ['manual', 'card', 'btc', 'usdt', 'eth'],
+  '1year':   ['manual', 'card', 'btc', 'usdt', 'eth'],
+  lifetime:  ['manual'],                         // only manual (WhatsApp)
+};
 
 function packBadgeClass(pack, expired) {
   if (expired) return 'sub-expired';
@@ -18,6 +27,7 @@ function daysLeft(dateStr) {
 
 export default function Subscriptions() {
   const showConfirm = useConfirm();
+  const { t } = useLang();
   const [subs,    setSubs]    = useState([]);
   const [users,   setUsers]   = useState([]);
   const [search,  setSearch]  = useState('');
@@ -25,7 +35,6 @@ export default function Subscriptions() {
   const [showAdd, setShowAdd] = useState(false);
   const [editSub, setEditSub] = useState(null);
 
-  // New subscription form
   const [newSub, setNewSub] = useState({ user_id: '', pack: 'trial', payment_method: 'manual' });
 
   useEffect(() => { load(); }, []);
@@ -33,19 +42,28 @@ export default function Subscriptions() {
   async function load() {
     const [subRes, userRes] = await Promise.all([
       api.get('/admin/subscriptions'),
-      api.get('/admin/users'),
+      api.get('/admin/users?page=1&limit=9999'),
     ]);
     setSubs(subRes?.data?.subscriptions || []);
     setUsers(userRes?.data?.users || []);
   }
 
+  // When pack changes, reset payment_method to first valid option (or '' if free)
+  function handlePackChange(pack) {
+    const opts = PAYMENT_OPTIONS[pack];
+    const defaultPayment = opts ? opts[0] : '';
+    setNewSub(s => ({ ...s, pack, payment_method: defaultPayment }));
+  }
+
   async function createSub() {
-    if (!newSub.user_id) { setMsg({ type: 'error', text: 'Select a user' }); return; }
-    const res = await api.post('/admin/subscriptions', newSub);
+    if (!newSub.user_id) { setMsg({ type: 'error', text: t('select_user') || 'Select a user' }); return; }
+    const payload = { ...newSub };
+    if (!PAYMENT_OPTIONS[newSub.pack]) delete payload.payment_method; // no payment for free/trial
+    const res = await api.post('/admin/subscriptions', payload);
     if (res?.success) {
-      setMsg({ type: 'success', text: '✓ Subscription created!' });
+      setMsg({ type: 'success', text: '✓ ' + (t('sub_created') || 'Subscription created!') });
       setShowAdd(false);
-      setNewSub({ user_id: '', pack: 'trial', payment_method: 'manual' });
+      setNewSub({ user_id: '', pack: 'trial', payment_method: '' });
       load();
     } else {
       setMsg({ type: 'error', text: res?.message || 'Failed' });
@@ -59,13 +77,18 @@ export default function Subscriptions() {
   }
 
   async function revokeSub(id) {
-    const ok = await showConfirm({ title: 'Revoke Subscription?', message: 'The user will lose access immediately.', type: 'danger', confirmLabel: 'Revoke', cancelLabel: 'Cancel' });
+    const ok = await showConfirm({
+      title: t('revoke_sub_title') || 'Revoke Subscription?',
+      message: t('revoke_sub_msg') || 'The user will lose access immediately.',
+      type: 'danger',
+      confirmLabel: t('revoke') || 'Revoke',
+      cancelLabel: t('cancel'),
+    });
     if (!ok) return;
     await api.delete(`/admin/subscriptions/${id}`);
     load();
   }
 
-  // Stats
   const counts = subs.reduce((a, s) => {
     const days = daysLeft(s.expires_at);
     const expired = s.pack !== 'lifetime' && days !== null && days <= 0;
@@ -77,14 +100,17 @@ export default function Subscriptions() {
     !search || s.user_name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const paymentOpts = PAYMENT_OPTIONS[newSub.pack];
+  const isFreePack  = !paymentOpts;
+
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div className="page-title">Subscriptions</div>
-          <div className="page-sub">{subs.length} total subscriptions</div>
+          <div className="page-title">{t('subs_title') || 'Subscriptions'}</div>
+          <div className="page-sub">{subs.length} {t('total_subscriptions') || 'total subscriptions'}</div>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ Assign Pack</button>
+        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ {t('assign_pack') || 'Assign Pack'}</button>
       </div>
 
       {/* Stats */}
@@ -107,33 +133,53 @@ export default function Subscriptions() {
       {/* Add subscription */}
       {showAdd && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ fontWeight: 700, marginBottom: 12 }}>Assign Subscription to User</div>
+          <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('assign_sub_title') || 'Assign Subscription to User'}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 10, alignItems: 'flex-end' }}>
+
+            {/* USER */}
             <div className="form-group">
-              <label className="form-label">User</label>
+              <label className="form-label">{t('col_user') || 'User'}</label>
               <select className="select" value={newSub.user_id}
                 onChange={e => setNewSub(s => ({ ...s, user_id: e.target.value }))}>
-                <option value="">Select user...</option>
+                <option value="">{t('select_user_placeholder') || 'Select user...'}</option>
                 {users.map(u => <option key={u.id} value={u.id}>{u.user_name}</option>)}
               </select>
             </div>
+
+            {/* PACK */}
             <div className="form-group">
-              <label className="form-label">Pack</label>
-              <select className="select" value={newSub.pack}
-                onChange={e => setNewSub(s => ({ ...s, pack: e.target.value }))}>
+              <label className="form-label">{t('pack') || 'Pack'}</label>
+              <select className="select" value={newSub.pack} onChange={e => handlePackChange(e.target.value)}>
                 {PACK_OPTIONS.map(p => <option key={p} value={p}>{PACK_LABELS[p]}</option>)}
               </select>
             </div>
+
+            {/* PAYMENT */}
             <div className="form-group">
-              <label className="form-label">Payment</label>
-              <select className="select" value={newSub.payment_method}
-                onChange={e => setNewSub(s => ({ ...s, payment_method: e.target.value }))}>
-                {['manual', 'card', 'btc', 'usdt', 'eth'].map(m => <option key={m}>{m}</option>)}
-              </select>
+              <label className="form-label">{t('payment') || 'Payment'}</label>
+              {isFreePack ? (
+                <div className="select" style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(0,230,118,0.08)', border: '1px solid var(--green)',
+                  color: 'var(--green)', fontWeight: 600, fontSize: 12, cursor: 'default',
+                }}>
+                  🎁 {t('free_pack') || 'Free — No Payment'}
+                </div>
+              ) : (
+                <select className="select" value={newSub.payment_method}
+                  onChange={e => setNewSub(s => ({ ...s, payment_method: e.target.value }))}>
+                  {paymentOpts.map(m => (
+                    <option key={m} value={m}>
+                      {m === 'manual' ? `${m} (WhatsApp)` : m}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
+
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-primary" onClick={createSub}>Assign</button>
-              <button className="btn btn-ghost" onClick={() => setShowAdd(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={createSub}>{t('assign') || 'Assign'}</button>
+              <button className="btn btn-ghost" onClick={() => setShowAdd(false)}>{t('cancel')}</button>
             </div>
           </div>
         </div>
@@ -141,7 +187,7 @@ export default function Subscriptions() {
 
       {/* Search */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <input className="input" placeholder="Search by username..." value={search}
+        <input className="input" placeholder={t('search_by_username') || 'Search by username...'} value={search}
           onChange={e => setSearch(e.target.value)} />
       </div>
 
@@ -149,11 +195,23 @@ export default function Subscriptions() {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr>{['User', 'Pack', 'Expires', 'Days Left', 'Payment', 'Status', 'Actions'].map(h => <th key={h}>{h}</th>)}</tr>
+              <tr>
+                {[
+                  t('col_user')    || 'User',
+                  t('pack')        || 'Pack',
+                  t('expires')     || 'Expires',
+                  t('days_left')   || 'Days Left',
+                  t('payment')     || 'Payment',
+                  t('col_status')  || 'Status',
+                  t('col_actions') || 'Actions',
+                ].map(h => <th key={h}>{h}</th>)}
+              </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--dim)', padding: 32 }}>No subscriptions</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--dim)', padding: 32 }}>
+                  {t('no_subscriptions') || 'No subscriptions'}
+                </td></tr>
               )}
               {filtered.map(s => {
                 const days = daysLeft(s.expires_at);
@@ -184,30 +242,36 @@ export default function Subscriptions() {
                         <span style={{ color: 'var(--gold)', fontWeight: 700 }}>∞</span>
                       ) : days !== null ? (
                         <span style={{ fontWeight: 700, color: expired ? 'var(--red)' : days <= 7 ? 'var(--orange)' : 'var(--green)' }}>
-                          {expired ? 'Expired' : `${days}d`}
+                          {expired ? (t('expired') || 'Expired') : `${days}d`}
                         </span>
                       ) : '—'}
                     </td>
-                    <td className="muted" style={{ fontSize: 12 }}>{s.payment_method || '—'}</td>
+                    <td className="muted" style={{ fontSize: 12 }}>
+                      {s.pack === 'trial'
+                        ? <span style={{ color: 'var(--green)', fontWeight: 600 }}>🎁 {t('free_pack') || 'Free'}</span>
+                        : s.payment_method
+                          ? (s.payment_method === 'manual' ? `${s.payment_method} (WhatsApp)` : s.payment_method)
+                          : '—'}
+                    </td>
                     <td>
                       <span className={`badge ${expired ? 'badge-red' : 'badge-green'}`}>
-                        {expired ? 'Expired' : 'Active'}
+                        {expired ? (t('expired') || 'Expired') : (t('active') || 'Active')}
                       </span>
                     </td>
                     <td>
                       {isEdit ? (
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 10px' }}
-                            onClick={() => updateSub(s.id, { pack: editSub.pack })}>Save</button>
+                            onClick={() => updateSub(s.id, { pack: editSub.pack })}>{t('save_changes') || 'Save'}</button>
                           <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 10px' }}
-                            onClick={() => setEditSub(null)}>Cancel</button>
+                            onClick={() => setEditSub(null)}>{t('cancel')}</button>
                         </div>
                       ) : (
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 8px' }}
-                            onClick={() => setEditSub({ id: s.id, pack: s.pack })}>✏️ Edit</button>
+                            onClick={() => setEditSub({ id: s.id, pack: s.pack })}>✏️ {t('edit')}</button>
                           <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }}
-                            onClick={() => revokeSub(s.id)}>Revoke</button>
+                            onClick={() => revokeSub(s.id)}>{t('revoke') || 'Revoke'}</button>
                         </div>
                       )}
                     </td>
