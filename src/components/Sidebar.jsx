@@ -170,7 +170,7 @@ function TrialCountdownWidget({ sub, navigate }) {
         </div>
 
         {/* HH:MM:SS digits */}
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
           {isExpired ? (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 11, color: '#e74c3c', fontWeight: 700, marginBottom: 6 }}>
@@ -207,9 +207,10 @@ function TrialCountdownWidget({ sub, navigate }) {
           ) : (
             <>
               <div style={{
-                fontFamily: 'monospace', fontSize: 22, fontWeight: 900,
-                color: textColor, letterSpacing: 2, lineHeight: 1,
+                fontFamily: 'monospace', fontSize: 16, fontWeight: 900,
+                color: textColor, letterSpacing: 0, lineHeight: 1,
                 textShadow: `0 0 10px ${glowColor}`,
+                whiteSpace: 'nowrap',
               }}>
                 {String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}
               </div>
