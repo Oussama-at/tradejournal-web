@@ -511,10 +511,8 @@ const translations = {
     delete_trade_confirm:'سيتم حذف الصفقة نهائياً.',
     maybe_later:         'ربما لاحقاً',
   },
-};
 
   fr: {
-    // Sidebar nav
     nav_dashboard:      'Tableau de bord',
     nav_chart:          'Graphique P&L',
     nav_trades:         'Trades',
@@ -528,9 +526,9 @@ const translations = {
     nav_pwd_resets:     'Réinitialisation',
     nav_password:       'Modifier le mot de passe',
     nav_profile:        'Mon profil',
+    nav_myplan:         'Mon abonnement',
     logout:             'Déconnexion',
 
-    // Dashboard
     dashboard_title:    'Tableau de bord',
     dashboard_sub:      'Aperçu de vos performances',
     total_trades:       'Total des trades',
@@ -541,10 +539,9 @@ const translations = {
     avg_win:            'Gain moyen',
     avg_loss:           'Perte moyenne',
     capital:            'Capital',
-    no_trades:          'Aucun trade pour l\'instant',
+    no_trades:          'Aucun trade pour le moment',
     monthly_pnl:        'P&L mensuel',
 
-    // Trades page
     trades_title:       'Trades',
     total_trades_label: 'trades au total',
     search_market:      'Rechercher un marché...',
@@ -576,12 +573,11 @@ const translations = {
     page_of:            'Page',
     of:                 '/',
 
-    // Edit modal
     edit_trade:         'Modifier le trade',
-    screenshot:         '📷 Capture d\'écran',
-    current_screenshot: 'Capture actuelle — cliquez pour agrandir',
+    screenshot:         '📷 Capture',
+    current_screenshot: 'Capture actuelle — cliquer pour agrandir',
     new_img_selected:   '✓ Nouvelle image sélectionnée',
-    change_image:       '🔄 Changer l\'image',
+    change_image:       '🔄 Changer image',
     replace_screenshot: '🔄 Remplacer la capture',
     add_screenshot:     '📎 Ajouter une capture',
     remove:             '✕ Supprimer',
@@ -600,12 +596,11 @@ const translations = {
     stop_loss:          'Stop Loss',
     manual:             'Manuel',
 
-    // Add Trade page
     add_trade_title:    'Ajouter un trade',
     add_trade_sub:      'Enregistrer une nouvelle entrée',
     direction:          'Direction',
     result:             'Résultat',
-    prices_amount:      'Prix & Montant',
+    prices_amount:      'Prix et Montant',
     entry_price:        'Prix d\'entrée',
     close_price:        'Prix de clôture',
     pts_preview:        'pts aperçu',
@@ -621,7 +616,6 @@ const translations = {
     free_limit_reached: 'Limite du plan gratuit atteinte',
     upgrade_pro:        'Passer à PRO →',
 
-    // Capital page
     capital_title:      'Archive capital',
     capital_archive:    'Archive capital',
     add_capital:        'Ajouter du capital',
@@ -636,12 +630,9 @@ const translations = {
     col_starting:       'Initial',
     col_current:        'Actuel',
     col_created:        'Créé',
-    col_status:         'Statut',
-    col_actions:        'Actions',
     col_net_pnl:        'P&L net',
     col_roi:            'ROI',
 
-    // Withdraw page
     withdraw_title:     'Retrait',
     available_capital:  'Capital disponible',
     total_withdrawn:    'Total retiré',
@@ -650,10 +641,8 @@ const translations = {
     withdrawal_history: 'Historique des retraits',
     col_note:           'Note',
     col_amount:         'Montant',
-    col_date:           'Date',
     confirm_withdrawal: 'Confirmer le retrait',
 
-    // Users page
     users_title:        'Gérer les utilisateurs',
     add_user:           '+ Ajouter un utilisateur',
     search_users:       'Rechercher des utilisateurs...',
@@ -663,11 +652,9 @@ const translations = {
     col_access:         'Accès',
     users_count:        'utilisateurs',
 
-    // Logs page
     logs_title:         'Journaux d\'activité',
     search_logs:        'Rechercher dans les logs...',
 
-    // Activations page
     activations_title:  'Activations',
     col_device:         'Appareil',
     col_id:             'ID',
@@ -676,10 +663,8 @@ const translations = {
     pending:            'En attente',
     rejected:           'Rejeté',
 
-    // Password Resets page
-    pwd_resets_title:   'Réinitialisations de mot de passe',
+    pwd_resets_title:   'Réinitialisations',
 
-    // Profile page
     my_profile:         'Mon profil',
     profile_title:      'Mon profil',
     member_since:       'Membre depuis',
@@ -694,7 +679,6 @@ const translations = {
     your_answer:        'Votre réponse...',
     save_questions:     'Enregistrer les questions',
 
-    // Update Password page
     password_title:     'Modifier le mot de passe',
     change_password:    'Modifier le mot de passe',
     current_password:   'Mot de passe actuel',
@@ -702,14 +686,12 @@ const translations = {
     confirm_password:   'Confirmer le mot de passe',
     update_password:    'Mettre à jour',
 
-    // Dashboard page
     dashboard_overview: 'Aperçu de vos performances de trading',
     recent_trades:      'Trades récents',
 
-    // Chart page
     chart_title:        'Graphique P&L',
     cumulative_pnl:     'P&L Cumulatif',
-    daily_pnl:          'P&L Quotidien (Gains vs Pertes)',
+    daily_pnl:          'P&L Quotidien',
     by_session:         'Par Session',
     top_markets:        'Meilleurs Marchés',
     monthly_chart:      'P&L Mensuel',
@@ -720,19 +702,16 @@ const translations = {
     month:              'Mois',
     today_btn:          'Aujourd\'hui',
 
-    // Language
     language:           'Langue',
     lang_en:            'English',
     lang_ar:            'العربية',
 
-    // Dashboard extras
     period:             'Période',
     refresh:            'Actualiser',
     all_dates:          'Toutes les dates',
     today_pnl:          'P&L Aujourd\'hui',
     todays_performance: 'Performance du jour',
 
-    // Subscriptions extras
     subs_title:              'Abonnements',
     total_subscriptions:     'abonnements au total',
     assign_pack:             'Attribuer un pack',
@@ -741,7 +720,7 @@ const translations = {
     payment:                 'Paiement',
     assign:                  'Attribuer',
     select_user_placeholder: 'Sélectionner un utilisateur...',
-    free_pack:               'Gratuit — Sans paiement',
+    free_pack:               'Gratuit',
     expires:                 'Expire',
     days_left:               'Jours restants',
     active:                  'Actif',
@@ -752,15 +731,11 @@ const translations = {
     no_subscriptions:        'Aucun abonnement',
     search_by_username:      'Rechercher par nom d\'utilisateur...',
 
-    // Status badges
     closed:              'Clôturé',
     deactivate:          'Désactiver',
     activate:            'Activer',
-    delete_trade_confirm:'Ce trade sera définitivement supprimé.',
+    delete_trade_confirm: 'Ce trade sera définitivement supprimé.',
     maybe_later:         'Plus tard',
-
-    // My Plan
-    nav_myplan:          'Mon abonnement',
   },
 };
 
