@@ -185,7 +185,10 @@ export default function Subscriptions() {
 
   const counts = subs.reduce((a, s) => {
     const days = daysLeft(s.expires_at);
-    const expired = s.pack !== 'lifetime' && days !== null && days <= 0;
+    const expired = s.pack !== 'lifetime' && (
+      s.status === 'expired' ||
+      (s.status !== 'active' && days !== null && days <= 0)
+    );
     a[expired ? 'expired' : s.pack] = (a[expired ? 'expired' : s.pack] || 0) + 1;
     return a;
   }, {});
@@ -337,7 +340,12 @@ export default function Subscriptions() {
               )}
               {filtered.map(s => {
                 const days    = daysLeft(s.expires_at);
-                const expired = s.pack !== 'lifetime' && days !== null && days <= 0;
+                // Trust the server's status field when available;
+                // only fall back to date math if the API doesn't provide one.
+                const expired = s.pack !== 'lifetime' && (
+                  s.status === 'expired' ||
+                  (s.status !== 'active' && days !== null && days <= 0)
+                );
                 const isEdit  = editSub?.id === s.id;
                 return (
                   <tr key={s.id}>
