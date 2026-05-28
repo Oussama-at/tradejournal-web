@@ -12,6 +12,7 @@ import Chart from './pages/Chart';
 import Trades from './pages/Trades';
 import AddTrade from './pages/AddTrade';
 import Subscriptions from './pages/Subscriptions';
+import MyPlan from './pages/MyPlan';
 import {
   Capital, Withdraw, Users, Logs,
   Activations, PasswordReset, Profile, Password
@@ -77,6 +78,7 @@ function AppLayout() {
           <Route path="/logs"             element={<AdminRoute><Logs /></AdminRoute>} />
           <Route path="/activations"      element={<AdminRoute><Activations /></AdminRoute>} />
           <Route path="/password-resets"  element={<AdminRoute><PasswordReset /></AdminRoute>} />
+          <Route path="/my-plan"          element={<MyPlan />} />
           <Route path="/profile"          element={<Profile />} />
           <Route path="/password"         element={<Password />} />
           <Route path="*"                 element={<Navigate to="/" replace />} />

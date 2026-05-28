@@ -13,6 +13,7 @@ const NAV = [
   null,
   { key: 'users',     path: '/users',           tkey: 'nav_users',       icon: '⊞', admin: true },
   { key: 'subs',      path: '/subscriptions',   tkey: 'nav_subs',        icon: '💳', admin: true },
+  { key: 'myplan',    path: '/my-plan',          tkey: 'nav_myplan',      icon: '💳', userOnly: true },
   { key: 'logs',      path: '/logs',            tkey: 'nav_logs',        icon: '≡', admin: true },
   { key: 'act',       path: '/activations',     tkey: 'nav_activations', icon: '★', admin: true },
   { key: 'passreset', path: '/password-resets', tkey: 'nav_pwd_resets',  icon: '⟳', admin: true },
@@ -79,6 +80,7 @@ export default function Sidebar({ capitalInfo }) {
         {NAV.map((item, i) => {
           if (!item) return <div key={i} className="nav-divider" />;
           if (item.admin && !isAdmin) return null;
+          if (item.userOnly && isAdmin) return null;
           return (
             <NavLink
               key={item.key}
