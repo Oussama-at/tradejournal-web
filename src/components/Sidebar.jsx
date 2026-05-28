@@ -27,12 +27,22 @@ const PACK_LABELS = {
   lifetime: { label: 'Lifetime',  cls: 'lifetime', color: 'var(--gold, #d4af37)' },
 };
 
-// Language config
+// Language config — using real flag images (Windows doesn't render emoji flags)
 const LANGUAGES = [
-  { code: 'en', label: 'English',  flag: '🇬🇧', short: 'EN' },
-  { code: 'ar', label: 'العربية',  flag: '🇦🇪', short: 'AR' },
-  { code: 'fr', label: 'Français', flag: '🇫🇷', short: 'FR' },
+  { code: 'en', label: 'English',  flagUrl: 'https://flagcdn.com/w40/gb.png', short: 'EN' },
+  { code: 'ar', label: 'العربية',  flagUrl: 'https://flagcdn.com/w40/ae.png', short: 'AR' },
+  { code: 'fr', label: 'Français', flagUrl: 'https://flagcdn.com/w40/fr.png', short: 'FR' },
 ];
+
+function FlagImg({ url, size = 20 }) {
+  return (
+    <img
+      src={url}
+      alt=""
+      style={{ width: size, height: Math.round(size * 0.67), borderRadius: 3, objectFit: 'cover', flexShrink: 0 }}
+    />
+  );
+}
 
 // ── Live countdown hook ───────────────────────────────────
 function useCountdown(expiresAt) {
@@ -68,18 +78,20 @@ function useCountdown(expiresAt) {
 // ── Trial countdown widget ────────────────────────────────
 function TrialCountdownWidget({ sub, navigate }) {
   const { h, m, s, pct } = useCountdown(sub?.expires_at);
-  const isExpired  = sub?.expires_at && new Date(sub.expires_at) <= new Date();
-  const isUrgent   = !isExpired && h < 1;
-  const isWarning  = !isExpired && !isUrgent && h < 6;
+  const hasExpiry  = !!sub?.expires_at;
+  const isExpired  = hasExpiry && new Date(sub.expires_at) <= new Date();
+  const isUrgent   = hasExpiry && !isExpired && h < 1;
+  const isWarning  = hasExpiry && !isExpired && !isUrgent && h < 6;
 
   const trackColor  = isExpired ? '#3a1010' : isUrgent ? '#3a1010' : isWarning ? '#2d2000' : '#0a2a18';
   const fillColor   = isExpired ? '#e74c3c' : isUrgent ? '#e74c3c' : isWarning ? '#f39c12' : '#00e676';
   const glowColor   = isExpired ? 'rgba(231,76,60,0.4)' : isUrgent ? 'rgba(231,76,60,0.35)' : isWarning ? 'rgba(243,156,18,0.35)' : 'rgba(0,230,118,0.3)';
   const textColor   = isExpired ? '#e74c3c' : isUrgent ? '#e74c3c' : isWarning ? '#f39c12' : '#00e676';
 
+  const displayPct = hasExpiry ? pct : 100;
   const radius = 34;
   const circ   = 2 * Math.PI * radius;
-  const dash   = circ * (pct / 100);
+  const dash   = circ * (displayPct / 100);
 
   return (
     <div style={{
@@ -136,7 +148,7 @@ function TrialCountdownWidget({ sub, navigate }) {
             fontSize: 13, fontWeight: 900, color: textColor,
             fontFamily: 'monospace',
           }}>
-            {isExpired ? '0%' : `${Math.round(pct)}%`}
+            {isExpired ? '0%' : !hasExpiry ? '24h' : `${Math.round(pct)}%`}
           </div>
         </div>
 
@@ -157,6 +169,22 @@ function TrialCountdownWidget({ sub, navigate }) {
                 }}
               >
                 Upgrade →
+              </div>
+            </div>
+          ) : !hasExpiry ? (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)', marginBottom: 4 }}>24h Trial</div>
+              <div style={{ fontSize: 10, color: 'var(--dim)', marginBottom: 8 }}>Active</div>
+              <div
+                onClick={() => navigate('/my-plan')}
+                style={{
+                  fontSize: 10, fontWeight: 800, padding: '4px 10px', borderRadius: 7,
+                  cursor: 'pointer', textAlign: 'center',
+                  background: 'linear-gradient(135deg, #00e676, #00c853)',
+                  color: '#000',
+                }}
+              >
+                View Plans →
               </div>
             </div>
           ) : (
@@ -194,7 +222,7 @@ function TrialCountdownWidget({ sub, navigate }) {
       </div>
 
       {/* Progress bar (linear) at bottom */}
-      {!isExpired && (
+      {hasExpiry && !isExpired && (
         <div style={{ marginTop: 10, background: trackColor, borderRadius: 4, height: 3, overflow: 'hidden' }}>
           <div style={{
             height: '100%', width: `${pct}%`,
@@ -231,7 +259,7 @@ function LangSwitcher({ lang, setLang }) {
           boxShadow: open ? '0 0 14px rgba(0,230,118,0.15)' : 'none',
         }}
       >
-        <span style={{ fontSize: 17 }}>{current.flag}</span>
+        <FlagImg url={current.flagUrl} />
         <span style={{ flex: 1, textAlign: 'left' }}>{current.label}</span>
         <span style={{
           fontSize: 10, padding: '2px 6px', borderRadius: 5,
@@ -278,7 +306,7 @@ function LangSwitcher({ lang, setLang }) {
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
               >
-                <span style={{ fontSize: 17 }}>{l.flag}</span>
+                <FlagImg url={l.flagUrl} />
                 <span style={{ flex: 1 }}>{l.label}</span>
                 <span style={{
                   fontSize: 10, padding: '2px 6px', borderRadius: 5, letterSpacing: 1,
@@ -339,8 +367,8 @@ export default function Sidebar({ capitalInfo }) {
         </div>
       )}
 
-      {/* Trial: visual countdown widget */}
-      {isTrial && sub?.expires_at && (
+      {/* Trial countdown widget — show for any trial pack (with or without expires_at) */}
+      {isTrial && (
         <TrialCountdownWidget sub={sub} navigate={navigate} />
       )}
 
