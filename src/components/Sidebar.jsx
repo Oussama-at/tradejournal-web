@@ -77,17 +77,18 @@ function useCountdown(expiresAt) {
 
 // ── Trial countdown widget ────────────────────────────────
 function getEffectiveExpiry(sub) {
+  // If server already gave us expires_at, use it directly
   if (sub?.expires_at) return sub.expires_at;
-  // Fallback: read JWT iat (issued-at) + 24h to derive expiry
+
+  // Fallback: use trial_start stored at login time + 24h
   try {
-    const token = localStorage.getItem('token');
-    if (!token) return null;
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    if (payload.iat) {
-      const expiry = new Date((payload.iat + 24 * 3600) * 1000);
+    const trialStart = localStorage.getItem('trial_start');
+    if (trialStart) {
+      const expiry = new Date(parseInt(trialStart, 10) + 24 * 3600 * 1000);
       return expiry.toISOString();
     }
   } catch {}
+
   return null;
 }
 

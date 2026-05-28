@@ -126,6 +126,10 @@ export function AuthProvider({ children }) {
         const payload = JSON.parse(atob(parts[1]));
         if (payload.exp * 1000 > Date.now()) {
           setUser({ username, token, role: role || 'user' });
+          // One-time migration: seed trial_start from JWT iat if not already stored
+          if (!localStorage.getItem('trial_start') && payload.iat) {
+            localStorage.setItem('trial_start', (payload.iat * 1000).toString());
+          }
           api.get('/subscription/my').then(r => {
             if (r?.data) {
               setSub(r.data);
@@ -166,13 +170,14 @@ export function AuthProvider({ children }) {
   }
 
   function clearStorage() {
-    ['token','username','role','device_id'].forEach(k => localStorage.removeItem(k));
+    ['token','username','role','device_id','trial_start'].forEach(k => localStorage.removeItem(k));
   }
 
   const login = (token, username, role) => {
-    localStorage.setItem('token',    token);
-    localStorage.setItem('username', username);
-    localStorage.setItem('role',     role || 'user');
+    localStorage.setItem('token',       token);
+    localStorage.setItem('username',    username);
+    localStorage.setItem('role',        role || 'user');
+    localStorage.setItem('trial_start', Date.now().toString()); // record exact login time
     setUser({ username, token, role: role || 'user' });
     expiredShownRef.current   = false;
     lifetimeShownRef.current = false;
