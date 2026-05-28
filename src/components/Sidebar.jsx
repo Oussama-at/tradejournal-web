@@ -76,10 +76,26 @@ function useCountdown(expiresAt) {
 }
 
 // ── Trial countdown widget ────────────────────────────────
+function getEffectiveExpiry(sub) {
+  if (sub?.expires_at) return sub.expires_at;
+  // Fallback: read JWT iat (issued-at) + 24h to derive expiry
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload.iat) {
+      const expiry = new Date((payload.iat + 24 * 3600) * 1000);
+      return expiry.toISOString();
+    }
+  } catch {}
+  return null;
+}
+
 function TrialCountdownWidget({ sub, navigate }) {
-  const { h, m, s, pct } = useCountdown(sub?.expires_at);
-  const hasExpiry  = !!sub?.expires_at;
-  const isExpired  = hasExpiry && new Date(sub.expires_at) <= new Date();
+  const effectiveExpiry = getEffectiveExpiry(sub);
+  const { h, m, s, pct } = useCountdown(effectiveExpiry);
+  const hasExpiry  = !!effectiveExpiry;
+  const isExpired  = hasExpiry && new Date(effectiveExpiry) <= new Date();
   const isUrgent   = hasExpiry && !isExpired && h < 1;
   const isWarning  = hasExpiry && !isExpired && !isUrgent && h < 6;
 
