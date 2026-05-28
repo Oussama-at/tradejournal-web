@@ -3,12 +3,16 @@ import translations from './translations';
 
 const LangContext = createContext(null);
 
+const SUPPORTED = ['en', 'ar', 'fr'];
+
 export function LangProvider({ children }) {
-  const [lang, setLang] = useState(() => localStorage.getItem('tj_lang') || 'en');
+  const [lang, setLangState] = useState(() => {
+    const stored = localStorage.getItem('tj_lang');
+    return SUPPORTED.includes(stored) ? stored : 'en';
+  });
 
   const isRTL = lang === 'ar';
 
-  // Apply RTL direction and font to document root
   useEffect(() => {
     document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
     document.documentElement.setAttribute('lang', lang);
@@ -22,8 +26,14 @@ export function LangProvider({ children }) {
     return translations[lang]?.[key] || translations['en']?.[key] || key;
   }
 
+  function setLang(l) {
+    if (SUPPORTED.includes(l)) setLangState(l);
+  }
+
+  // Cycle: en → ar → fr → en
   function toggleLang() {
-    setLang(l => l === 'en' ? 'ar' : 'en');
+    const idx = SUPPORTED.indexOf(lang);
+    setLangState(SUPPORTED[(idx + 1) % SUPPORTED.length]);
   }
 
   return (
