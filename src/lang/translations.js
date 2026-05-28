@@ -17,6 +17,7 @@ const translations = {
     nav_pwd_resets:     'Pwd Resets',
     nav_password:       'Update Password',
     nav_profile:        'My Profile',
+    nav_myplan:         'My Plan',
     logout:             'Logout',
 
     // Dashboard
@@ -272,6 +273,7 @@ const translations = {
     nav_pwd_resets:     'إعادة كلمة المرور',
     nav_password:       'تحديث كلمة المرور',
     nav_profile:        'ملفي الشخصي',
+    nav_myplan:         'خطتي',
     logout:             'تسجيل الخروج',
 
     // Dashboard

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLang } from '../lang/LangContext';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const NAV = [
@@ -13,7 +13,7 @@ const NAV = [
   null,
   { key: 'users',     path: '/users',           tkey: 'nav_users',       icon: '⊞', admin: true },
   { key: 'subs',      path: '/subscriptions',   tkey: 'nav_subs',        icon: '💳', admin: true },
-  { key: 'myplan',    path: '/my-plan',          tkey: 'nav_myplan',      icon: '💳', userOnly: true },
+  { key: 'myplan',    path: '/my-plan',         tkey: 'nav_myplan',      icon: '💳', userOnly: true },
   { key: 'logs',      path: '/logs',            tkey: 'nav_logs',        icon: '≡', admin: true },
   { key: 'act',       path: '/activations',     tkey: 'nav_activations', icon: '★', admin: true },
   { key: 'passreset', path: '/password-resets', tkey: 'nav_pwd_resets',  icon: '⟳', admin: true },
@@ -27,76 +27,287 @@ const PACK_LABELS = {
   lifetime: { label: 'Lifetime',  cls: 'lifetime', color: 'var(--gold, #d4af37)' },
 };
 
-// Language options: cycle EN → AR → FR → EN
-const LANG_CYCLE = {
-  en: { next: 'ar', flag: '🇦🇷', label: 'العربية' },   // currently EN → show AR option
-  ar: { next: 'fr', flag: '🇫🇷', label: 'Français' }, // currently AR → show FR option
-  fr: { next: 'en', flag: '🇬🇧', label: 'English' },   // currently FR → show EN option
-};
-// Correct flags for current language display
-const LANG_FLAG = { en: '🇬🇧', ar: '🇦🇪', fr: '🇫🇷' };
+// Language config
+const LANGUAGES = [
+  { code: 'en', label: 'English',  flag: '🇬🇧', short: 'EN' },
+  { code: 'ar', label: 'العربية',  flag: '🇦🇪', short: 'AR' },
+  { code: 'fr', label: 'Français', flag: '🇫🇷', short: 'FR' },
+];
 
-// Live countdown hook
-function useTrialCountdown(expiresAt) {
-  const [data, setData] = useState({ display: '', hoursLeft: null, expired: false });
+// ── Live countdown hook ───────────────────────────────────
+function useCountdown(expiresAt) {
+  const [state, setState] = useState({ h: 0, m: 0, s: 0, total: 0, pct: 100 });
 
   useEffect(() => {
+    if (!expiresAt) return;
+    // Assume 24h trial from creation — estimate start as expires_at - 24h
+    const totalDuration = 24 * 3600 * 1000;
+
     function calc() {
-      if (!expiresAt) return;
-      const diff = new Date(expiresAt) - new Date();
-      if (diff <= 0) { setData({ display: 'Expired', hoursLeft: 0, expired: true }); return; }
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      setData({
-        display: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`,
-        hoursLeft: diff / 3600000,
-        expired: false,
-      });
+      const now  = Date.now();
+      const end  = new Date(expiresAt).getTime();
+      const diff = end - now;
+      if (diff <= 0) {
+        setState({ h: 0, m: 0, s: 0, total: 0, pct: 0 });
+        return;
+      }
+      const h   = Math.floor(diff / 3600000);
+      const m   = Math.floor((diff % 3600000) / 60000);
+      const s   = Math.floor((diff % 60000) / 1000);
+      const pct = Math.min(100, Math.max(0, (diff / totalDuration) * 100));
+      setState({ h, m, s, total: diff, pct });
     }
     calc();
     const id = setInterval(calc, 1000);
     return () => clearInterval(id);
   }, [expiresAt]);
 
-  return data;
+  return state;
 }
 
+// ── Trial countdown widget ────────────────────────────────
+function TrialCountdownWidget({ sub, navigate }) {
+  const { h, m, s, pct } = useCountdown(sub?.expires_at);
+  const isExpired  = sub?.expires_at && new Date(sub.expires_at) <= new Date();
+  const isUrgent   = !isExpired && h < 1;
+  const isWarning  = !isExpired && !isUrgent && h < 6;
+
+  const trackColor  = isExpired ? '#3a1010' : isUrgent ? '#3a1010' : isWarning ? '#2d2000' : '#0a2a18';
+  const fillColor   = isExpired ? '#e74c3c' : isUrgent ? '#e74c3c' : isWarning ? '#f39c12' : '#00e676';
+  const glowColor   = isExpired ? 'rgba(231,76,60,0.4)' : isUrgent ? 'rgba(231,76,60,0.35)' : isWarning ? 'rgba(243,156,18,0.35)' : 'rgba(0,230,118,0.3)';
+  const textColor   = isExpired ? '#e74c3c' : isUrgent ? '#e74c3c' : isWarning ? '#f39c12' : '#00e676';
+
+  const radius = 34;
+  const circ   = 2 * Math.PI * radius;
+  const dash   = circ * (pct / 100);
+
+  return (
+    <div style={{
+      margin: '4px 12px 8px',
+      background: 'linear-gradient(135deg, rgba(0,0,0,0.4), rgba(20,20,35,0.6))',
+      border: `1px solid ${isExpired || isUrgent ? 'rgba(231,76,60,0.35)' : isWarning ? 'rgba(243,156,18,0.25)' : 'rgba(0,230,118,0.2)'}`,
+      borderRadius: 14,
+      padding: '14px 14px 12px',
+      cursor: isExpired ? 'pointer' : 'default',
+      boxShadow: `0 0 20px ${glowColor}`,
+      transition: 'box-shadow 0.3s',
+    }}
+    onClick={() => isExpired && navigate('/my-plan')}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: 'var(--dim)', textTransform: 'uppercase' }}>
+          {isExpired ? '⛔ EXPIRED' : '⏱ TRIAL'}
+        </span>
+        {!isExpired && (
+          <span style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: 1, padding: '2px 7px',
+            background: isUrgent ? 'rgba(231,76,60,0.15)' : isWarning ? 'rgba(243,156,18,0.12)' : 'rgba(0,230,118,0.1)',
+            borderRadius: 20, color: textColor, border: `1px solid ${textColor}44`,
+          }}>
+            {isUrgent ? 'URGENT' : isWarning ? 'WARNING' : 'ACTIVE'}
+          </span>
+        )}
+      </div>
+
+      {/* Circular progress + digits */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* SVG ring */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <svg width={80} height={80} style={{ transform: 'rotate(-90deg)' }}>
+            {/* Track */}
+            <circle cx={40} cy={40} r={radius} fill="none" stroke={trackColor} strokeWidth={6} />
+            {/* Fill */}
+            <circle
+              cx={40} cy={40} r={radius} fill="none"
+              stroke={fillColor} strokeWidth={6}
+              strokeDasharray={`${dash} ${circ}`}
+              strokeLinecap="round"
+              style={{
+                filter: `drop-shadow(0 0 4px ${fillColor})`,
+                transition: 'stroke-dasharray 0.5s ease',
+              }}
+            />
+          </svg>
+          {/* Percentage in center */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 13, fontWeight: 900, color: textColor,
+            fontFamily: 'monospace',
+          }}>
+            {isExpired ? '0%' : `${Math.round(pct)}%`}
+          </div>
+        </div>
+
+        {/* HH:MM:SS digits */}
+        <div style={{ flex: 1 }}>
+          {isExpired ? (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: '#e74c3c', fontWeight: 700, marginBottom: 6 }}>
+                Trial ended
+              </div>
+              <div
+                onClick={() => navigate('/my-plan')}
+                style={{
+                  fontSize: 10, fontWeight: 800, letterSpacing: 0.5,
+                  padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
+                  color: '#fff', textAlign: 'center',
+                }}
+              >
+                Upgrade →
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{
+                fontFamily: 'monospace', fontSize: 22, fontWeight: 900,
+                color: textColor, letterSpacing: 2, lineHeight: 1,
+                textShadow: `0 0 10px ${glowColor}`,
+              }}>
+                {String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                {['HRS','MIN','SEC'].map(l => (
+                  <span key={l} style={{ fontSize: 8, color: 'var(--dim)', letterSpacing: 1, fontWeight: 600, flex: 1, textAlign: 'center' }}>{l}</span>
+                ))}
+              </div>
+              {(isUrgent || isWarning) && (
+                <div
+                  onClick={() => navigate('/my-plan')}
+                  style={{
+                    marginTop: 8, fontSize: 10, fontWeight: 800, letterSpacing: 0.5,
+                    padding: '4px 8px', borderRadius: 7, cursor: 'pointer', textAlign: 'center',
+                    background: isUrgent
+                      ? 'linear-gradient(135deg, #e74c3c, #c0392b)'
+                      : 'linear-gradient(135deg, #f39c12, #d68910)',
+                    color: '#fff',
+                  }}
+                >
+                  Upgrade Now →
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Progress bar (linear) at bottom */}
+      {!isExpired && (
+        <div style={{ marginTop: 10, background: trackColor, borderRadius: 4, height: 3, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', width: `${pct}%`,
+            background: `linear-gradient(90deg, ${fillColor}88, ${fillColor})`,
+            borderRadius: 4, transition: 'width 0.5s ease',
+            boxShadow: `0 0 6px ${fillColor}`,
+          }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Luxury Language Switcher ──────────────────────────────
+function LangSwitcher({ lang, setLang }) {
+  const [open, setOpen] = useState(false);
+  const current = LANGUAGES.find(l => l.code === lang) || LANGUAGES[0];
+
+  return (
+    <div style={{ margin: '0 12px 8px', position: 'relative' }}>
+      {/* Trigger button */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+          padding: '9px 12px',
+          background: open
+            ? 'linear-gradient(135deg, rgba(0,230,118,0.12), rgba(0,180,100,0.08))'
+            : 'linear-gradient(135deg, rgba(0,230,118,0.06), rgba(0,180,100,0.04))',
+          border: `1px solid ${open ? 'rgba(0,230,118,0.35)' : 'rgba(0,230,118,0.18)'}`,
+          borderRadius: open ? '10px 10px 0 0' : 10,
+          color: 'var(--green)', cursor: 'pointer', fontSize: 13, fontWeight: 700,
+          transition: 'all 0.2s',
+          boxShadow: open ? '0 0 14px rgba(0,230,118,0.15)' : 'none',
+        }}
+      >
+        <span style={{ fontSize: 17 }}>{current.flag}</span>
+        <span style={{ flex: 1, textAlign: 'left' }}>{current.label}</span>
+        <span style={{
+          fontSize: 10, padding: '2px 6px', borderRadius: 5,
+          background: 'rgba(0,230,118,0.12)', fontWeight: 800, letterSpacing: 1,
+        }}>{current.short}</span>
+        <span style={{
+          fontSize: 10, opacity: 0.6,
+          transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.2s', display: 'inline-block',
+        }}>▾</span>
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: 0, right: 0,
+          background: 'linear-gradient(180deg, #0e1420, #0a1020)',
+          border: '1px solid rgba(0,230,118,0.25)',
+          borderBottom: 'none',
+          borderRadius: '10px 10px 0 0',
+          overflow: 'hidden',
+          boxShadow: '0 -8px 24px rgba(0,0,0,0.5)',
+          zIndex: 200,
+        }}>
+          {LANGUAGES.map((l, i) => {
+            const isActive = l.code === lang;
+            return (
+              <button
+                key={l.code}
+                onClick={() => { setLang(l.code); setOpen(false); }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 14px',
+                  background: isActive
+                    ? 'linear-gradient(90deg, rgba(0,230,118,0.15), rgba(0,230,118,0.05))'
+                    : 'transparent',
+                  border: 'none',
+                  borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                  color: isActive ? 'var(--green)' : 'var(--text, #ccc)',
+                  cursor: 'pointer', fontSize: 13, fontWeight: isActive ? 700 : 500,
+                  transition: 'background 0.15s',
+                  textAlign: 'left',
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <span style={{ fontSize: 17 }}>{l.flag}</span>
+                <span style={{ flex: 1 }}>{l.label}</span>
+                <span style={{
+                  fontSize: 10, padding: '2px 6px', borderRadius: 5, letterSpacing: 1,
+                  background: isActive ? 'rgba(0,230,118,0.2)' : 'rgba(255,255,255,0.06)',
+                  color: isActive ? 'var(--green)' : 'var(--dim)',
+                  fontWeight: 800,
+                }}>{l.short}</span>
+                {isActive && <span style={{ fontSize: 12, color: 'var(--green)' }}>✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Sidebar ──────────────────────────────────────────
 export default function Sidebar({ capitalInfo }) {
   const { user, logout, sub } = useAuth();
-  const { lang, t, setLang, isRTL } = useLang();
-  const isAdmin = user?.role === 'admin';
+  const { lang, t, setLang } = useLang();
+  const isAdmin  = user?.role === 'admin';
+  const navigate = useNavigate();
 
   const packInfo = sub ? PACK_LABELS[sub.pack] : null;
-  const { display: countdownDisplay, hoursLeft, expired } = useTrialCountdown(
-    sub?.pack !== 'lifetime' ? sub?.expires_at : null
-  );
 
-  // Compute expiry label for badge
-  let expiresLabel = null;
-  if (sub?.pack === 'lifetime') {
-    expiresLabel = '∞ Never expires';
-  } else if (sub?.expires_at) {
-    if (expired) {
-      expiresLabel = 'Expired';
-    } else if (hoursLeft !== null && hoursLeft < 24) {
-      // Show live countdown when less than 24h left
-      expiresLabel = countdownDisplay;
-    } else {
-      const days = Math.ceil((new Date(sub.expires_at) - new Date()) / 86400000);
-      expiresLabel = days > 0 ? `${days}d left` : 'Expired';
-    }
-  }
-
-  const countdownColor = expired
-    ? 'var(--red)'
-    : hoursLeft !== null && hoursLeft < 1
-      ? 'var(--red)'
-      : hoursLeft !== null && hoursLeft < 6
-        ? 'var(--orange)'
-        : 'var(--green)';
-
-  const langInfo = LANG_CYCLE[lang] || LANG_CYCLE['en'];
+  // For lifetime: just show label + never expires
+  const isTrial    = sub?.pack === 'trial';
+  const isLifetime = sub?.pack === 'lifetime';
 
   return (
     <aside className="sidebar">
@@ -120,35 +331,17 @@ export default function Sidebar({ capitalInfo }) {
         </div>
       </div>
 
-      {/* Subscription badge with live countdown */}
-      {packInfo && (
+      {/* Lifetime badge (simple) */}
+      {isLifetime && packInfo && (
         <div className={`sidebar-pack ${packInfo.cls}`}>
           <div className="pack-title" style={{ color: packInfo.color }}>{packInfo.label}</div>
-          {expiresLabel && (
-            <div
-              className="pack-expire"
-              style={{
-                color: sub?.pack !== 'lifetime' && hoursLeft !== null && hoursLeft < 24
-                  ? countdownColor
-                  : undefined,
-                fontFamily: sub?.pack !== 'lifetime' && hoursLeft !== null && hoursLeft < 24
-                  ? 'monospace'
-                  : undefined,
-                fontWeight: sub?.pack !== 'lifetime' && hoursLeft !== null && hoursLeft < 24
-                  ? 800
-                  : undefined,
-                fontSize: sub?.pack !== 'lifetime' && hoursLeft !== null && hoursLeft < 24
-                  ? 13
-                  : undefined,
-                letterSpacing: sub?.pack !== 'lifetime' && hoursLeft !== null && hoursLeft < 24
-                  ? 1
-                  : undefined,
-              }}
-            >
-              {expiresLabel}
-            </div>
-          )}
+          <div className="pack-expire" style={{ color: 'var(--gold, #d4af37)' }}>∞ Never expires</div>
         </div>
+      )}
+
+      {/* Trial: visual countdown widget */}
+      {isTrial && sub?.expires_at && (
+        <TrialCountdownWidget sub={sub} navigate={navigate} />
       )}
 
       <nav className="sidebar-nav">
@@ -171,35 +364,8 @@ export default function Sidebar({ capitalInfo }) {
         })}
       </nav>
 
-      {/* Language toggle — cycles EN → AR → FR → EN */}
-      <button
-        onClick={() => setLang(langInfo.next)}
-        style={{
-          margin: '0 12px 8px',
-          padding: '9px 14px',
-          background: 'rgba(0,230,118,0.07)',
-          border: '1px solid rgba(0,230,118,0.2)',
-          borderRadius: 8,
-          color: 'var(--green)',
-          cursor: 'pointer',
-          fontSize: 13,
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          transition: 'background 0.2s',
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,230,118,0.13)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,230,118,0.07)'}
-      >
-        {/* Show current language flag + name, then arrow to next */}
-        <span style={{ fontSize: 16 }}>{LANG_FLAG[lang]}</span>
-        <span style={{ opacity: 0.5, fontSize: 11 }}>{lang.toUpperCase()}</span>
-        <span style={{ opacity: 0.4 }}>→</span>
-        <span style={{ fontSize: 16 }}>{langInfo.flag}</span>
-        {langInfo.label}
-      </button>
+      {/* Luxury language switcher */}
+      <LangSwitcher lang={lang} setLang={setLang} />
 
       <button className="sidebar-logout" onClick={logout}>
         ⏻ {t('logout')}
