@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar from './components/Sidebar';
 import ExpiryBanner from './components/ExpiryBanner';
+import AlertBanner from './components/AlertBanner';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -17,6 +18,7 @@ import {
   Capital, Withdraw, Users, Logs,
   Activations, PasswordReset, Profile, Password
 } from './pages/OtherPages';
+import AdminAlerts from './pages/AdminAlerts';
 import api from './services/api';
 import './index.css';
 import { LangProvider } from './lang/LangContext';
@@ -65,6 +67,7 @@ function AppLayout() {
     <div className="app-layout">
       <Sidebar capitalInfo={capInfo} />
       <main className="main-content">
+        <AlertBanner />
         <ExpiryBanner />
         <Routes>
           <Route path="/"                 element={<Dashboard />} />
@@ -78,6 +81,7 @@ function AppLayout() {
           <Route path="/logs"             element={<AdminRoute><Logs /></AdminRoute>} />
           <Route path="/activations"      element={<AdminRoute><Activations /></AdminRoute>} />
           <Route path="/password-resets"  element={<AdminRoute><PasswordReset /></AdminRoute>} />
+          <Route path="/alerts"            element={<AdminRoute><AdminAlerts /></AdminRoute>} />
           <Route path="/my-plan"          element={<MyPlan />} />
           <Route path="/profile"          element={<Profile />} />
           <Route path="/password"         element={<Password />} />

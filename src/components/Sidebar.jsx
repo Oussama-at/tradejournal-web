@@ -17,6 +17,7 @@ const NAV = [
   { key: 'logs',      path: '/logs',            tkey: 'nav_logs',        icon: '≡', admin: true },
   { key: 'act',       path: '/activations',     tkey: 'nav_activations', icon: '★', admin: true },
   { key: 'passreset', path: '/password-resets', tkey: 'nav_pwd_resets',  icon: '⟳', admin: true },
+  { key: 'alerts',   path: '/alerts',          tkey: 'nav_alerts',      icon: '📢', admin: true },
   null,
   { key: 'pass',      path: '/password',        tkey: 'nav_password',    icon: '🔒' },
   { key: 'profile',   path: '/profile',         tkey: 'nav_profile',     icon: '👤' },
