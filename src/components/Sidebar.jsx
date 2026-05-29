@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import api from '../services/api';
 import { useLang } from '../lang/LangContext';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -343,6 +344,227 @@ function LangSwitcher({ lang, setLang }) {
   );
 }
 
+
+const TYPE_STYLES = {
+  info:    { border: '#00b4ff', icon: 'ℹ',  bg: 'rgba(0,180,255,0.08)',  text: '#7dd6f7' },
+  warning: { border: '#ffb400', icon: '⚠',  bg: 'rgba(255,180,0,0.08)',  text: '#ffd060' },
+  success: { border: '#00e676', icon: '✓',  bg: 'rgba(0,230,118,0.08)',  text: '#00e676' },
+  danger:  { border: '#f44336', icon: '✕',  bg: 'rgba(244,67,54,0.08)',  text: '#f77066' },
+};
+
+function useAlerts(user) {
+  const [alerts, setAlerts]       = useState([]);
+  const [dismissed, setDismissed] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('dismissed_alerts') || '[]'); }
+    catch { return []; }
+  });
+
+  const fetch = useCallback(() => {
+    if (!user) return;
+    api.get('/alerts')
+      .then(r => { if (r?.data?.alerts) setAlerts(r.data.alerts); })
+      .catch(() => {});
+  }, [user]);
+
+  useEffect(() => {
+    fetch();
+    const id = setInterval(fetch, 60_000);
+    return () => clearInterval(id);
+  }, [fetch]);
+
+  const dismiss = (id) => {
+    const next = [...dismissed, id];
+    setDismissed(next);
+    try { sessionStorage.setItem('dismissed_alerts', JSON.stringify(next)); } catch {}
+  };
+
+  const visible = alerts.filter(a => !dismissed.includes(a.id));
+  return { visible, dismiss };
+}
+
+function NotificationBell({ user }) {
+  const [open, setOpen]   = useState(false);
+  const { visible, dismiss } = useAlerts(user);
+  const panelRef = useRef(null);
+  const count    = visible.length;
+
+  // Close panel on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (panelRef.current && !panelRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <>
+      {/* Keyframe styles */}
+      <style>{`
+        @keyframes slideInPanel {
+          from { opacity: 0; transform: translateX(20px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes bellShake {
+          0%,100% { transform: rotate(0deg); }
+          20%      { transform: rotate(-18deg); }
+          40%      { transform: rotate(18deg); }
+          60%      { transform: rotate(-10deg); }
+          80%      { transform: rotate(10deg); }
+        }
+        .bell-btn:hover .bell-icon { animation: bellShake 0.5s ease; }
+      `}</style>
+
+      {/* Bell button */}
+      <button
+        className="bell-btn"
+        onClick={() => setOpen(o => !o)}
+        title="Notifications"
+        style={{
+          position: 'relative',
+          background: open ? 'rgba(0,230,118,0.12)' : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${open ? 'rgba(0,230,118,0.35)' : 'rgba(255,255,255,0.08)'}`,
+          borderRadius: 9,
+          width: 36, height: 36,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          flexShrink: 0,
+        }}
+      >
+        <span className="bell-icon" style={{ fontSize: 17, lineHeight: 1 }}>🔔</span>
+        {count > 0 && (
+          <span style={{
+            position: 'absolute', top: -5, right: -5,
+            background: '#f44336',
+            color: '#fff',
+            fontSize: 9, fontWeight: 800,
+            width: 17, height: 17,
+            borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: '2px solid #080c10',
+            lineHeight: 1,
+          }}>
+            {count > 9 ? '9+' : count}
+          </span>
+        )}
+      </button>
+
+      {/* Slide-in panel */}
+      {open && (
+        <div
+          ref={panelRef}
+          style={{
+            position: 'fixed',
+            top: 0, right: 0,
+            width: 340,
+            height: '100vh',
+            background: 'linear-gradient(180deg, #0a0f16 0%, #080c10 100%)',
+            borderLeft: '1px solid #1e2a35',
+            boxShadow: '-8px 0 40px rgba(0,0,0,0.6)',
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'slideInPanel 0.25s ease',
+          }}
+        >
+          {/* Header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '18px 20px',
+            borderBottom: '1px solid #1e2a35',
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>🔔</span>
+              <div>
+                <div style={{ color: '#e8edf3', fontWeight: 700, fontSize: 15 }}>Notifications</div>
+                <div style={{ color: '#7a8a9a', fontSize: 11 }}>
+                  {count === 0 ? 'All clear' : `${count} active alert${count > 1 ? 's' : ''}`}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setOpen(false)}
+              style={{
+                background: 'rgba(255,255,255,0.05)', border: '1px solid #1e2a35',
+                color: '#7a8a9a', borderRadius: 7, width: 30, height: 30,
+                cursor: 'pointer', fontSize: 16, display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+              }}
+            >×</button>
+          </div>
+
+          {/* Alert list */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {count === 0 ? (
+              <div style={{
+                flex: 1, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 12,
+                color: '#4a5a6a', paddingTop: 60,
+              }}>
+                <span style={{ fontSize: 48 }}>🔕</span>
+                <div style={{ fontSize: 14, color: '#7a8a9a' }}>No notifications</div>
+                <div style={{ fontSize: 12, color: '#4a5a6a', textAlign: 'center' }}>
+                  You're all caught up!
+                </div>
+              </div>
+            ) : visible.map(a => {
+              const s = TYPE_STYLES[a.type] || TYPE_STYLES.info;
+              return (
+                <div key={a.id} style={{
+                  background: s.bg,
+                  border: `1px solid ${s.border}33`,
+                  borderLeft: `3px solid ${s.border}`,
+                  borderRadius: 8,
+                  padding: '12px 14px',
+                  display: 'flex', gap: 10, alignItems: 'flex-start',
+                }}>
+                  <span style={{ color: s.border, fontSize: 16, flexShrink: 0, marginTop: 1 }}>{s.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: '#dce8f0', fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word' }}>
+                      {a.message}
+                    </div>
+                    <div style={{ color: '#4a5a6a', fontSize: 10, marginTop: 5 }}>
+                      {new Date(a.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => dismiss(a.id)}
+                    title="Dismiss"
+                    style={{
+                      background: 'none', border: 'none', color: '#4a5a6a',
+                      cursor: 'pointer', fontSize: 15, padding: '0 2px',
+                      flexShrink: 0, lineHeight: 1,
+                    }}
+                  >×</button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          {count > 0 && (
+            <div style={{ padding: '12px 16px', borderTop: '1px solid #1e2a35', flexShrink: 0 }}>
+              <button
+                onClick={() => visible.forEach(a => dismiss(a.id))}
+                style={{
+                  width: '100%', padding: '9px', background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid #1e2a35', borderRadius: 7, color: '#7a8a9a',
+                  cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                }}
+              >
+                Dismiss all
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
 // ── Main Sidebar ──────────────────────────────────────────
 export default function Sidebar({ capitalInfo }) {
   const { user, logout, sub } = useAuth();
@@ -358,12 +580,15 @@ export default function Sidebar({ capitalInfo }) {
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-brand">
-        <div className="brand-icon">TJ</div>
-        <div>
-          <div className="brand-name">TradeJournal</div>
-          <div className="brand-sub">PRO · v2.0</div>
+      <div className="sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="brand-icon">TJ</div>
+          <div>
+            <div className="brand-name">TradeJournal</div>
+            <div className="brand-sub">PRO · v2.0</div>
+          </div>
         </div>
+        <NotificationBell user={user} />
       </div>
 
       <div className="sidebar-user">
