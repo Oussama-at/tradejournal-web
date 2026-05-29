@@ -20,7 +20,13 @@ function packBadgeClass(pack, expired) {
 
 function daysLeft(dateStr) {
   if (!dateStr) return null;
-  const diff = new Date(dateStr) - new Date();
+  // Compare date-only (strip time) to avoid timezone shifting the count
+  const expiry = new Date(dateStr);
+  const today  = new Date();
+  // Normalise both to local midnight for a clean day diff
+  const expiryMidnight = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
+  const todayMidnight  = new Date(today.getFullYear(),  today.getMonth(),  today.getDate());
+  const diff = expiryMidnight - todayMidnight;
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
@@ -167,7 +173,13 @@ export default function Subscriptions() {
   }
 
   async function updateSub(id, body) {
-    const res = await api.put(`/admin/subscriptions/${id}`, body);
+    // Append T12:00:00 so the date is noon local time, not UTC midnight
+    // This prevents timezone offset from shifting the date by one day
+    const safeBody = { ...body };
+    if (safeBody.expires_at && /^\d{4}-\d{2}-\d{2}$/.test(safeBody.expires_at)) {
+      safeBody.expires_at = safeBody.expires_at + 'T12:00:00';
+    }
+    const res = await api.put(`/admin/subscriptions/${id}`, safeBody);
     if (res?.success) { setEditSub(null); load(); }
     else setMsg({ type: 'error', text: res?.message || 'Failed' });
   }
@@ -364,7 +376,17 @@ export default function Subscriptions() {
                       )}
                     </td>
                     <td className="muted mono" style={{ fontSize: 12 }}>
-                      {s.pack === 'lifetime' ? '∞' : (s.expires_at || '').substring(0, 10)}
+                      {isEdit && editSub.pack !== 'lifetime' ? (
+                        <input
+                          type="date"
+                          className="input"
+                          style={{ fontSize: 12, padding: '2px 6px', width: 140 }}
+                          value={editSub.expires_at || ''}
+                          onChange={e => setEditSub(es => ({ ...es, expires_at: e.target.value }))}
+                        />
+                      ) : (
+                        s.pack === 'lifetime' ? '∞' : (s.expires_at || '').substring(0, 10)
+                      )}
                     </td>
                     <td>
                       {s.pack === 'lifetime' ? (
@@ -391,14 +413,14 @@ export default function Subscriptions() {
                       {isEdit ? (
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 10px' }}
-                            onClick={() => updateSub(s.id, { pack: editSub.pack })}>{t('save_changes') || 'Save'}</button>
+                            onClick={() => updateSub(s.id, { pack: editSub.pack, expires_at: editSub.expires_at || null })}>{t('save_changes') || 'Save'}</button>
                           <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 10px' }}
                             onClick={() => setEditSub(null)}>{t('cancel')}</button>
                         </div>
                       ) : (
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 8px' }}
-                            onClick={() => setEditSub({ id: s.id, pack: s.pack })}>✏️ {t('edit')}</button>
+                            onClick={() => setEditSub({ id: s.id, pack: s.pack, expires_at: s.expires_at ? s.expires_at.substring(0,10) : '' })}>✏️ {t('edit')}</button>
                           <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }}
                             onClick={() => revokeSub(s.id)}>{t('revoke') || 'Revoke'}</button>
                         </div>
