@@ -208,6 +208,11 @@ export function Users() {
 
   // Contact modal
   const [contactModal, setContactModal] = useState(null); // { userId, userName, email }
+
+  // Email edit modal (admin direct set)
+  const [emailEditModal, setEmailEditModal] = useState(null); // { userId, userName, currentEmail }
+  const [emailEditValue, setEmailEditValue] = useState('');
+  const [emailEditMsg, setEmailEditMsg] = useState(null);
   const [contactForm, setContactForm] = useState({ subject: '', message: '' });
   const [contactSending, setContactSending] = useState(false);
 
@@ -272,6 +277,28 @@ export function Users() {
     if (pw && pw.length >= 4) { const res = await api.post(`/admin/users/${id}/reset-password`, { new_password: pw }); alert(res?.success ? '✓ Done' : res?.message); }
   }
 
+  // Admin direct email edit
+  function openEmailEdit(u) {
+    setEmailEditModal({ userId: u.id, userName: u.user_name, currentEmail: u.email || '' });
+    setEmailEditValue(u.email || '');
+    setEmailEditMsg(null);
+  }
+
+  async function saveEmail() {
+    if (!emailEditValue || !emailEditValue.includes('@')) {
+      setEmailEditMsg({ type: 'error', text: 'Enter a valid email address' });
+      return;
+    }
+    const res = await api.put(`/admin/users/${emailEditModal.userId}/email`, { email: emailEditValue });
+    if (res?.success) {
+      setEmailEditModal(null);
+      setMsg({ type: 'success', text: `✓ Email updated for ${emailEditModal.userName}` });
+      load();
+    } else {
+      setEmailEditMsg({ type: 'error', text: res?.message || 'Failed' });
+    }
+  }
+
   // Contact user via email
   function openContact(u) {
     if (!u.email) { setMsg({ type: 'error', text: `${u.user_name} has no email on file` }); return; }
@@ -311,6 +338,38 @@ export function Users() {
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button className="btn btn-ghost" onClick={() => setContactModal(null)}>Cancel</button>
               <button className="btn btn-primary" onClick={sendContact} disabled={contactSending}>{contactSending ? 'Sending...' : '✉️ Send Email'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {emailEditModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="card" style={{ width: '100%', maxWidth: 400, margin: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>✉️ Set Email — {emailEditModal.userName}</div>
+            <div className="muted" style={{ fontSize: 12, marginBottom: 14 }}>
+              Current: {emailEditModal.currentEmail || <em>not set</em>}
+            </div>
+            <div className="form-group" style={{ marginBottom: 12 }}>
+              <label className="form-label">New email address</label>
+              <input
+                className="input"
+                type="email"
+                placeholder="user@example.com"
+                value={emailEditValue}
+                onChange={e => setEmailEditValue(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && saveEmail()}
+                autoFocus
+              />
+            </div>
+            {emailEditMsg && (
+              <div className={`alert alert-${emailEditMsg.type}`} style={{ marginBottom: 10, fontSize: 12 }}>
+                {emailEditMsg.text}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setEmailEditModal(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveEmail}>✓ Save Email</button>
             </div>
           </div>
         </div>
@@ -401,6 +460,12 @@ export function Users() {
                           onClick={() => openContact(u)}
                           title={u.email ? `Email ${u.user_name}` : 'No email on file'}
                         >✉️ Email</button>
+                        <button
+                          className="btn btn-ghost"
+                          style={{ fontSize: 10, padding: '2px 7px', borderColor: 'var(--orange)', color: 'var(--orange)' }}
+                          onClick={() => openEmailEdit(u)}
+                          title="Set / change email directly"
+                        >✏️ Email</button>
                         {u.role !== 'admin' && (
                           <button
                             className="btn btn-ghost"
