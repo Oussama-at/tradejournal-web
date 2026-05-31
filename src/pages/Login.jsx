@@ -216,7 +216,12 @@ export default function Login() {
           role = payload.role || 'user';
         } catch {}
         login(res.data.token, username.trim(), role);
-        navigate('/');
+        // On first login (no security questions set), redirect to profile to prompt setup
+        if (res.data.first_login) {
+          navigate('/profile?setup_security=1');
+        } else {
+          navigate('/');
+        }
       } else {
         setError(res.message || 'Login failed');
         setPassword('');

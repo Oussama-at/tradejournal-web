@@ -31,8 +31,8 @@ const PACK_LABELS = {
 
 // Language config — using real flag images (Windows doesn't render emoji flags)
 const LANGUAGES = [
-  { code: 'en', label: 'English',  flagUrl: 'https://flagcdn.com/w40/gb.png', short: 'EN' },
-  { code: 'ar', label: 'العربية',  flagUrl: 'https://flagcdn.com/w40/ae.png', short: 'AR' },
+  { code: 'en', label: 'English',  flagUrl: 'https://flagcdn.com/w40/us.png', short: 'EN' },
+  { code: 'ar', label: 'العربية',  flagUrl: 'https://flagcdn.com/w40/sa.png', short: 'AR' },
   { code: 'fr', label: 'Français', flagUrl: 'https://flagcdn.com/w40/fr.png', short: 'FR' },
 ];
 

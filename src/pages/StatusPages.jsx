@@ -40,6 +40,16 @@ export function EmailSent() {
 
 export function BlockedPage() {
   const navigate = useNavigate();
+  const WHATSAPP_NUMBER = process.env.REACT_APP_WHATSAPP_NUMBER || '212600000000';
+
+  function handleUpgrade() {
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=Hello%2C%20I%20would%20like%20to%20upgrade%20my%20TradeJournal%20PRO%20subscription.`, '_blank');
+  }
+
+  function handleSignOut() {
+    ['token','username','role','device_id','trial_start'].forEach(k => localStorage.removeItem(k));
+    navigate('/login');
+  }
 
   return (
     <div className="blocked-page">
@@ -48,15 +58,15 @@ export function BlockedPage() {
         <h2 className="blocked-title">Account Access Blocked</h2>
         <p className="blocked-sub" style={{ marginBottom: 24 }}>
           Your subscription has expired or your access has been suspended.
-          Please renew your plan to continue using TradeJournal PRO.
+          Please upgrade your plan to continue using TradeJournal PRO.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: 13 }}
-            onClick={() => navigate('/register')}>
-            🔄 Renew Subscription
+            onClick={handleUpgrade}>
+            🚀 Upgrade Subscription
           </button>
           <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }}
-            onClick={() => { localStorage.clear(); navigate('/login'); }}>
+            onClick={handleSignOut}>
             Sign out
           </button>
         </div>

@@ -5,7 +5,6 @@ import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useLang } from '../lang/LangContext';
 import { useAuth } from '../context/AuthContext';
-
 export function Capital() {
   const { t } = useLang();
   const [capitals, setCapitals] = useState([]);
@@ -206,15 +205,15 @@ export function Users() {
   const [licenseMsg, setLicenseMsg] = useState(null);
   const [loggingInAs, setLoggingInAs] = useState(null);
 
-  // Contact modal
+  // Contact-user modal state
   const [contactModal, setContactModal] = useState(null); // { userId, userName, email }
+  const [contactForm, setContactForm] = useState({ subject: '', message: '' });
+  const [contactSending, setContactSending] = useState(false);
 
-  // Email edit modal (admin direct set)
+  // Admin direct email-edit modal
   const [emailEditModal, setEmailEditModal] = useState(null); // { userId, userName, currentEmail }
   const [emailEditValue, setEmailEditValue] = useState('');
   const [emailEditMsg, setEmailEditMsg] = useState(null);
-  const [contactForm, setContactForm] = useState({ subject: '', message: '' });
-  const [contactSending, setContactSending] = useState(false);
 
   useEffect(() => { load(); }, []);
 
@@ -224,10 +223,18 @@ export function Users() {
   }
 
   async function addUser() {
-    if (!newUser.user_name || !newUser.password) { setMsg({ type: 'error', text: 'Username and password required' }); return; }
+    if (!newUser.user_name || !newUser.password) {
+      setMsg({ type: 'error', text: 'Username and password required' });
+      return;
+    }
     const res = await api.post('/admin/users', newUser);
-    if (res?.success) { setShowAdd(false); setNewUser({ user_name: '', password: '', role: 'user', email: '' }); load(); }
-    else setMsg({ type: 'error', text: res?.message || 'Failed' });
+    if (res?.success) {
+      setShowAdd(false);
+      setNewUser({ user_name: '', password: '', role: 'user', email: '' });
+      load();
+    } else {
+      setMsg({ type: 'error', text: res?.message || 'Failed' });
+    }
   }
 
   async function toggleLicense(id, currentActive) {
@@ -242,7 +249,11 @@ export function Users() {
       setLicenseMsg({ userId: id, text, type: newState ? 'success' : 'warning' });
       setUsers(prev => prev.map(u => {
         if (u.id !== id) return u;
-        return { ...u, is_active: newState, license_key: u.license_key || (wasCreated ? '__assigned__' : u.license_key) };
+        return {
+          ...u,
+          is_active: newState,
+          license_key: u.license_key || (wasCreated ? '__assigned__' : u.license_key),
+        };
       }));
       load();
       setTimeout(() => setLicenseMsg(null), 2500);
@@ -255,7 +266,13 @@ export function Users() {
   const showConfirm = useConfirm();
 
   async function loginAsUser(u) {
-    const ok = await showConfirm({ title: `Login as ${u.user_name}?`, message: 'You will be logged in as this user. Only this device will connect to that account. Your admin session will end.', type: 'warning', confirmLabel: 'Login as user', cancelLabel: 'Cancel' });
+    const ok = await showConfirm({
+      title: `Login as ${u.user_name}?`,
+      message: 'You will be logged in as this user. Only this device will connect to that account. Your admin session will end.',
+      type: 'warning',
+      confirmLabel: 'Login as user',
+      cancelLabel: 'Cancel',
+    });
     if (!ok) return;
     setLoggingInAs(u.id);
     try {
@@ -265,19 +282,67 @@ export function Users() {
         localStorage.setItem('device_id', deviceId);
         login(res.data.token, u.user_name, u.role || 'user');
         navigate('/');
-      } else { setMsg({ type: 'error', text: res?.message || 'Failed to login as user' }); setLoggingInAs(null); }
-    } catch { setMsg({ type: 'error', text: 'Server error while trying to login as user' }); setLoggingInAs(null); }
+      } else {
+        setMsg({ type: 'error', text: res?.message || 'Failed to login as user' });
+        setLoggingInAs(null);
+      }
+    } catch {
+      setMsg({ type: 'error', text: 'Server error while trying to login as user' });
+      setLoggingInAs(null);
+    }
   }
 
-  async function resetDevice(id) { const ok = await showConfirm({ title: 'Reset Device?', message: 'This will log the user out of their current device.', type: 'warning', confirmLabel: 'Reset', cancelLabel: 'Cancel' }); if (ok) { await api.post(`/admin/users/${id}/reset-device`, {}); load(); } }
-  async function deleteUser(id, name) { const ok = await showConfirm({ title: `Delete ${name}?`, message: 'This will permanently delete the user and all their data.', type: 'danger', confirmLabel: 'Delete', cancelLabel: 'Cancel' }); if (ok) { await api.delete(`/admin/users/${id}`); load(); } }
-  async function toggleAccess(id, blocked) { await api.put(`/admin/users/${id}/access`, { blocked: !blocked }); load(); }
+  async function resetDevice(id) {
+    const ok = await showConfirm({ title: 'Reset Device?', message: 'This will log the user out of their current device.', type: 'warning', confirmLabel: 'Reset', cancelLabel: 'Cancel' });
+    if (ok) { await api.post(`/admin/users/${id}/reset-device`, {}); load(); }
+  }
+
+  async function deleteUser(id, name) {
+    const ok = await showConfirm({ title: `Delete ${name}?`, message: 'This will permanently delete the user and all their data.', type: 'danger', confirmLabel: 'Delete', cancelLabel: 'Cancel' });
+    if (ok) { await api.delete(`/admin/users/${id}`); load(); }
+  }
+
+  async function toggleAccess(id, blocked) {
+    await api.put(`/admin/users/${id}/access`, { blocked: !blocked });
+    load();
+  }
+
   async function resetPassword(id, name) {
     const pw = window.prompt(`New password for ${name}:`);
-    if (pw && pw.length >= 4) { const res = await api.post(`/admin/users/${id}/reset-password`, { new_password: pw }); alert(res?.success ? '✓ Done' : res?.message); }
+    if (pw && pw.length >= 4) {
+      const res = await api.post(`/admin/users/${id}/reset-password`, { new_password: pw });
+      alert(res?.success ? '✓ Done' : res?.message);
+    }
   }
 
-  // Admin direct email edit
+  // ── Contact user via email ────────────────────────────────────────────────
+  function openContact(u) {
+    if (!u.email) {
+      setMsg({ type: 'error', text: `${u.user_name} has no email on file` });
+      return;
+    }
+    setContactModal({ userId: u.id, userName: u.user_name, email: u.email });
+    setContactForm({ subject: '', message: '' });
+    setContactSending(false);
+  }
+
+  async function sendContact() {
+    if (!contactForm.subject.trim() || !contactForm.message.trim()) {
+      setMsg({ type: 'error', text: 'Subject and message are required' });
+      return;
+    }
+    setContactSending(true);
+    const res = await api.post(`/admin/users/${contactModal.userId}/contact`, contactForm);
+    setContactSending(false);
+    if (res?.success) {
+      setContactModal(null);
+      setMsg({ type: 'success', text: `✓ Email sent to ${contactModal.userName}` });
+    } else {
+      setMsg({ type: 'error', text: res?.message || 'Failed to send email' });
+    }
+  }
+
+  // Admin direct email set
   function openEmailEdit(u) {
     setEmailEditModal({ userId: u.id, userName: u.user_name, currentEmail: u.email || '' });
     setEmailEditValue(u.email || '');
@@ -299,55 +364,16 @@ export function Users() {
     }
   }
 
-  // Contact user via email
-  function openContact(u) {
-    if (!u.email) { setMsg({ type: 'error', text: `${u.user_name} has no email on file` }); return; }
-    setContactModal({ userId: u.id, userName: u.user_name, email: u.email });
-    setContactForm({ subject: '', message: '' });
-    setContactSending(false);
-  }
-
-  async function sendContact() {
-    if (!contactForm.subject.trim() || !contactForm.message.trim()) { setMsg({ type: 'error', text: 'Subject and message are required' }); return; }
-    setContactSending(true);
-    const res = await api.post(`/admin/users/${contactModal.userId}/contact`, contactForm);
-    setContactSending(false);
-    if (res?.success) { setContactModal(null); setMsg({ type: 'success', text: `✓ Email sent to ${contactModal.userName}` }); }
-    else setMsg({ type: 'error', text: res?.message || 'Failed to send email' });
-  }
-
   const filtered = users.filter(u => u.user_name?.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div>
-      {/* Contact Modal */}
-      {contactModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card" style={{ width: '100%', maxWidth: 480, margin: 16 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>✉️ Contact {contactModal.userName}</div>
-            <div className="muted" style={{ fontSize: 12, marginBottom: 16 }}>{contactModal.email}</div>
-            <div className="form-group" style={{ marginBottom: 10 }}>
-              <label className="form-label">Subject</label>
-              <input className="input" placeholder="e.g. Account Update" value={contactForm.subject} onChange={e => setContactForm(f => ({ ...f, subject: e.target.value }))} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 14 }}>
-              <label className="form-label">Message</label>
-              <textarea className="input" rows={5} placeholder="Write your message here..." style={{ resize: 'vertical', minHeight: 100 }} value={contactForm.message} onChange={e => setContactForm(f => ({ ...f, message: e.target.value }))} />
-            </div>
-            {msg && <div className={`alert alert-${msg.type}`} style={{ marginBottom: 8, fontSize: 12 }}>{msg.text}</div>}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="btn btn-ghost" onClick={() => setContactModal(null)}>Cancel</button>
-              <button className="btn btn-primary" onClick={sendContact} disabled={contactSending}>{contactSending ? 'Sending...' : '✉️ Send Email'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* ── Email Edit Modal ────────────────────────────────────────────── */}
       {emailEditModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card" style={{ width: '100%', maxWidth: 400, margin: 16 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>✉️ Set Email — {emailEditModal.userName}</div>
-            <div className="muted" style={{ fontSize: 12, marginBottom: 14 }}>
+          <div className="card" style={{ width: '100%', maxWidth: 420, margin: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>✏️ Set Email — {emailEditModal.userName}</div>
+            <div className="muted" style={{ fontSize: 12, marginBottom: 12 }}>
               Current: {emailEditModal.currentEmail || <em>not set</em>}
             </div>
             <div className="form-group" style={{ marginBottom: 12 }}>
@@ -362,11 +388,7 @@ export function Users() {
                 autoFocus
               />
             </div>
-            {emailEditMsg && (
-              <div className={`alert alert-${emailEditMsg.type}`} style={{ marginBottom: 10, fontSize: 12 }}>
-                {emailEditMsg.text}
-              </div>
-            )}
+            {emailEditMsg && <div className={`alert alert-${emailEditMsg.type}`} style={{ marginBottom: 10, fontSize: 12 }}>{emailEditMsg.text}</div>}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button className="btn btn-ghost" onClick={() => setEmailEditModal(null)}>Cancel</button>
               <button className="btn btn-primary" onClick={saveEmail}>✓ Save Email</button>
@@ -375,52 +397,119 @@ export function Users() {
         </div>
       )}
 
+      {/* ── Contact Modal ──────────────────────────────────────────────── */}
+      {contactModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: 480, margin: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
+              ✉️ Contact {contactModal.userName}
+            </div>
+            <div className="muted" style={{ fontSize: 12, marginBottom: 16 }}>
+              {contactModal.email}
+            </div>
+            <div className="form-group" style={{ marginBottom: 10 }}>
+              <label className="form-label">Subject</label>
+              <input
+                className="input"
+                placeholder="e.g. Account Update"
+                value={contactForm.subject}
+                onChange={e => setContactForm(f => ({ ...f, subject: e.target.value }))}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 14 }}>
+              <label className="form-label">Message</label>
+              <textarea
+                className="input"
+                rows={5}
+                placeholder="Write your message here..."
+                style={{ resize: 'vertical', minHeight: 100 }}
+                value={contactForm.message}
+                onChange={e => setContactForm(f => ({ ...f, message: e.target.value }))}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setContactModal(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={sendContact} disabled={contactSending}>
+                {contactSending ? 'Sending...' : '✉️ Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Page Header ────────────────────────────────────────────────── */}
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div><div className="page-title">{t('users_title')}</div><div className="page-sub">{users.length} {t('users_count')}</div></div>
+        <div>
+          <div className="page-title">{t('users_title')}</div>
+          <div className="page-sub">{users.length} {t('users_count')}</div>
+        </div>
         <button className="btn btn-primary" onClick={() => setShowAdd(true)}>{t('add_user')}</button>
       </div>
 
+      {/* ── Search ─────────────────────────────────────────────────────── */}
       <div className="card" style={{ marginBottom: 16 }}>
         <input className="input" placeholder={t('search_users')} value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
-      {msg && !showAdd && !contactModal && (
+      {/* ── Global alert ───────────────────────────────────────────────── */}
+      {msg && !showAdd && (
         <div className={`alert alert-${msg.type}`} style={{ marginBottom: 12, cursor: 'pointer' }} onClick={() => setMsg(null)}>
           {msg.text} <span style={{ float: 'right', opacity: 0.6 }}>✕</span>
         </div>
       )}
 
+      {/* ── Add New User form ───────────────────────────────────────────── */}
       {showAdd && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 700, marginBottom: 12 }}>Add New User</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: 10, alignItems: 'flex-end' }}>
             <div className="form-group">
               <label className="form-label">Username</label>
-              <input className="input" value={newUser.user_name} onChange={e => setNewUser(u => ({ ...u, user_name: e.target.value }))} />
+              <input className="input" value={newUser.user_name}
+                onChange={e => setNewUser(u => ({ ...u, user_name: e.target.value }))} />
             </div>
             <div className="form-group">
               <label className="form-label">Password</label>
-              <input className="input" value={newUser.password} onChange={e => setNewUser(u => ({ ...u, password: e.target.value }))} />
+              <input className="input" value={newUser.password}
+                onChange={e => setNewUser(u => ({ ...u, password: e.target.value }))} />
             </div>
+            {/* ── NEW: Email field ── */}
             <div className="form-group">
               <label className="form-label">Email <span className="muted" style={{ fontSize: 10 }}>(optional — sends credentials)</span></label>
-              <input className="input" type="email" placeholder="user@example.com" value={newUser.email} onChange={e => setNewUser(u => ({ ...u, email: e.target.value }))} />
+              <input className="input" type="email" placeholder="user@example.com"
+                value={newUser.email}
+                onChange={e => setNewUser(u => ({ ...u, email: e.target.value }))} />
             </div>
             <div className="form-group">
               <label className="form-label">Role</label>
-              <select className="select" value={newUser.role} onChange={e => setNewUser(u => ({ ...u, role: e.target.value }))}><option>user</option><option>admin</option></select>
+              <select className="select" value={newUser.role}
+                onChange={e => setNewUser(u => ({ ...u, role: e.target.value }))}>
+                <option>user</option>
+                <option>admin</option>
+              </select>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}><button className="btn btn-primary" onClick={addUser}>Add</button><button className="btn btn-ghost" onClick={() => setShowAdd(false)}>Cancel</button></div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-primary" onClick={addUser}>Add</button>
+              <button className="btn btn-ghost" onClick={() => setShowAdd(false)}>Cancel</button>
+            </div>
           </div>
           {msg && <div className={`alert alert-${msg.type}`} style={{ marginTop: 8 }}>{msg.text}</div>}
         </div>
       )}
 
+      {/* ── Users Table ─────────────────────────────────────────────────── */}
       <div className="card">
         <div className="table-wrap">
           <table>
             <thead>
-              <tr>{[t('col_user'), 'Email', t('col_role'), t('col_license'), t('col_access'), t('col_created'), t('col_actions')].map(h => <th key={h}>{h}</th>)}</tr>
+              <tr>
+                {[t('col_user'), 'Email', t('col_role'), t('col_license'), t('col_access'), t('col_created'), t('col_actions')].map(h => (
+                  <th key={h}>{h}</th>
+                ))}
+              </tr>
             </thead>
             <tbody>
               {filtered.map(u => {
@@ -428,54 +517,95 @@ export function Users() {
                 const hasLicense = !!u.license_key;
                 const pending = !hasLicense;
                 const blocked = u.blocked;
+
                 return (
                   <tr key={u.id}>
                     <td style={{ fontWeight: 600 }}>{u.user_name}</td>
-                    <td><span className="muted" style={{ fontSize: 12 }}>{u.email || <span style={{ opacity: 0.35 }}>—</span>}</span></td>
-                    <td><span className={`badge ${u.role === 'admin' ? 'badge-purple' : 'badge-blue'}`}>{u.role}</span></td>
-                    <td><span className={`badge ${pending ? 'badge-orange' : active ? 'badge-green' : 'badge-red'}`}>{pending ? t('pending') : active ? t('active') || 'Active' : t('expired') || 'Expired'}</span></td>
-                    <td><span className={`badge ${blocked ? 'badge-red' : 'badge-green'}`}>{blocked ? 'Blocked' : 'OK'}</span></td>
+                    {/* ── NEW: Email column ── */}
+                    <td>
+                      {u.email
+                        ? <span className="muted" style={{ fontSize: 12 }}>{u.email}</span>
+                        : <span className="muted" style={{ fontSize: 11, opacity: 0.4 }}>—</span>
+                      }
+                    </td>
+                    <td>
+                      <span className={`badge ${u.role === 'admin' ? 'badge-purple' : 'badge-blue'}`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge ${pending ? 'badge-orange' : active ? 'badge-green' : 'badge-red'}`}>
+                        {pending ? t('pending') : active ? t('active') || 'Active' : t('expired') || 'Expired'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge ${blocked ? 'badge-red' : 'badge-green'}`}>
+                        {blocked ? 'Blocked' : 'OK'}
+                      </span>
+                    </td>
                     <td className="muted">{(u.created_at || '').substring(0, 10)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                        {/* License toggle */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                           <button
                             className={`btn ${active ? 'btn-danger' : 'btn-primary'} ${licenseMsg?.userId === u.id ? 'btn-ghost' : ''}`}
                             style={{ fontSize: 10, padding: '2px 7px' }}
                             onClick={() => toggleLicense(u.id, u.is_active)}
                             title={pending ? 'Create & assign a license' : active ? 'Disable license' : 'Re-activate license'}
-                          >🔑 {licenseMsg?.userId === u.id ? '...' : pending ? 'Assign' : active ? 'Disable' : 'Enable'}</button>
+                          >
+                            🔑 {licenseMsg?.userId === u.id ? '...' : pending ? 'Assign' : active ? 'Disable' : 'Enable'}
+                          </button>
                           {licenseMsg?.userId === u.id && (
                             <span style={{ fontSize: 9, color: licenseMsg.type === 'success' ? 'var(--green)' : licenseMsg.type === 'warning' ? 'var(--orange)' : 'var(--red)', whiteSpace: 'nowrap' }}>
                               {licenseMsg.text}
                             </span>
                           )}
                         </div>
-                        <button className="btn btn-ghost" style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => resetDevice(u.id)}>📱 Device</button>
-                        <button className="btn btn-ghost" style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => resetPassword(u.id, u.user_name)}>🔒 Pwd</button>
-                        <button className={`btn ${blocked ? 'btn-primary' : 'btn-danger'}`} style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => toggleAccess(u.id, blocked)}>{blocked ? 'Unblock' : 'Block'}</button>
+
+                        <button className="btn btn-ghost" style={{ fontSize: 10, padding: '2px 7px' }}
+                          onClick={() => resetDevice(u.id)}>📱 Device</button>
+                        <button className="btn btn-ghost" style={{ fontSize: 10, padding: '2px 7px' }}
+                          onClick={() => resetPassword(u.id, u.user_name)}>🔒 Pwd</button>
+                        <button className={`btn ${blocked ? 'btn-primary' : 'btn-danger'}`}
+                          style={{ fontSize: 10, padding: '2px 7px' }}
+                          onClick={() => toggleAccess(u.id, blocked)}>
+                          {blocked ? 'Unblock' : 'Block'}
+                        </button>
+
+                        {/* ── NEW: Contact via Email button ── */}
                         <button
                           className="btn btn-ghost"
                           style={{ fontSize: 10, padding: '2px 7px', opacity: u.email ? 1 : 0.4 }}
                           onClick={() => openContact(u)}
                           title={u.email ? `Email ${u.user_name}` : 'No email on file'}
-                        >✉️ Email</button>
+                        >
+                          ✉️ Email
+                        </button>
+
+                        {/* Admin direct email set */}
                         <button
                           className="btn btn-ghost"
-                          style={{ fontSize: 10, padding: '2px 7px', borderColor: 'var(--orange)', color: 'var(--orange)' }}
+                          style={{ fontSize: 10, padding: '2px 7px' }}
                           onClick={() => openEmailEdit(u)}
                           title="Set / change email directly"
-                        >✏️ Email</button>
+                        >
+                          ✏️ Email
+                        </button>
+
                         {u.role !== 'admin' && (
                           <button
                             className="btn btn-ghost"
-                            style={{ fontSize: 10, padding: '2px 7px', borderColor: 'var(--blue)', color: 'var(--blue)' }}
+                            style={{ fontSize: 10, padding: '2px 7px', opacity: loggingInAs === u.id ? 0.5 : 1 }}
                             onClick={() => loginAsUser(u)}
                             disabled={loggingInAs === u.id}
-                            title="Login as this user (admin only)"
-                          >{loggingInAs === u.id ? '...' : '👤 Login As'}</button>
+                          >
+                            {loggingInAs === u.id ? '...' : '🔐 Login As'}
+                          </button>
                         )}
-                        <button className="btn btn-danger" style={{ fontSize: 10, padding: '2px 7px' }} onClick={() => deleteUser(u.id, u.user_name)}>🗑</button>
+
+                        <button className="btn btn-danger" style={{ fontSize: 10, padding: '2px 7px' }}
+                          onClick={() => deleteUser(u.id, u.user_name)}>🗑</button>
                       </div>
                     </td>
                   </tr>
@@ -489,7 +619,6 @@ export function Users() {
   );
 }
 
-// Activity Logs
 export function Logs() {
   const { t } = useLang();
   const [logs, setLogs] = useState([]);
@@ -642,6 +771,8 @@ export function PasswordReset() {
 }
 
 // My Profile
+
+// My Profile
 export function Profile() {
   const { t } = useLang();
   const [profile, setProfile] = useState(null);
@@ -652,6 +783,14 @@ export function Profile() {
   const [questions, setQuestions] = useState([]);
   const [msg, setMsg] = useState(null);
   const DEFAULTS = ['What is your favourite color?', 'Name of your best player?', 'What is your birthday?', "Mother's maiden name?", 'First pet name?', 'City you were born in?'];
+
+  // First-login security setup notification
+  const [showSecurityAlert, setShowSecurityAlert] = useState(false);
+
+  // Admin direct email set
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminEmailMsg, setAdminEmailMsg] = useState(null);
+  const [adminEmailLoading, setAdminEmailLoading] = useState(false);
 
   // Email change state machine: 'idle' | 'verifying' | 'verified' | 'pending'
   const [emailStep, setEmailStep] = useState('idle');
@@ -667,7 +806,17 @@ export function Profile() {
   const [submitMsg, setSubmitMsg] = useState(null);
 
   useEffect(() => {
-    api.get('/profile').then(r => setProfile(r?.data?.user || null));
+    // Check if redirected here for first-login security setup
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('setup_security') === '1') {
+      setShowSecurityAlert(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    api.get('/profile').then(r => {
+      const u = r?.data?.user || null;
+      setProfile(u);
+      if (u?.email) setAdminEmail(u.email);
+    });
     api.get('/secret-questions').then(r => {
       const qs = r?.data?.questions || [];
       setQuestions(qs.length ? qs : DEFAULTS);
@@ -675,15 +824,39 @@ export function Profile() {
     api.get('/profile/email-change-status').then(r => {
       if (r?.data?.status === 'pending') setEmailStep('pending');
     }).catch(() => {});
-  // eslint-disable-next-line
+    // eslint-disable-next-line
   }, []);
+
+  // Admin: save email directly (no approval needed)
+  async function saveAdminEmail() {
+    if (!adminEmail || !adminEmail.includes('@')) {
+      setAdminEmailMsg({ type: 'error', text: 'Enter a valid email address' });
+      return;
+    }
+    setAdminEmailLoading(true);
+    setAdminEmailMsg(null);
+    const res = await api.put('/profile/email', { email: adminEmail });
+    setAdminEmailLoading(false);
+    if (res?.success) {
+      setAdminEmailMsg({ type: 'success', text: '✓ Email saved!' });
+      setProfile(p => ({ ...p, email: adminEmail }));
+    } else {
+      setAdminEmailMsg({ type: 'error', text: res?.message || 'Failed' });
+    }
+  }
 
   async function saveQuestions() {
     if (!q1 || !a1 || !q2 || !a2) { setMsg({ type: 'error', text: 'All fields required' }); return; }
     if (q1 === q2) { setMsg({ type: 'error', text: 'Questions must be different' }); return; }
     const res = await api.post('/set-secret-answers', { question_1: q1, answer_1: a1, question_2: q2, answer_2: a2 });
-    if (res?.success) { setMsg({ type: 'success', text: '✓ Saved!' }); setA1(''); setA2(''); setUserQ1(q1); setUserQ2(q2); }
-    else setMsg({ type: 'error', text: res?.message || 'Failed' });
+    if (res?.success) {
+      setMsg({ type: 'success', text: '✓ Security questions saved!' });
+      setA1(''); setA2('');
+      setUserQ1(q1); setUserQ2(q2);
+      setShowSecurityAlert(false);
+    } else {
+      setMsg({ type: 'error', text: res?.message || 'Failed' });
+    }
   }
 
   async function changePhoto(file) {
@@ -692,8 +865,10 @@ export function Profile() {
     if (res?.success) alert('✓ Photo updated!');
   }
 
+  // Step 1: open email-change verify flow
   async function startEmailChange() {
-    setVerifyA1(''); setVerifyA2(''); setVerifyMsg(null); setNewEmail(''); setSubmitMsg(null); setVerifyToken(null);
+    setVerifyA1(''); setVerifyA2(''); setVerifyMsg(null);
+    setNewEmail(''); setSubmitMsg(null); setVerifyToken(null);
     try {
       const r = await api.get('/profile');
       const uname = r?.data?.user?.user_name;
@@ -706,23 +881,43 @@ export function Profile() {
     setEmailStep('verifying');
   }
 
+  // Step 2: verify secret answers
   async function submitVerify() {
-    if (!verifyA1.trim() || !verifyA2.trim()) { setVerifyMsg({ type: 'error', text: 'Please answer both questions' }); return; }
-    setVerifyLoading(true); setVerifyMsg(null);
+    if (!verifyA1.trim() || !verifyA2.trim()) {
+      setVerifyMsg({ type: 'error', text: 'Please answer both questions' });
+      return;
+    }
+    setVerifyLoading(true);
+    setVerifyMsg(null);
     const res = await api.post('/profile/verify-for-email-change', { answer_1: verifyA1, answer_2: verifyA2 });
     setVerifyLoading(false);
-    if (res?.success) { setVerifyToken(res.data?.verify_token); setEmailStep('verified'); }
-    else setVerifyMsg({ type: 'error', text: res?.message || 'Verification failed' });
+    if (res?.success) {
+      setVerifyToken(res.data?.verify_token);
+      setEmailStep('verified');
+    } else {
+      setVerifyMsg({ type: 'error', text: res?.message || 'Verification failed' });
+    }
   }
 
+  // Step 3: submit new email with token
   async function submitEmailChange() {
-    if (!newEmail || !newEmail.includes('@')) { setSubmitMsg({ type: 'error', text: 'Please enter a valid email address' }); return; }
-    if (!verifyToken) { setSubmitMsg({ type: 'error', text: 'Verification expired — please start again' }); setEmailStep('idle'); return; }
-    setSubmitLoading(true); setSubmitMsg(null);
+    if (!newEmail || !newEmail.includes('@')) {
+      setSubmitMsg({ type: 'error', text: 'Please enter a valid email address' });
+      return;
+    }
+    if (!verifyToken) {
+      setSubmitMsg({ type: 'error', text: 'Verification expired — please start again' });
+      setEmailStep('idle');
+      return;
+    }
+    setSubmitLoading(true);
+    setSubmitMsg(null);
     const res = await api.post('/profile/request-email-change', { new_email: newEmail, verify_token: verifyToken });
     setSubmitLoading(false);
-    if (res?.success) { setEmailStep('pending'); setVerifyToken(null); }
-    else {
+    if (res?.success) {
+      setEmailStep('pending');
+      setVerifyToken(null);
+    } else {
       if (res?.message?.includes('expired') || res?.message?.includes('invalid')) setEmailStep('idle');
       setSubmitMsg({ type: 'error', text: res?.message || 'Failed to submit request' });
     }
@@ -731,8 +926,19 @@ export function Profile() {
   return (
     <div>
       <div className="page-header"><div className="page-title">{t('my_profile')}</div></div>
+
+      {/* First-login security setup banner */}
+      {showSecurityAlert && (
+        <div className="alert alert-warning" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <span>🔐 <strong>Setup Required:</strong> Please set your security questions on the right to protect your account.</span>
+          <button onClick={() => setShowSecurityAlert(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>✕</button>
+        </div>
+      )}
+
       <div className="grid-2">
+        {/* ── Identity card ─────────────────────────────────────── */}
         <div className="card">
+          {/* Avatar + name */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
             <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--bg4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: 'var(--blue)' }}>
               {profile?.user_name?.[0]?.toUpperCase() || 'U'}
@@ -744,75 +950,113 @@ export function Profile() {
             </div>
           </div>
 
-          {/* Email — read-only display */}
+          {/* ── Email section ──────────────────────────────────── */}
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginBottom: 14 }}>
-            <div className="form-group" style={{ marginBottom: 10 }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                ✉️ Email Address
-                <span style={{ fontSize: 10, color: 'var(--dim)', fontWeight: 400 }}>(read-only)</span>
-              </label>
-              <div className="input" style={{ cursor: 'default', opacity: 0.75, background: 'var(--bg3)' }}>
-                {profile?.email || <span style={{ opacity: 0.4 }}>Not set</span>}
-              </div>
-            </div>
 
-            {/* IDLE */}
-            {emailStep === 'idle' && (
-              <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={startEmailChange}>
-                🔐 Request email change
-              </button>
-            )}
-
-            {/* PENDING */}
-            {emailStep === 'pending' && (
-              <div className="alert alert-warning" style={{ fontSize: 12 }}>
-                ⏳ Your email change request is pending admin approval.
-              </div>
-            )}
-
-            {/* VERIFYING — answer secret questions */}
-            {emailStep === 'verifying' && (
-              <div style={{ background: 'var(--bg3)', borderRadius: 8, padding: 14, border: '1px solid var(--border)' }}>
-                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>🔒 Verify your identity</div>
-                <div className="muted" style={{ fontSize: 12, marginBottom: 12 }}>Answer your security questions to continue.</div>
-                <div className="form-group" style={{ marginBottom: 10 }}>
-                  <label className="form-label" style={{ fontSize: 12 }}>{userQ1 || 'Security Question 1'}</label>
-                  <input className="input" placeholder="Your answer..." value={verifyA1} onChange={e => setVerifyA1(e.target.value)} autoComplete="off" />
-                </div>
-                <div className="form-group" style={{ marginBottom: 12 }}>
-                  <label className="form-label" style={{ fontSize: 12 }}>{userQ2 || 'Security Question 2'}</label>
-                  <input className="input" placeholder="Your answer..." value={verifyA2} onChange={e => setVerifyA2(e.target.value)} autoComplete="off" onKeyDown={e => e.key === 'Enter' && submitVerify()} />
-                </div>
-                {verifyMsg && <div className={`alert alert-${verifyMsg.type}`} style={{ marginBottom: 10, fontSize: 12 }}>{verifyMsg.text}</div>}
+            {profile?.role === 'admin' ? (
+              /* Admin: editable email field — no approval flow */
+              <div className="form-group">
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  ✉️ Email Address
+                </label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-primary" onClick={submitVerify} disabled={verifyLoading}>{verifyLoading ? 'Checking...' : '✓ Verify'}</button>
-                  <button className="btn btn-ghost" onClick={() => setEmailStep('idle')}>Cancel</button>
+                  <input
+                    className="input"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={adminEmail}
+                    onChange={e => { setAdminEmail(e.target.value); setAdminEmailMsg(null); }}
+                    onKeyDown={e => e.key === 'Enter' && saveAdminEmail()}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    style={{ whiteSpace: 'nowrap' }}
+                    onClick={saveAdminEmail}
+                    disabled={adminEmailLoading}
+                  >
+                    {adminEmailLoading ? '...' : '✓ Save'}
+                  </button>
                 </div>
+                {adminEmailMsg && (
+                  <div className={`alert alert-${adminEmailMsg.type}`} style={{ marginTop: 8, fontSize: 12 }}>
+                    {adminEmailMsg.text}
+                  </div>
+                )}
               </div>
-            )}
-
-            {/* VERIFIED — enter new email */}
-            {emailStep === 'verified' && (
-              <div style={{ background: 'var(--bg3)', borderRadius: 8, padding: 14, border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <span style={{ color: 'var(--green)', fontSize: 16 }}>✅</span>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>Identity verified</span>
-                  <span className="muted" style={{ fontSize: 11 }}>(token valid 10 min)</span>
-                </div>
+            ) : (
+              /* Regular user: read-only email + 3-step change flow */
+              <>
                 <div className="form-group" style={{ marginBottom: 10 }}>
-                  <label className="form-label" style={{ fontSize: 12 }}>New email address</label>
-                  <input className="input" type="email" placeholder="new@email.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && submitEmailChange()} />
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    ✉️ Email Address
+                    <span style={{ fontSize: 10, color: 'var(--dim)', fontWeight: 400 }}>(read-only)</span>
+                  </label>
+                  <div className="input" style={{ cursor: 'default', opacity: 0.75, background: 'var(--bg3)' }}>
+                    {profile?.email || <span style={{ opacity: 0.4 }}>Not set</span>}
+                  </div>
                 </div>
-                {submitMsg && <div className={`alert alert-${submitMsg.type}`} style={{ marginBottom: 10, fontSize: 12 }}>{submitMsg.text}</div>}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-primary" onClick={submitEmailChange} disabled={submitLoading}>{submitLoading ? 'Submitting...' : '📨 Submit request'}</button>
-                  <button className="btn btn-ghost" onClick={() => setEmailStep('idle')}>Cancel</button>
-                </div>
-                <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>Admin will review and approve. You'll be notified by email.</div>
-              </div>
+
+                {/* IDLE — button to start flow */}
+                {emailStep === 'idle' && (
+                  <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={startEmailChange}>
+                    🔐 Request email change
+                  </button>
+                )}
+
+                {/* PENDING — waiting for admin */}
+                {emailStep === 'pending' && (
+                  <div className="alert alert-warning" style={{ fontSize: 12 }}>
+                    ⏳ Your email change request is pending admin approval.
+                  </div>
+                )}
+
+                {/* VERIFYING — answer security questions */}
+                {emailStep === 'verifying' && (
+                  <div style={{ background: 'var(--bg3)', borderRadius: 8, padding: 14, border: '1px solid var(--border)' }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>🔒 Verify your identity</div>
+                    <div className="muted" style={{ fontSize: 12, marginBottom: 12 }}>Answer your security questions to continue.</div>
+                    <div className="form-group" style={{ marginBottom: 10 }}>
+                      <label className="form-label" style={{ fontSize: 12 }}>{userQ1 || 'Security Question 1'}</label>
+                      <input className="input" placeholder="Your answer..." value={verifyA1} onChange={e => setVerifyA1(e.target.value)} autoComplete="off" />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 12 }}>
+                      <label className="form-label" style={{ fontSize: 12 }}>{userQ2 || 'Security Question 2'}</label>
+                      <input className="input" placeholder="Your answer..." value={verifyA2} onChange={e => setVerifyA2(e.target.value)} autoComplete="off" onKeyDown={e => e.key === 'Enter' && submitVerify()} />
+                    </div>
+                    {verifyMsg && <div className={`alert alert-${verifyMsg.type}`} style={{ marginBottom: 10, fontSize: 12 }}>{verifyMsg.text}</div>}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn btn-primary" onClick={submitVerify} disabled={verifyLoading}>{verifyLoading ? 'Checking...' : '✓ Verify'}</button>
+                      <button className="btn btn-ghost" onClick={() => setEmailStep('idle')}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* VERIFIED — enter new email */}
+                {emailStep === 'verified' && (
+                  <div style={{ background: 'var(--bg3)', borderRadius: 8, padding: 14, border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <span style={{ color: 'var(--green)', fontSize: 16 }}>✅</span>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>Identity verified</span>
+                      <span className="muted" style={{ fontSize: 11 }}>(token valid 10 min)</span>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 10 }}>
+                      <label className="form-label" style={{ fontSize: 12 }}>New email address</label>
+                      <input className="input" type="email" placeholder="new@email.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && submitEmailChange()} />
+                    </div>
+                    {submitMsg && <div className={`alert alert-${submitMsg.type}`} style={{ marginBottom: 10, fontSize: 12 }}>{submitMsg.text}</div>}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn btn-primary" onClick={submitEmailChange} disabled={submitLoading}>{submitLoading ? 'Submitting...' : '📨 Submit request'}</button>
+                      <button className="btn btn-ghost" onClick={() => setEmailStep('idle')}>Cancel</button>
+                    </div>
+                    <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>Admin will review and approve. You'll be notified by email.</div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
+          {/* Change photo */}
           <label>
             <div className="btn btn-ghost" style={{ cursor: 'pointer' }} onClick={() => document.getElementById('pic-input').click()}>
               {t('change_photo')}
@@ -821,6 +1065,7 @@ export function Profile() {
           </label>
         </div>
 
+        {/* ── Security Questions card ───────────────────────── */}
         <div className="card">
           <div style={{ fontWeight: 700, marginBottom: 16 }}>{t('security_questions')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -855,7 +1100,6 @@ export function Profile() {
   );
 }
 
-// Update Password
 export function Password() {
   const { t } = useLang();
   const [cur, setCur] = useState('');
