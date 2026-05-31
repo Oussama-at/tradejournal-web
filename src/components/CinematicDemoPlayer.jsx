@@ -24,37 +24,53 @@ function getBestVoice(lang) {
 function speak(text, lang, onEnd) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
+
   const run = () => {
-    const utt = new SpeechSynthesisUtterance(text);
-    const voice = getBestVoice(lang);
-    if (voice) utt.voice = voice;
-    utt.lang  = lang === 'ar' ? 'ar-SA' : lang === 'fr' ? 'fr-FR' : 'en-US';
-    utt.rate  = lang === 'ar' ? 0.85 : 0.9;
-    utt.pitch = 1;
-    utt.volume = 1;
-    if (onEnd) utt.onend = onEnd;
-    // Chrome bug: split long Arabic text
-    if (lang === 'ar' && text.length > 120) {
-      const parts = text.split(/[.،]/g).filter(Boolean);
+    // Chrome bug: after cancel() synthesis can get stuck in paused state; resume() unblocks it
+    try { window.speechSynthesis.resume(); } catch (_) {}
+
+    // Always split Arabic text at sentence boundaries — Chrome silently cuts off
+    // single long utterances in Arabic regardless of length
+    if (lang === 'ar') {
+      const parts = text.split(/[.،!?]/g).map(s => s.trim()).filter(Boolean);
       let i = 0;
       const playNext = () => {
         if (i >= parts.length) { onEnd?.(); return; }
-        const u = new SpeechSynthesisUtterance(parts[i++].trim());
-        const v2 = getBestVoice(lang);
-        if (v2) u.voice = v2;
-        u.lang = 'ar-SA'; u.rate = 0.85; u.pitch = 1;
+        const u = new SpeechSynthesisUtterance(parts[i++]);
+        const v = getBestVoice('ar');
+        if (v) u.voice = v;
+        u.lang = 'ar-SA'; u.rate = 0.85; u.pitch = 1; u.volume = 1;
         u.onend = playNext;
+        u.onerror = playNext; // don't get stuck on a failed segment
         window.speechSynthesis.speak(u);
       };
       playNext();
       return;
     }
+
+    const utt = new SpeechSynthesisUtterance(text);
+    const voice = getBestVoice(lang);
+    if (voice) utt.voice = voice;
+    utt.lang   = lang === 'fr' ? 'fr-FR' : 'en-US';
+    utt.rate   = 0.9;
+    utt.pitch  = 1;
+    utt.volume = 1;
+    if (onEnd) utt.onend = onEnd;
     window.speechSynthesis.speak(utt);
   };
-  // Voices may not be loaded yet
+
+  // Voices may not be loaded yet — wait for them with a timeout safety net
   if (window.speechSynthesis.getVoices().length === 0) {
-    window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.onvoiceschanged = null; run(); };
-  } else { run(); }
+    let ran = false;
+    const fallback = setTimeout(() => { if (!ran) { ran = true; run(); } }, 500);
+    window.speechSynthesis.onvoiceschanged = () => {
+      if (!ran) { ran = true; clearTimeout(fallback); }
+      window.speechSynthesis.onvoiceschanged = null;
+      run();
+    };
+  } else {
+    run();
+  }
 }
 
 /* ── Scene data ─────────────────────────────────────────────── */
@@ -483,18 +499,39 @@ export default function CinematicDemoPlayer({ lang = 'en' }) {
     const next = !voiceRef.current;
     voiceRef.current = next;
     setVoiceOn(next);
-    if (next && playRef.current) speak(scenes[sceneRef.current].voice, lang);
-    else window.speechSynthesis?.cancel();
+    if (next) {
+      // Speak current scene if playback is running
+      if (playRef.current) speak(scenes[sceneRef.current].voice, lang);
+    } else {
+      window.speechSynthesis?.cancel();
+    }
   };
 
   useEffect(() => {
+    // Pre-load voices so the first speak() call is instant
+    if (window.speechSynthesis) {
+      const preload = () => window.speechSynthesis.getVoices();
+      preload();
+      if ('onvoiceschanged' in window.speechSynthesis) {
+        window.speechSynthesis.addEventListener('voiceschanged', preload);
+      }
+    }
     // Auto-start after 1.5s
     const t = setTimeout(() => {
       playRef.current = true;
       setPlaying(true);
       startScene(0);
+      // If user already enabled voice before the timer fired, start speaking now
+      if (voiceRef.current) speak(scenes[0].voice, lang);
     }, 1500);
-    return () => { clearTimeout(t); stopTimer(); window.speechSynthesis?.cancel(); };
+    return () => {
+      clearTimeout(t);
+      stopTimer();
+      window.speechSynthesis?.cancel();
+      if (window.speechSynthesis && 'onvoiceschanged' in window.speechSynthesis) {
+        window.speechSynthesis.removeEventListener('voiceschanged', () => {});
+      }
+    };
   }, []);
 
   // Reset on lang change
