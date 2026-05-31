@@ -271,13 +271,12 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 .land-video-wrap {
   position: relative;
   border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  background: var(--bg2);
-  min-height: 520px;
-  max-width: 860px;
+  overflow: visible;
+  border: none;
+  background: transparent;
+  max-width: 900px;
   margin: 0 auto;
-  box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+  box-shadow: 0 40px 100px rgba(0,0,0,0.45);
 }
 .land-video-wrap iframe,
 .land-video-wrap video {
@@ -703,4 +702,35 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 }
 [dir="rtl"] .user-info {
   text-align: right;
+}
+
+/* ===== GLOBAL LOGO BOX (outside nav) ===== */
+.logo-box {
+  width: 36px; height: 36px; background: var(--green);
+  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 15px; color: #080c10;
+  flex-shrink: 0;
+}
+
+/* ===== RTL LANDING FIXES ===== */
+[dir="rtl"] .land-hero-content { text-align: center; }
+[dir="rtl"] .land-section-sub { text-align: right; }
+[dir="rtl"] .land-section-label { text-align: right; }
+[dir="rtl"] .land-section-title { text-align: right; }
+[dir="rtl"] .land-features-section .land-section-sub,
+[dir="rtl"] .land-video-section .land-section-sub { max-width: 600px; }
+[dir="rtl"] .land-feature-card { text-align: right; }
+[dir="rtl"] .pack-lifetime-tag { left: auto; right: 50%; transform: translateX(50%); }
+[dir="rtl"] .pack-popular-tag  { left: auto; right: 50%; transform: translateX(50%); }
+[dir="rtl"] .land-footer { direction: rtl; }
+[dir="rtl"] .land-hero-ctas { direction: rtl; }
+[dir="rtl"] .land-nav { direction: rtl; }
+[dir="rtl"] .land-nav-actions { direction: ltr; }
+
+/* ===== VIDEO PLAYER RESPONSIVE ===== */
+@media(max-width: 768px) {
+  .land-video-section { padding: 48px 20px; }
+  .land-features-section { padding: 48px 20px; }
+  .land-pricing-section { padding: 48px 20px; }
+  .land-cta-section { padding: 60px 20px; }
 }
