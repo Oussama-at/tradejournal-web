@@ -9,6 +9,8 @@ const pClass = (v) => v >= 0 ? 'green' : 'red';
 export default function Dashboard() {
   const { t } = useLang();
   const [period, setPeriod] = useState('all');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo]     = useState('');
   const [stats, setStats] = useState(null);
   const [trades, setTrades] = useState([]);
   const [capital, setCapital] = useState(null);
@@ -16,17 +18,33 @@ export default function Dashboard() {
 
   const PERIODS = [
     { key: 'all',     label: t('all_dates')   || 'All dates' },
-    { key: 'daily',   label: t('today')       || 'Daily' },
-    { key: 'weekly',  label: t('this_week')   || 'Weekly' },
-    { key: 'monthly', label: t('this_month')  || 'Monthly' },
+    { key: 'daily',   label: t('today')       || 'Today' },
+    { key: 'weekly',  label: t('this_week')   || 'This Week' },
+    { key: 'monthly', label: t('this_month')  || 'This Month' },
+    { key: 'custom',  label: 'Custom' },
   ];
 
   // eslint-disable-next-line
-  useEffect(() => { load(); }, [period]);
+  useEffect(() => { load(); }, [period, customFrom, customTo]);
+
+  // Auto-refresh every 30 seconds for real-time updates
+  useEffect(() => {
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line
+  }, [period, customFrom, customTo]);
+
+  // Refresh immediately when a new trade is added
+  useEffect(() => {
+    const handler = () => load();
+    window.addEventListener('trade-saved', handler);
+    return () => window.removeEventListener('trade-saved', handler);
+  // eslint-disable-next-line
+  }, [period, customFrom, customTo]);
 
   async function load() {
     try {
-      const param = period !== 'all' ? `?period=${period}` : '';
+      const param = period !== 'all' && period !== 'custom' ? `?period=${period}` : '';
       const [statsRes, tradesRes, allTradesRes, capRes] = await Promise.all([
         api.get('/stats' + param),
         api.get('/trades?page=1&limit=10'),
@@ -39,8 +57,21 @@ export default function Dashboard() {
       setCapital(capRes?.data || null);
 
       const allT = allTradesRes?.data?.trades || [];
+      // Filter by period client-side
+      const today = new Date(); today.setHours(0,0,0,0);
+      const filtered = allT.filter(tr => {
+        const d = new Date((tr.date_trade || '').substring(0, 10));
+        if (period === 'daily') return d >= today;
+        if (period === 'weekly') { const s = new Date(today); s.setDate(today.getDate() - today.getDay()); return d >= s; }
+        if (period === 'monthly') return d >= new Date(today.getFullYear(), today.getMonth(), 1);
+        if (period === 'custom' && customFrom && customTo) {
+          const f = new Date(customFrom); const t2 = new Date(customTo); t2.setHours(23,59,59);
+          return d >= f && d <= t2;
+        }
+        return true;
+      });
       const byDay = {};
-      allT.forEach(tr => {
+      filtered.forEach(tr => {
         const day = (tr.date_trade || '').substring(0, 10);
         if (!byDay[day]) byDay[day] = 0;
         byDay[day] += tr.status === 'win' ? tr.montant : -Math.abs(tr.montant);
@@ -98,6 +129,15 @@ export default function Dashboard() {
           <select className="select" style={{ width: 'auto' }} value={period} onChange={e => setPeriod(e.target.value)}>
             {PERIODS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
           </select>
+          {period === 'custom' && (
+            <>
+              <input type="date" className="input" style={{ padding: '5px 10px', fontSize: 12, width: 140 }}
+                value={customFrom} onChange={e => setCustomFrom(e.target.value)} />
+              <span style={{ color: 'var(--muted)', fontSize: 12 }}>→</span>
+              <input type="date" className="input" style={{ padding: '5px 10px', fontSize: 12, width: 140 }}
+                value={customTo} onChange={e => setCustomTo(e.target.value)} />
+            </>
+          )}
           <button className="btn btn-ghost" onClick={load}>↺ {t('refresh') || 'Refresh'}</button>
         </div>
       </div>
@@ -176,7 +216,7 @@ export default function Dashboard() {
                   <td className={`mono bold ${tr.status === 'win' ? 'green' : 'red'}`}>
                     {tr.status === 'win' ? '+' : '-'}{Math.abs(tr.montant).toFixed(2)}$
                   </td>
-                  <td className="muted">{tr.sessions}</td>
+                  <td className="muted">{{ LON: 'London', NY: 'New York', ASI: 'Asia' }[tr.sessions] || tr.sessions}</td>
                 </tr>
               ))}
             </tbody>

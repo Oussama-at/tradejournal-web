@@ -10,6 +10,7 @@ import {
 const PERIODS = [
   { label: 'Today', val: 'today' }, { label: 'Week', val: 'week' },
   { label: 'Month', val: 'month' }, { label: 'All', val: 'all' },
+  { label: 'Custom', val: 'custom' },
 ];
 
 const fmt = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '$';
@@ -127,7 +128,9 @@ const WithdrawDot = (props) => {
 
 export default function Chart() {
   const { t } = useLang();
-  const [period, setPeriod]     = useState('month');
+  const [period, setPeriod]     = useState('all');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo]     = useState('');
   const [trades, setTrades]     = useState([]);
   const [chartData, setChartData] = useState([]);
   const [monthData, setMonthData] = useState([]);
@@ -135,15 +138,39 @@ export default function Chart() {
   const [withdrawals, setWithdrawals] = useState([]);
   const [combinedData, setCombinedData] = useState([]);
 
+  // Helper: filter trades by period client-side
+  const filterByPeriod = useCallback((list, isWithdrawal = false) => {
+    const dateKey = isWithdrawal ? 'created_at' : 'date_trade';
+    const today = new Date(); today.setHours(0,0,0,0);
+    return list.filter(item => {
+      const d = new Date((item[dateKey] || '').substring(0, 10));
+      if (period === 'today') return d >= today;
+      if (period === 'week') {
+        const start = new Date(today); start.setDate(today.getDate() - today.getDay());
+        return d >= start;
+      }
+      if (period === 'month') {
+        const start = new Date(today.getFullYear(), today.getMonth(), 1);
+        return d >= start;
+      }
+      if (period === 'custom' && customFrom && customTo) {
+        const from = new Date(customFrom); const to = new Date(customTo); to.setHours(23,59,59);
+        return d >= from && d <= to;
+      }
+      return true; // 'all'
+    });
+  }, [period, customFrom, customTo]);
+
   const load = useCallback(async () => {
     try {
-      const [statsRes, tradesRes, withdrawRes] = await Promise.all([
-        api.get(`/stats/chart?period=${period}`),
+      const [tradesRes, withdrawRes] = await Promise.all([
         api.get('/trades?page=1&limit=9999'),
         api.get('/withdraw'),
       ]);
-      const allTrades = tradesRes?.data?.trades || [];
-      const allWithdrawals = withdrawRes?.data?.withdrawals || [];
+      const rawTrades = tradesRes?.data?.trades || [];
+      const rawWithdrawals = withdrawRes?.data?.withdrawals || [];
+      const allTrades = filterByPeriod(rawTrades);
+      const allWithdrawals = filterByPeriod(rawWithdrawals, true);
       setTrades(allTrades);
       setWithdrawals(allWithdrawals);
 
@@ -228,6 +255,13 @@ export default function Chart() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Refresh immediately when a new trade is added from AddTrade page
+  useEffect(() => {
+    const handler = () => load();
+    window.addEventListener('trade-saved', handler);
+    return () => window.removeEventListener('trade-saved', handler);
+  }, [load]);
+
   // Stats
   const wins   = trades.filter(t => t.status === 'win').length;
   const losses = trades.filter(t => t.status !== 'win').length;
@@ -255,15 +289,24 @@ export default function Chart() {
 
   return (
     <div>
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div><div className="page-title">{t('chart_title')}</div></div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           {PERIODS.map(p => (
             <button key={p.val} className={`btn ${period === p.val ? 'btn-primary' : 'btn-ghost'}`}
               style={{ padding: '6px 14px' }} onClick={() => setPeriod(p.val)}>
               {p.label}
             </button>
           ))}
+          {period === 'custom' && (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input type="date" className="input" style={{ padding: '5px 10px', fontSize: 12, width: 140 }}
+                value={customFrom} onChange={e => setCustomFrom(e.target.value)} />
+              <span style={{ color: 'var(--muted)', fontSize: 12 }}>→</span>
+              <input type="date" className="input" style={{ padding: '5px 10px', fontSize: 12, width: 140 }}
+                value={customTo} onChange={e => setCustomTo(e.target.value)} />
+            </div>
+          )}
         </div>
       </div>
 
@@ -490,17 +533,20 @@ export default function Chart() {
           {/* Session */}
           <div className="card">
             <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('by_session')}</div>
-            {Object.entries(sessMap).map(([sess, pnl]) => (
+            {Object.entries(sessMap).map(([sess, pnl]) => {
+              const sessLabel = { LON: 'London', NY: 'New York', ASI: 'Asia' }[sess] || sess;
+              return (
               <div key={sess} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
-                  <span>{sess}</span>
+                  <span>{sessLabel}</span>
                   <span className={`mono bold ${pnl >= 0 ? 'green' : 'red'}`}>{fmt(pnl)}</span>
                 </div>
                 <div style={{ height: 3, background: 'var(--bg3)', borderRadius: 99 }}>
                   <div style={{ height: '100%', borderRadius: 99, background: pnl >= 0 ? 'var(--green)' : 'var(--red)', width: `${Math.min(100, Math.abs(pnl) / Math.max(...Object.values(sessMap).map(Math.abs)) * 100)}%` }} />
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Top markets */}

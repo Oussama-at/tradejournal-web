@@ -126,7 +126,7 @@ export default function Trades() {
                     <td className={`mono bold ${tr.status === 'win' ? 'green' : 'red'}`}>
                       {tr.status === 'win' ? '+' : '-'}{Math.abs(tr.montant).toFixed(2)}$
                     </td>
-                    <td className="muted">{tr.sessions}</td>
+                    <td className="muted">{{ LON: 'London', NY: 'New York', ASI: 'Asia' }[tr.sessions] || tr.sessions}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-ghost" style={{ padding: '3px 8px', fontSize: 11 }}
@@ -222,9 +222,17 @@ function EditModal({ trade, onClose, onSave }) {
           ].map(([label, key, opts]) => (
             <div key={key} className="form-group">
               <label className="form-label">{label}</label>
-              <select className="select" value={form[key]} onChange={e => set(key, e.target.value)}>
-                {opts.map(o => <option key={o}>{o}</option>)}
-              </select>
+              {key === 'sessions' ? (
+                <select className="select" value={form[key]} onChange={e => set(key, e.target.value)}>
+                  <option value="LON">London</option>
+                  <option value="NY">New York</option>
+                  <option value="ASI">Asia</option>
+                </select>
+              ) : (
+                <select className="select" value={form[key]} onChange={e => set(key, e.target.value)}>
+                  {opts.map(o => <option key={o}>{o}</option>)}
+                </select>
+              )}
             </div>
           ))}
         </div>

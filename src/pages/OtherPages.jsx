@@ -623,44 +623,162 @@ export function Logs() {
   const { t } = useLang();
   const [logs, setLogs] = useState([]);
   const [search, setSearch] = useState('');
+  const [actionFilter, setActionFilter] = useState('all');
+  const [userFilter, setUserFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo]   = useState('');
   const [page, setPage] = useState(0);
-  const PER = 15;
+  const [showFilters, setShowFilters] = useState(false);
+  const PER = 20;
 
-  useEffect(() => { api.get('/admin/logs?page=1&limit=500').then(r => setLogs(r?.data?.logs || [])); }, []);
+  useEffect(() => {
+    api.get('/admin/logs?page=1&limit=1000').then(r => setLogs(r?.data?.logs || []));
+  }, []);
 
-  const filtered = logs.filter(l =>
-    !search || l.action?.toLowerCase().includes(search) || l.details?.toLowerCase().includes(search) || l.user_name?.toLowerCase().includes(search)
-  );
-  const paged = filtered.slice(page * PER, (page + 1) * PER);
-  const maxPg = Math.ceil(filtered.length / PER);
+  const DOT_COLOR = { LOGIN:'var(--blue)', LOGIN_FAILED:'var(--red)', TRADE_SAVED:'var(--green)', TRADE_DELETED:'var(--red)', ADMIN_ADD_USER:'var(--purple)', WITHDRAWAL:'var(--orange)', CAPITAL_ADDED:'var(--green)', ADMIN_CREATE_ALERT:'var(--orange)', ADMIN_TOGGLE_ACCESS:'var(--purple)', REGISTER:'var(--blue)' };
+  const dotColor = a => DOT_COLOR[a] || 'var(--dim)';
 
-  const dotColor = (a) => ({ LOGIN:'var(--blue)', LOGIN_FAILED:'var(--red)', TRADE_SAVED:'var(--green)', TRADE_DELETED:'var(--red)', ADMIN_ADD_USER:'var(--purple)', WITHDRAWAL:'var(--orange)', CAPITAL_ADDED:'var(--green)' }[a] || 'var(--dim)');
+  const ACTION_ICONS = { LOGIN:'🔑', LOGIN_FAILED:'🚫', TRADE_SAVED:'📈', TRADE_DELETED:'🗑️', ADMIN_ADD_USER:'👤', WITHDRAWAL:'💸', CAPITAL_ADDED:'💰', ADMIN_CREATE_ALERT:'🔔', ADMIN_TOGGLE_ACCESS:'🔒', REGISTER:'✅' };
+  const actionIcon = a => ACTION_ICONS[a] || '•';
+
+  // Unique action types and users from log data
+  const allActions = Array.from(new Set(logs.map(l => l.action).filter(Boolean))).sort();
+  const allUsers   = Array.from(new Set(logs.map(l => l.user_name).filter(Boolean))).sort();
+
+  const filtered = logs.filter(l => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || l.action?.toLowerCase().includes(q) || l.details?.toLowerCase().includes(q) || l.user_name?.toLowerCase().includes(q);
+    const matchAction = actionFilter === 'all' || l.action === actionFilter;
+    const matchUser   = userFilter === 'all' || l.user_name === userFilter;
+    const logDate = (l.created_at || '').substring(0, 10);
+    const matchFrom = !dateFrom || logDate >= dateFrom;
+    const matchTo   = !dateTo   || logDate <= dateTo;
+    return matchSearch && matchAction && matchUser && matchFrom && matchTo;
+  });
+
+  const paged  = filtered.slice(page * PER, (page + 1) * PER);
+  const maxPg  = Math.ceil(filtered.length / PER);
+  const activeFilters = [actionFilter !== 'all', userFilter !== 'all', !!dateFrom, !!dateTo].filter(Boolean).length;
+
+  const clearFilters = () => { setActionFilter('all'); setUserFilter('all'); setDateFrom(''); setDateTo(''); setSearch(''); setPage(0); };
 
   return (
     <div>
-      <div className="page-header"><div className="page-title">{t('logs_title')}</div></div>
-      <div className="card" style={{ marginBottom: 16 }}>
-        <input className="input" placeholder="Search logs..." value={search} onChange={e => { setSearch(e.target.value.toLowerCase()); setPage(0); }} />
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="page-title">{t('logs_title')}</div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
+          <button className={`btn ${showFilters ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ padding: '6px 14px', fontSize: 12, position: 'relative' }}
+            onClick={() => setShowFilters(s => !s)}>
+            ⚙ Filters {activeFilters > 0 && (
+              <span style={{ marginLeft: 4, background: 'var(--red)', color: '#fff', borderRadius: 99, padding: '0 6px', fontSize: 11 }}>{activeFilters}</span>
+            )}
+          </button>
+          {activeFilters > 0 && (
+            <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12, color: 'var(--muted)' }} onClick={clearFilters}>✕ Clear</button>
+          )}
+        </div>
       </div>
+
+      {/* Search bar always visible */}
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px' }}>
+          <span style={{ color: 'var(--muted)' }}>🔍</span>
+          <input style={{ flex: 1, border: 'none', background: 'transparent', padding: '11px 0', fontSize: 13, color: 'var(--text)', outline: 'none' }}
+            placeholder="Search by action, details or user..."
+            value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} />
+          {search && <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 16 }} onClick={() => setSearch('')}>✕</button>}
+        </div>
+      </div>
+
+      {/* Advanced filter panel */}
+      {showFilters && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Action Type</label>
+              <select className="select" value={actionFilter} onChange={e => { setActionFilter(e.target.value); setPage(0); }}>
+                <option value="all">All Actions</option>
+                {allActions.map(a => (
+                  <option key={a} value={a}>{actionIcon(a)} {a.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>User</label>
+              <select className="select" value={userFilter} onChange={e => { setUserFilter(e.target.value); setPage(0); }}>
+                <option value="all">All Users</option>
+                {allUsers.map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>From Date</label>
+              <input type="date" className="input" style={{ padding: '8px 10px', fontSize: 13 }}
+                value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(0); }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>To Date</label>
+              <input type="date" className="input" style={{ padding: '8px 10px', fontSize: 13 }}
+                value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(0); }} />
+            </div>
+          </div>
+          {/* Quick action type badges */}
+          <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {['LOGIN', 'TRADE_SAVED', 'WITHDRAWAL', 'REGISTER', 'ADMIN_TOGGLE_ACCESS'].map(a => (
+              <button key={a} onClick={() => { setActionFilter(actionFilter === a ? 'all' : a); setPage(0); }}
+                style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                  background: actionFilter === a ? dotColor(a) : 'var(--bg3)',
+                  color: actionFilter === a ? '#fff' : 'var(--muted)', transition: 'all 0.15s' }}>
+                {actionIcon(a)} {a.replace(/_/g, ' ')}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Log list */}
       <div className="card">
+        {paged.length === 0 && (
+          <div style={{ textAlign: 'center', color: 'var(--dim)', padding: 40 }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+            <div>No logs match your filters</div>
+          </div>
+        )}
         {paged.map((l, i) => {
           const date = (l.created_at || '').substring(0, 16).replace('T', ' ');
           return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor(l.action), flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 13 }}>{l.action}{l.details ? ' — ' + l.details : ''}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{l.user_name} · {date}</div>
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 0', borderBottom: i < paged.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              {/* Colored dot */}
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor(l.action), flexShrink: 0, marginTop: 5 }} />
+              {/* Icon */}
+              <div style={{ fontSize: 16, flexShrink: 0, lineHeight: 1 }}>{actionIcon(l.action)}</div>
+              {/* Content */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 700, fontSize: 12, background: dotColor(l.action) + '22', color: dotColor(l.action),
+                    padding: '2px 8px', borderRadius: 4, letterSpacing: '0.04em' }}>
+                    {l.action}
+                  </span>
+                  {l.details && (
+                    <span style={{ fontSize: 13, color: 'var(--text)' }}>{l.details}</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'flex', gap: 12 }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text)' }}>@{l.user_name}</span>
+                  <span>🕐 {date}</span>
+                </div>
               </div>
             </div>
           );
         })}
-        {filtered.length === 0 && <div style={{ textAlign: 'center', color: 'var(--dim)', padding: 32 }}>No logs</div>}
-        <div className="pagination">
-          <button className="btn btn-ghost" disabled={page === 0} onClick={() => setPage(p => p - 1)}>← Prev</button>
-          <span className="page-info">Page {page + 1} / {maxPg || 1}</span>
-          <button className="btn btn-ghost" disabled={page >= maxPg - 1} onClick={() => setPage(p => p + 1)}>Next →</button>
-        </div>
+        {maxPg > 1 && (
+          <div className="pagination" style={{ marginTop: 16 }}>
+            <button className="btn btn-ghost" disabled={page === 0} onClick={() => setPage(p => p - 1)}>← Prev</button>
+            <span className="page-info">Page {page + 1} / {maxPg}</span>
+            <button className="btn btn-ghost" disabled={page >= maxPg - 1} onClick={() => setPage(p => p + 1)}>Next →</button>
+          </div>
+        )}
       </div>
     </div>
   );

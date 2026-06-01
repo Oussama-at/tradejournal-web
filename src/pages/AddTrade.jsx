@@ -16,6 +16,7 @@ const MARKETS = {
   'CRYPTO':   ['BTC','ETH','SOL','XRP','BNB','ADA','DOGE','AVAX','LINK','LTC','DOT','MATIC','UNI','ATOM','NEAR','FTM','ALGO','XLM','TRX','SHIB'],
 };
 const SESSIONS = ['LON', 'NY', 'ASI'];
+const SESSION_LABELS = { LON: 'London', NY: 'New York', ASI: 'Asia' };
 
 /* ─────────────────────────────────────────────
    MarketSelector component
@@ -300,6 +301,8 @@ export default function AddTrade() {
         setForm(f => ({ ...f, point_entree: '', point_sortie: '', montant: '', signal: '' }));
         setImage(null); setPreview(null);
         if (!isLifetime) setTradeCount(c => (c ?? 0) + 1);
+        // Notify other components (Dashboard, Chart) to refresh
+        window.dispatchEvent(new CustomEvent('trade-saved'));
       } else if (res?.message === 'FREE_LIMIT_REACHED') {
         setShowUpgrade(true);
       } else {
@@ -425,7 +428,7 @@ export default function AddTrade() {
                       <button key={s} type="button"
                         className={`btn ${form.sessions === s ? 'btn-primary' : 'btn-ghost'}`}
                         style={{ flex: 1, padding: '6px 4px', fontSize: 12 }}
-                        onClick={() => set('sessions', s)}>{s}</button>
+                        onClick={() => set('sessions', s)}>{SESSION_LABELS[s] || s}</button>
                     ))}
                   </div>
                 </div>
@@ -464,8 +467,13 @@ export default function AddTrade() {
             <div className="card">
               <div style={{ fontWeight: 700, marginBottom: 12 }}>Screenshot</div>
               {preview && (
-                <img src={preview} alt="preview"
-                  style={{ width: '100%', borderRadius: 6, marginBottom: 10, maxHeight: 200, objectFit: 'cover' }} />
+                <>
+                  <img src={preview} alt="preview"
+                    onClick={() => window.open(preview, '_blank')}
+                    style={{ width: '100%', borderRadius: 6, marginBottom: 10, maxHeight: 200, objectFit: 'cover', cursor: 'zoom-in' }}
+                    title="Click to view full size" />
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, textAlign: 'center' }}>🔍 Click to view full size</div>
+                </>
               )}
               <label style={{ display: 'block', cursor: 'pointer' }}>
                 <div className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }}
