@@ -251,7 +251,7 @@ export default function Chart() {
       }));
       setDailyPnL(dl);
     } catch (e) { console.error(e); }
-  }, [period]);
+  }, [filterByPeriod]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -281,11 +281,12 @@ export default function Chart() {
   });
   const topMarkets = Object.entries(mktMap).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 5);
 
-  const totalPnl = chartData[chartData.length - 1]?.cumul || 0;
+  const totalPnl = trades.reduce((s, t) => s + (t.status === 'win' ? t.montant : -Math.abs(t.montant)), 0);
   const totalWithdrawn = withdrawals.reduce((s, w) => s + parseFloat(w.amount || 0), 0);
   const netCapital = totalPnl - totalWithdrawn;
   const daysWithWithdrawals = combinedData.filter(d => d.withdrawAmount > 0);
   const hasWithdrawals = withdrawals.length > 0;
+  const hasData = combinedData.length > 0 || trades.length > 0;
 
   return (
     <div>
@@ -332,11 +333,28 @@ export default function Chart() {
         </div>
       </div>
 
+      {/* No data empty state */}
+      {!hasData && (
+        <div className="card" style={{ textAlign: 'center', padding: '48px 24px', marginBottom: 20 }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📊</div>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>No trades in this period</div>
+          <div style={{ color: 'var(--muted)', fontSize: 13 }}>Try selecting a different time range or switch to "All"</div>
+        </div>
+      )}
+
       {/* Cumulative P&L with Withdrawal Markers */}
-      {combinedData.length > 1 && (
+      {combinedData.length > 0 && (
         <div className="card" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ fontWeight: 700 }}>Cumulative P&L{hasWithdrawals ? ' & Withdrawals' : ''}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ fontWeight: 700 }}>Cumulative P&L{hasWithdrawals ? ' & Withdrawals' : ''}</div>
+              {period !== 'all' && (
+                <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12,
+                  background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+                  { period === 'today' ? 'Today' : period === 'week' ? 'This Week' : period === 'month' ? 'This Month' : `${customFrom} → ${customTo}` }
+                </span>
+              )}
+            </div>
             {hasWithdrawals && (
               <div style={{ display: 'flex', gap: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
@@ -427,7 +445,7 @@ export default function Chart() {
         <div className="card" style={{ marginBottom: 20 }}>
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Withdrawal History Chart</div>
           <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={combinedData.filter(d => d.withdrawAmount > 0)}>
+            <BarChart data={combinedData.filter(d => d.withdrawAmount > 0)} barSize={Math.max(24, Math.min(80, Math.floor(600 / Math.max(combinedData.filter(d => d.withdrawAmount > 0).length, 1))))}>
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} />
               <Tooltip
@@ -477,7 +495,7 @@ export default function Chart() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={dailyPnL} barCategoryGap="30%" barGap={4}>
+            <BarChart data={dailyPnL} barCategoryGap="30%" barGap={4} barSize={Math.max(20, Math.min(60, Math.floor(600 / Math.max(dailyPnL.length, 1))))}>
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${Math.abs(v)}`} />
               <Tooltip content={<DailyPnLTooltip />} />
@@ -493,7 +511,7 @@ export default function Chart() {
         <div className="card">
           <div style={{ fontWeight: 700, marginBottom: 16 }}>{t('monthly_chart')}</div>
           <ResponsiveContainer width="100%" height={180}>
-            <ComposedChart data={monthData}>
+            <ComposedChart data={monthData} barSize={Math.max(20, Math.min(60, Math.floor(300 / Math.max(monthData.length, 1))))}>
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} />
               <Tooltip content={({ active, payload, label }) => {
