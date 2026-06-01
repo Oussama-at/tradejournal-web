@@ -16,7 +16,7 @@ import Subscriptions from './pages/Subscriptions';
 import MyPlan from './pages/MyPlan';
 import {
   Capital, Withdraw, Users, Logs,
-  Activations, PasswordReset, Profile, Password
+  Activations, PasswordReset, EmailChangeRequests, Profile, Password
 } from './pages/OtherPages';
 import AdminAlerts from './pages/AdminAlerts';
 import api from './services/api';
@@ -81,6 +81,7 @@ function AppLayout() {
           <Route path="/logs"             element={<AdminRoute><Logs /></AdminRoute>} />
           <Route path="/activations"      element={<AdminRoute><Activations /></AdminRoute>} />
           <Route path="/password-resets"  element={<AdminRoute><PasswordReset /></AdminRoute>} />
+          <Route path="/email-changes"    element={<AdminRoute><EmailChangeRequests /></AdminRoute>} />
           <Route path="/alerts"            element={<AdminRoute><AdminAlerts /></AdminRoute>} />
           <Route path="/my-plan"          element={<MyPlan />} />
           <Route path="/profile"          element={<Profile />} />

@@ -770,6 +770,91 @@ export function PasswordReset() {
   );
 }
 
+// Email Change Requests
+export function EmailChangeRequests() {
+  const { t } = useLang();
+  const showConfirm = useConfirm();
+  const [reqs, setReqs] = useState([]);
+  useEffect(() => { load(); }, []);
+  async function load() {
+    const res = await api.get('/admin/email-change-requests');
+    setReqs(res?.data?.requests || []);
+  }
+  async function approve(id, userName, newEmail) {
+    const ok = await showConfirm({
+      title: 'Approve Email Change?',
+      message: `This will update ${userName}'s email to ${newEmail}. They will be notified automatically.`,
+      type: 'primary',
+      confirmLabel: 'Approve',
+      cancelLabel: 'Cancel',
+    });
+    if (!ok) return;
+    const res = await api.post(`/admin/email-change-requests/${id}/approve`, {});
+    if (res?.success) load();
+  }
+  async function reject(id, userName) {
+    const ok = await showConfirm({
+      title: 'Reject Request?',
+      message: `Reject ${userName}'s email change request? They will be notified by email.`,
+      type: 'danger',
+      confirmLabel: 'Reject',
+      cancelLabel: 'Cancel',
+    });
+    if (!ok) return;
+    await api.post(`/admin/email-change-requests/${id}/reject`, {});
+    load();
+  }
+  const counts = reqs.reduce((a, r) => { a[r.status] = (a[r.status] || 0) + 1; return a; }, {});
+  return (
+    <div>
+      <div className="page-header"><div className="page-title">✉️ Email Change Requests</div></div>
+      <div className="grid-4" style={{ marginBottom: 20 }}>
+        {[['Total', reqs.length, 'blue'], ['Pending', counts.pending || 0, 'orange'], ['Approved', counts.approved || 0, 'green'], ['Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
+          <div key={l} className="stat-card"><div className="stat-label">{l}</div><div className={`stat-value ${c}`}>{v}</div></div>
+        ))}
+      </div>
+      <div className="card">
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                {[t('col_id') || '#', t('col_user') || 'User', 'Current Email', 'Requested Email', t('col_date') || 'Date', t('col_status') || 'Status', t('col_actions') || 'Actions'].map(h => <th key={h}>{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {reqs.length === 0 && (
+                <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 24 }}>No requests yet</td></tr>
+              )}
+              {reqs.map(r => (
+                <tr key={r.id}>
+                  <td className="muted mono">{r.id}</td>
+                  <td style={{ fontWeight: 600 }}>{r.user_name}</td>
+                  <td className="muted" style={{ fontSize: 12 }}>{r.current_email || <em>—</em>}</td>
+                  <td style={{ color: 'var(--accent)', fontFamily: 'monospace', fontSize: 13 }}>{r.new_email}</td>
+                  <td className="muted">{(r.created_at || '').substring(0, 10)}</td>
+                  <td>
+                    <span className={`badge ${r.status === 'pending' ? 'badge-orange' : r.status === 'approved' ? 'badge-green' : 'badge-red'}`}>
+                      {r.status}
+                    </span>
+                  </td>
+                  <td>
+                    {r.status === 'pending' && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => approve(r.id, r.user_name, r.new_email)}>Approve</button>
+                        <button className="btn btn-danger"  style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => reject(r.id, r.user_name)}>Reject</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // My Profile
 
 // My Profile
