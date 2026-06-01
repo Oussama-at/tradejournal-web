@@ -354,42 +354,94 @@ const TYPE_STYLES = {
 };
 
 function useAlerts(user) {
-  const [alerts, setAlerts]       = useState([]);
+  const isAdmin = user?.role === 'admin';
+
+  // ── Broadcast alerts (manual, admin-created) ──────────────────────────────
+  const [alerts, setAlerts] = useState([]);
   const [dismissed, setDismissed] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('dismissed_alerts') || '[]'); }
     catch { return []; }
   });
 
-  const fetch = useCallback(() => {
+  // ── User notifications (auto-created by system) ───────────────────────────
+  const [userNotifs, setUserNotifs] = useState([]);
+
+  // ── Admin pending counts ──────────────────────────────────────────────────
+  const [pendingCounts, setPendingCounts] = useState({ email_changes: 0, password_resets: 0, activations: 0 });
+
+  const fetchAll = useCallback(() => {
     if (!user) return;
+
+    // Broadcast alerts
     api.get('/alerts')
       .then(r => { if (r?.data?.alerts) setAlerts(r.data.alerts); })
       .catch(() => {});
-  }, [user]);
+
+    // User notifications
+    api.get('/notifications')
+      .then(r => { if (r?.data?.notifications) setUserNotifs(r.data.notifications); })
+      .catch(() => {});
+
+    // Admin pending counts
+    if (isAdmin) {
+      api.get('/admin/pending-counts')
+        .then(r => { if (r?.data) setPendingCounts(r.data); })
+        .catch(() => {});
+    }
+  }, [user, isAdmin]);
 
   useEffect(() => {
-    fetch();
-    const id = setInterval(fetch, 60_000);
+    fetchAll();
+    const id = setInterval(fetchAll, 60_000);
     return () => clearInterval(id);
-  }, [fetch]);
+  }, [fetchAll]);
 
-  const dismiss = (id) => {
+  // Dismiss a broadcast alert (session only)
+  const dismissAlert = (id) => {
     const next = [...dismissed, id];
     setDismissed(next);
     try { sessionStorage.setItem('dismissed_alerts', JSON.stringify(next)); } catch {}
   };
 
-  const visible = alerts.filter(a => !dismissed.includes(a.id));
-  return { visible, dismiss };
+  // Mark a user notification as read
+  const markRead = (id) => {
+    setUserNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    api.post(`/notifications/${id}/read`, {}).catch(() => {});
+  };
+
+  // Mark all user notifications as read
+  const markAllRead = () => {
+    setUserNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
+    api.post('/notifications/read-all', {}).catch(() => {});
+  };
+
+  const visibleAlerts = alerts.filter(a => !dismissed.includes(a.id));
+  const unreadNotifs  = userNotifs.filter(n => !n.is_read);
+  const totalPending  = isAdmin
+    ? pendingCounts.email_changes + pendingCounts.password_resets + pendingCounts.activations
+    : 0;
+
+  return {
+    visibleAlerts, dismissAlert,
+    userNotifs, unreadNotifs, markRead, markAllRead,
+    pendingCounts, totalPending,
+  };
 }
 
 function NotificationBell({ user }) {
-  const [open, setOpen]   = useState(false);
-  const { visible, dismiss } = useAlerts(user);
-  const panelRef = useRef(null);
-  const count    = visible.length;
+  const [open, setOpen] = useState(false);
+  const [tab, setTab]   = useState('notifs'); // 'notifs' | 'alerts'
+  const isAdmin = user?.role === 'admin';
 
-  // Close panel on outside click
+  const {
+    visibleAlerts, dismissAlert,
+    userNotifs, unreadNotifs, markRead, markAllRead,
+    pendingCounts, totalPending,
+  } = useAlerts(user);
+
+  const panelRef = useRef(null);
+  const totalBadge = unreadNotifs.length + (isAdmin ? totalPending : 0);
+
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
@@ -399,167 +451,144 @@ function NotificationBell({ user }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
+  const renderNotifCard = (n) => {
+    const s = TYPE_STYLES[n.type] || TYPE_STYLES.info;
+    return (
+      <div key={n.id} style={{
+        background: n.is_read ? 'rgba(255,255,255,0.02)' : s.bg,
+        border: `1px solid ${n.is_read ? '#1e2a35' : s.border + '44'}`,
+        borderLeft: `3px solid ${n.is_read ? '#2a3a4a' : s.border}`,
+        borderRadius: 8, padding: '12px 14px',
+        display: 'flex', gap: 10, alignItems: 'flex-start',
+        opacity: n.is_read ? 0.6 : 1, transition: 'opacity 0.2s',
+      }}>
+        <span style={{ color: s.border, fontSize: 16, flexShrink: 0, marginTop: 1 }}>{s.icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: '#dce8f0', fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word' }}>{n.message}</div>
+          <div style={{ color: '#4a5a6a', fontSize: 10, marginTop: 5 }}>{new Date(n.created_at).toLocaleString()}</div>
+        </div>
+        {!n.is_read && (
+          <button onClick={() => markRead(n.id)} title="Mark as read" style={{
+            background: 'none', border: 'none', color: '#4a5a6a',
+            cursor: 'pointer', fontSize: 13, padding: '0 2px', flexShrink: 0, lineHeight: 1,
+          }}>✓</button>
+        )}
+      </div>
+    );
+  };
+
+  const renderAlertCard = (a) => {
+    const s = TYPE_STYLES[a.type] || TYPE_STYLES.info;
+    return (
+      <div key={a.id} style={{
+        background: s.bg, border: `1px solid ${s.border}33`,
+        borderLeft: `3px solid ${s.border}`,
+        borderRadius: 8, padding: '12px 14px',
+        display: 'flex', gap: 10, alignItems: 'flex-start',
+      }}>
+        <span style={{ color: s.border, fontSize: 16, flexShrink: 0, marginTop: 1 }}>{s.icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: '#dce8f0', fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word' }}>{a.message}</div>
+          <div style={{ color: '#4a5a6a', fontSize: 10, marginTop: 5 }}>{new Date(a.created_at).toLocaleDateString()}</div>
+        </div>
+        <button onClick={() => dismissAlert(a.id)} title="Dismiss" style={{
+          background: 'none', border: 'none', color: '#4a5a6a',
+          cursor: 'pointer', fontSize: 15, padding: '0 2px', flexShrink: 0, lineHeight: 1,
+        }}>×</button>
+      </div>
+    );
+  };
+
   return (
     <>
-      {/* Keyframe styles */}
       <style>{`
-        @keyframes slideInPanel {
-          from { opacity: 0; transform: translateX(20px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes bellShake {
-          0%,100% { transform: rotate(0deg); }
-          20%      { transform: rotate(-18deg); }
-          40%      { transform: rotate(18deg); }
-          60%      { transform: rotate(-10deg); }
-          80%      { transform: rotate(10deg); }
-        }
+        @keyframes slideInPanel { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes bellShake { 0%,100%{transform:rotate(0deg)} 20%{transform:rotate(-18deg)} 40%{transform:rotate(18deg)} 60%{transform:rotate(-10deg)} 80%{transform:rotate(10deg)} }
         .bell-btn:hover .bell-icon { animation: bellShake 0.5s ease; }
+        .notif-tab { padding:6px 14px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:600; transition:all 0.15s; }
+        .notif-tab.active { background:rgba(0,230,118,0.15); color:#00e676; }
+        .notif-tab:not(.active) { background:transparent; color:#4a5a6a; }
+        .notif-tab:not(.active):hover { color:#7a8a9a; }
       `}</style>
 
-      {/* Bell button */}
-      <button
-        className="bell-btn"
-        onClick={() => setOpen(o => !o)}
-        title="Notifications"
-        style={{
-          position: 'relative',
-          background: open ? 'rgba(0,230,118,0.12)' : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${open ? 'rgba(0,230,118,0.35)' : 'rgba(255,255,255,0.08)'}`,
-          borderRadius: 9,
-          width: 36, height: 36,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-          flexShrink: 0,
-        }}
-      >
-        <span className="bell-icon" style={{ fontSize: 17, lineHeight: 1 }}>🔔</span>
-        {count > 0 && (
+      <button className="bell-btn" onClick={() => setOpen(o => !o)} title="Notifications" style={{
+        position:'relative', background: open ? 'rgba(0,230,118,0.12)' : 'rgba(255,255,255,0.04)',
+        border:`1px solid ${open ? 'rgba(0,230,118,0.35)' : 'rgba(255,255,255,0.08)'}`,
+        borderRadius:9, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center',
+        cursor:'pointer', transition:'all 0.2s', flexShrink:0,
+      }}>
+        <span className="bell-icon" style={{ fontSize:17, lineHeight:1 }}>🔔</span>
+        {totalBadge > 0 && (
           <span style={{
-            position: 'absolute', top: -5, right: -5,
-            background: '#f44336',
-            color: '#fff',
-            fontSize: 9, fontWeight: 800,
-            width: 17, height: 17,
-            borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '2px solid #080c10',
-            lineHeight: 1,
-          }}>
-            {count > 9 ? '9+' : count}
-          </span>
+            position:'absolute', top:-5, right:-5, background:'#f44336', color:'#fff',
+            fontSize:9, fontWeight:800, width:17, height:17, borderRadius:'50%',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            border:'2px solid #080c10', lineHeight:1,
+          }}>{totalBadge > 9 ? '9+' : totalBadge}</span>
         )}
       </button>
 
-      {/* Slide-in panel */}
       {open && (
-        <div
-          ref={panelRef}
-          style={{
-            position: 'fixed',
-            top: 0, right: 0,
-            width: 340,
-            height: '100vh',
-            background: 'linear-gradient(180deg, #0a0f16 0%, #080c10 100%)',
-            borderLeft: '1px solid #1e2a35',
-            boxShadow: '-8px 0 40px rgba(0,0,0,0.6)',
-            zIndex: 9999,
-            display: 'flex',
-            flexDirection: 'column',
-            animation: 'slideInPanel 0.25s ease',
-          }}
-        >
+        <div ref={panelRef} style={{
+          position:'fixed', top:0, right:0, width:340, height:'100vh',
+          background:'linear-gradient(180deg,#0a0f16 0%,#080c10 100%)',
+          borderLeft:'1px solid #1e2a35', boxShadow:'-8px 0 40px rgba(0,0,0,0.6)',
+          zIndex:9999, display:'flex', flexDirection:'column', animation:'slideInPanel 0.25s ease',
+        }}>
           {/* Header */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '18px 20px',
-            borderBottom: '1px solid #1e2a35',
-            flexShrink: 0,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 20 }}>🔔</span>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'18px 20px', borderBottom:'1px solid #1e2a35', flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:20 }}>🔔</span>
               <div>
-                <div style={{ color: '#e8edf3', fontWeight: 700, fontSize: 15 }}>Notifications</div>
-                <div style={{ color: '#7a8a9a', fontSize: 11 }}>
-                  {count === 0 ? 'All clear' : `${count} active alert${count > 1 ? 's' : ''}`}
-                </div>
+                <div style={{ color:'#e8edf3', fontWeight:700, fontSize:15 }}>Notifications</div>
+                <div style={{ color:'#7a8a9a', fontSize:11 }}>{totalBadge === 0 ? 'All clear' : `${totalBadge} unread`}</div>
               </div>
             </div>
-            <button
-              onClick={() => setOpen(false)}
-              style={{
-                background: 'rgba(255,255,255,0.05)', border: '1px solid #1e2a35',
-                color: '#7a8a9a', borderRadius: 7, width: 30, height: 30,
-                cursor: 'pointer', fontSize: 16, display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-              }}
-            >×</button>
+            <button onClick={() => setOpen(false)} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid #1e2a35', color:'#7a8a9a', borderRadius:7, width:30, height:30, cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
           </div>
 
-          {/* Alert list */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {count === 0 ? (
-              <div style={{
-                flex: 1, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: 12,
-                color: '#4a5a6a', paddingTop: 60,
-              }}>
-                <span style={{ fontSize: 48 }}>🔕</span>
-                <div style={{ fontSize: 14, color: '#7a8a9a' }}>No notifications</div>
-                <div style={{ fontSize: 12, color: '#4a5a6a', textAlign: 'center' }}>
-                  You're all caught up!
-                </div>
-              </div>
-            ) : visible.map(a => {
-              const s = TYPE_STYLES[a.type] || TYPE_STYLES.info;
-              return (
-                <div key={a.id} style={{
-                  background: s.bg,
-                  border: `1px solid ${s.border}33`,
-                  borderLeft: `3px solid ${s.border}`,
-                  borderRadius: 8,
-                  padding: '12px 14px',
-                  display: 'flex', gap: 10, alignItems: 'flex-start',
-                }}>
-                  <span style={{ color: s.border, fontSize: 16, flexShrink: 0, marginTop: 1 }}>{s.icon}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: '#dce8f0', fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word' }}>
-                      {a.message}
-                    </div>
-                    <div style={{ color: '#4a5a6a', fontSize: 10, marginTop: 5 }}>
-                      {new Date(a.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => dismiss(a.id)}
-                    title="Dismiss"
-                    style={{
-                      background: 'none', border: 'none', color: '#4a5a6a',
-                      cursor: 'pointer', fontSize: 15, padding: '0 2px',
-                      flexShrink: 0, lineHeight: 1,
-                    }}
-                  >×</button>
-                </div>
-              );
-            })}
+          {/* Admin pending summary chips */}
+          {isAdmin && totalPending > 0 && (
+            <div style={{ padding:'10px 16px', borderBottom:'1px solid #1e2a35', display:'flex', gap:8, flexWrap:'wrap', flexShrink:0 }}>
+              {pendingCounts.activations > 0 && <span style={{ background:'rgba(0,180,255,0.12)', color:'#7dd6f7', borderRadius:5, fontSize:11, padding:'3px 8px', fontWeight:600 }}>⭐ {pendingCounts.activations} activation{pendingCounts.activations > 1 ? 's' : ''}</span>}
+              {pendingCounts.password_resets > 0 && <span style={{ background:'rgba(255,180,0,0.12)', color:'#ffd060', borderRadius:5, fontSize:11, padding:'3px 8px', fontWeight:600 }}>🔑 {pendingCounts.password_resets} pwd reset{pendingCounts.password_resets > 1 ? 's' : ''}</span>}
+              {pendingCounts.email_changes > 0 && <span style={{ background:'rgba(0,230,118,0.10)', color:'#00e676', borderRadius:5, fontSize:11, padding:'3px 8px', fontWeight:600 }}>✉️ {pendingCounts.email_changes} email change{pendingCounts.email_changes > 1 ? 's' : ''}</span>}
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div style={{ display:'flex', gap:4, padding:'10px 16px 0', borderBottom:'1px solid #1e2a35', flexShrink:0 }}>
+            <button className={`notif-tab${tab === 'notifs' ? ' active' : ''}`} onClick={() => setTab('notifs')}>
+              My Notifications{unreadNotifs.length > 0 ? ` (${unreadNotifs.length})` : ''}
+            </button>
+            <button className={`notif-tab${tab === 'alerts' ? ' active' : ''}`} onClick={() => setTab('alerts')}>
+              Announcements{visibleAlerts.length > 0 ? ` (${visibleAlerts.length})` : ''}
+            </button>
+          </div>
+
+          {/* Content */}
+          <div style={{ flex:1, overflowY:'auto', padding:'12px 16px', display:'flex', flexDirection:'column', gap:10 }}>
+            {tab === 'notifs' && (
+              userNotifs.length === 0
+                ? <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, color:'#4a5a6a', paddingTop:60 }}><span style={{ fontSize:48 }}>🔕</span><div style={{ fontSize:14, color:'#7a8a9a' }}>No notifications yet</div></div>
+                : userNotifs.map(renderNotifCard)
+            )}
+            {tab === 'alerts' && (
+              visibleAlerts.length === 0
+                ? <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, color:'#4a5a6a', paddingTop:60 }}><span style={{ fontSize:48 }}>🔕</span><div style={{ fontSize:14, color:'#7a8a9a' }}>No announcements</div></div>
+                : visibleAlerts.map(renderAlertCard)
+            )}
           </div>
 
           {/* Footer */}
-          {count > 0 && (
-            <div style={{ padding: '12px 16px', borderTop: '1px solid #1e2a35', flexShrink: 0 }}>
-              <button
-                onClick={() => visible.forEach(a => dismiss(a.id))}
-                style={{
-                  width: '100%', padding: '9px', background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid #1e2a35', borderRadius: 7, color: '#7a8a9a',
-                  cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                }}
-              >
-                Dismiss all
-              </button>
-            </div>
-          )}
+          <div style={{ padding:'12px 16px', borderTop:'1px solid #1e2a35', flexShrink:0 }}>
+            {tab === 'notifs' && unreadNotifs.length > 0 && (
+              <button onClick={markAllRead} style={{ width:'100%', padding:'9px', background:'rgba(255,255,255,0.04)', border:'1px solid #1e2a35', borderRadius:7, color:'#7a8a9a', cursor:'pointer', fontSize:12, fontWeight:600 }}>✓ Mark all as read</button>
+            )}
+            {tab === 'alerts' && visibleAlerts.length > 0 && (
+              <button onClick={() => visibleAlerts.forEach(a => dismissAlert(a.id))} style={{ width:'100%', padding:'9px', background:'rgba(255,255,255,0.04)', border:'1px solid #1e2a35', borderRadius:7, color:'#7a8a9a', cursor:'pointer', fontSize:12, fontWeight:600 }}>Dismiss all</button>
+            )}
+          </div>
         </div>
       )}
     </>
