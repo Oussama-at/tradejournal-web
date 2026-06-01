@@ -16,7 +16,7 @@ const MARKETS = {
   'CRYPTO':   ['BTC','ETH','SOL','XRP','BNB','ADA','DOGE','AVAX','LINK','LTC','DOT','MATIC','UNI','ATOM','NEAR','FTM','ALGO','XLM','TRX','SHIB'],
 };
 const SESSIONS = ['LON', 'NY', 'ASI'];
-const SESSION_LABELS = { LON: 'London', NY: 'New York', ASI: 'Asia' };
+const SESSION_TKEYS = { LON: 'session_lon', NY: 'session_ny', ASI: 'session_asi' };
 
 /* ─────────────────────────────────────────────
    MarketSelector component
@@ -422,18 +422,18 @@ export default function AddTrade() {
               <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('trade_details')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <div className="form-group">
-                  <label className="form-label">Session</label>
+                  <label className="form-label">{t('session')}</label>
                   <div style={{ display: 'flex', gap: 6 }}>
                     {SESSIONS.map(s => (
                       <button key={s} type="button"
                         className={`btn ${form.sessions === s ? 'btn-primary' : 'btn-ghost'}`}
                         style={{ flex: 1, padding: '6px 4px', fontSize: 12 }}
-                        onClick={() => set('sessions', s)}>{SESSION_LABELS[s] || s}</button>
+                        onClick={() => set('sessions', s)}>{t(SESSION_TKEYS[s]) || s}</button>
                     ))}
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Close By</label>
+                  <label className="form-label">{t('close_by')}</label>
                   <select className="select" value={form.type_close} onChange={e => set('type_close', e.target.value)}>
                     {['Target', 'Stop Loss', 'Manual'].map(o => <option key={o}>{o}</option>)}
                   </select>
