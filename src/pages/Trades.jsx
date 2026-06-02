@@ -126,7 +126,7 @@ export default function Trades() {
                     <td className={`mono bold ${tr.status === 'win' ? 'green' : 'red'}`}>
                       {tr.status === 'win' ? '+' : '-'}{Math.abs(tr.montant).toFixed(2)}$
                     </td>
-                    <td className="muted">{{ LON: 'London', NY: 'New York', ASI: 'Asia' }[tr.sessions] || tr.sessions}</td>
+                    <td className="muted">{{ LON: t('session_lon'), NY: t('session_ny'), ASI: t('session_asi') }[tr.sessions] || tr.sessions}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-ghost" style={{ padding: '3px 8px', fontSize: 11 }}
@@ -224,9 +224,9 @@ function EditModal({ trade, onClose, onSave }) {
               <label className="form-label">{label}</label>
               {key === 'sessions' ? (
                 <select className="select" value={form[key]} onChange={e => set(key, e.target.value)}>
-                  <option value="LON">London</option>
-                  <option value="NY">New York</option>
-                  <option value="ASI">Asia</option>
+                  <option value="LON">{t('session_lon')}</option>
+                  <option value="NY">{t('session_ny')}</option>
+                  <option value="ASI">{t('session_asi')}</option>
                 </select>
               ) : (
                 <select className="select" value={form[key]} onChange={e => set(key, e.target.value)}>
