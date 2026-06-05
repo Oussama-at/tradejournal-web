@@ -402,7 +402,9 @@ export default function Chart() {
                 fill="url(#grad1)"
                 dot={(dotProps) => {
                   const { payload } = dotProps;
+                  // Show dot for withdrawal markers OR when only 1 point (single trade)
                   if (payload?.withdrawAmount > 0) return <WithdrawDot key={`wd-${dotProps.index}`} {...dotProps} />;
+                  if (combinedData.length === 1) return <circle key={`single-${dotProps.index}`} cx={dotProps.cx} cy={dotProps.cy} r={6} fill={totalPnl >= 0 ? 'var(--green)' : 'var(--red)'} stroke="var(--bg2)" strokeWidth={2} />;
                   return <g key={`empty-${dotProps.index}`} />;
                 }}
                 activeDot={{ r: 5, strokeWidth: 2, stroke: 'var(--bg2)', fill: totalPnl >= 0 ? 'var(--green)' : 'var(--red)' }}

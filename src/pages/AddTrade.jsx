@@ -249,6 +249,8 @@ export default function AddTrade() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [logicWarning, setLogicWarning] = useState(null);
+  const fileInputRef = React.useRef(null);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -268,6 +270,33 @@ export default function AddTrade() {
     return pts;
   };
   const pts = calcPnl();
+
+  // Check logic consistency: direction vs result vs price movement
+  const checkLogic = (formData) => {
+    const e = parseFloat(formData.point_entree), c = parseFloat(formData.point_sortie);
+    if (isNaN(e) || isNaN(c) || e === 0 || c === 0) return null;
+    const priceUp = c > e;
+    const isBuy = formData.type_trd === 'buy';
+    const isWin = formData.status === 'win';
+    // BUY + price up = WIN (logical), BUY + price down = LOSE (logical)
+    // SELL + price down = WIN (logical), SELL + price up = LOSE (logical)
+    const logicalWin = isBuy ? priceUp : !priceUp;
+    if (logicalWin !== isWin) {
+      const direction = isBuy ? 'BUY' : 'SELL';
+      const priceMove = priceUp ? 'went UP' : 'went DOWN';
+      const expected = logicalWin ? 'WIN' : 'LOSE';
+      const selected = isWin ? 'WIN' : 'LOSE';
+      return `Inconsistent trade: ${direction} trade with price that ${priceMove} should be ${expected}, but you selected ${selected}. Please verify your entry/close prices or change the result.`;
+    }
+    return null;
+  };
+
+  // Recalculate logic warning whenever relevant fields change
+  useEffect(() => {
+    const w = checkLogic(form);
+    setLogicWarning(w);
+  // eslint-disable-next-line
+  }, [form.type_trd, form.status, form.point_entree, form.point_sortie]);
 
   async function onSave(e) {
     e.preventDefault();
@@ -298,8 +327,14 @@ export default function AddTrade() {
       const res = await api.post('/trades', body);
       if (res?.success) {
         setMsg({ type: 'success', text: '✓ Trade saved!' });
-        setForm(f => ({ ...f, point_entree: '', point_sortie: '', montant: '', signal: '' }));
+        // Reset form fully including market
+        setForm({
+          marcher: '', type_trd: 'buy', point_entree: '', point_sortie: '', montant: '',
+          nbr_contrat: 1, qty_type: 'contract mini', status: 'win', type_close: 'Target',
+          sessions: 'LON', date_trade: new Date().toISOString().split('T')[0], signal: '',
+        });
         setImage(null); setPreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
         if (!isLifetime) setTradeCount(c => (c ?? 0) + 1);
         // Notify other components (Dashboard, Chart) to refresh
         window.dispatchEvent(new CustomEvent('trade-saved'));
@@ -312,6 +347,18 @@ export default function AddTrade() {
       setMsg({ type: 'error', text: err.message || 'Error saving trade' });
     }
     setLoading(false);
+  }
+
+  function handleImageSelect(e) {
+    const f = e.target.files[0];
+    if (f) { setImage(f); setPreview(URL.createObjectURL(f)); }
+    // Reset input value so selecting the same file again works, and prevent re-opening
+    e.target.value = '';
+  }
+
+  function removeImage() {
+    setImage(null); setPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   return (
@@ -358,7 +405,16 @@ export default function AddTrade() {
 
             {/* Market selector */}
             <div className="card">
-              <div style={{ fontWeight: 700, marginBottom: 10 }}>{t('market')}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div style={{ fontWeight: 700 }}>{t('market')}</div>
+                {form.marcher && (
+                  <button type="button"
+                    onClick={() => set('marcher', '')}
+                    style={{ background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.3)', color: 'var(--red)', borderRadius: 6, padding: '3px 10px', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+                    ✕ Reset
+                  </button>
+                )}
+              </div>
               <MarketSelector value={form.marcher} onChange={v => set('marcher', v)} />
             </div>
 
@@ -394,6 +450,31 @@ export default function AddTrade() {
                   </div>
                 </div>
               </div>
+              {/* Logic warning */}
+              {logicWarning && (
+                <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 6, background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.35)', color: '#ffd060', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>⚠</span>
+                  <div>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>Inconsistent Trade Logic</div>
+                    <div style={{ fontSize: 12, opacity: 0.9 }}>{logicWarning}</div>
+                    <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                      <button type="button"
+                        onClick={() => {
+                          // Auto-correct: flip the status based on price movement
+                          const e = parseFloat(form.point_entree), c = parseFloat(form.point_sortie);
+                          if (!isNaN(e) && !isNaN(c)) {
+                            const priceUp = c > e;
+                            const isBuy = form.type_trd === 'buy';
+                            set('status', (isBuy ? priceUp : !priceUp) ? 'win' : 'lose');
+                          }
+                        }}
+                        style={{ background: 'rgba(255,180,0,0.2)', border: '1px solid rgba(255,180,0,0.4)', color: '#ffd060', borderRadius: 5, padding: '4px 10px', fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
+                        Auto-correct Result
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Prices */}
@@ -450,7 +531,7 @@ export default function AddTrade() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">QTY</label>
-                  <input className="input mono" type="number" step="any" value={form.nbr_contrat}
+                  <input className="input mono" type="number" step="any" min="0" value={form.nbr_contrat}
                     onChange={e => set('nbr_contrat', e.target.value)} />
                 </div>
                 <div className="form-group">
@@ -475,20 +556,22 @@ export default function AddTrade() {
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, textAlign: 'center' }}>🔍 Click to view full size</div>
                 </>
               )}
-              <label style={{ display: 'block', cursor: 'pointer' }}>
-                <div className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }}
-                  onClick={() => document.getElementById('img-input').click()}>
-                  📷 {image ? image.name : 'Choose image'}
-                </div>
-                <input id="img-input" type="file" accept="image/*" style={{ display: 'none' }}
-                  onChange={e => {
-                    const f = e.target.files[0];
-                    if (f) { setImage(f); setPreview(URL.createObjectURL(f)); }
-                  }} />
-              </label>
+              {/* Hidden file input — only one, controlled via ref */}
+              <input
+                ref={fileInputRef}
+                id="img-input"
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleImageSelect}
+              />
+              <button type="button" className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }}
+                onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+                📷 {image ? image.name : 'Choose image'}
+              </button>
               {image && (
                 <button type="button" className="btn btn-danger" style={{ width: '100%', marginTop: 8, justifyContent: 'center' }}
-                  onClick={() => { setImage(null); setPreview(null); }}>✕ Remove</button>
+                  onClick={removeImage}>✕ Remove</button>
               )}
             </div>
 

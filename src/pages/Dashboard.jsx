@@ -3,6 +3,21 @@ import { useLang } from '../lang/LangContext';
 import api from '../services/api';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
+// Sortable table header helper
+function SortableTh({ children, sortCol, colIdx, sortDir, onSort }) {
+  const active = sortCol === colIdx;
+  return (
+    <th onClick={() => onSort(colIdx)} style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {children}
+        <span style={{ fontSize: 10, opacity: active ? 1 : 0.3, color: active ? 'var(--green)' : 'inherit' }}>
+          {active ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+        </span>
+      </span>
+    </th>
+  );
+}
+
 const fmt = (v) => (v >= 0 ? '+' : '') + v.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '$';
 const pClass = (v) => v >= 0 ? 'green' : 'red';
 
@@ -47,13 +62,12 @@ export default function Dashboard() {
       const param = period !== 'all' && period !== 'custom' ? `?period=${period}` : '';
       const [statsRes, tradesRes, allTradesRes, capRes] = await Promise.all([
         api.get('/stats' + param),
-        api.get('/trades?page=1&limit=10'),
+        api.get('/trades?page=1&limit=9999'),
         api.get('/trades?page=1&limit=9999'),
         api.get('/capital/current').catch(() => null),
       ]);
 
       setStats(statsRes?.data || null);
-      setTrades(tradesRes?.data?.trades || []);
       setCapital(capRes?.data || null);
 
       const allT = allTradesRes?.data?.trades || [];
@@ -70,6 +84,8 @@ export default function Dashboard() {
         }
         return true;
       });
+      // Show recent trades filtered by period (max 10)
+      setTrades(filtered.slice(0, 10));
       const byDay = {};
       filtered.forEach(tr => {
         const day = (tr.date_trade || '').substring(0, 10);
@@ -90,6 +106,24 @@ export default function Dashboard() {
     else { acc.losses++; acc.sumLose += tr.montant; }
     return acc;
   }, { wins: 0, losses: 0, sumWin: 0, sumLose: 0 });
+
+  // Table sort state
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
+  function handleSort(idx) {
+    if (sortCol === idx) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else if (sortDir === 'desc') { setSortCol(null); setSortDir('asc'); }
+    } else { setSortCol(idx); setSortDir('asc'); }
+  }
+
+  const SORT_KEYS = ['date_trade', 'marcher', 'type_trd', 'status', 'point_entree', 'point_sortie', 'montant', 'sessions'];
+  const sortedTrades = sortCol === null ? trades : [...trades].sort((a, b) => {
+    const av = a[SORT_KEYS[sortCol]] ?? '';
+    const bv = b[SORT_KEYS[sortCol]] ?? '';
+    const cmp = typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv));
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
 
   const capNow   = capital?.capital_now || 0;
   const capDep   = capital?.capital_depart || 0;
@@ -155,7 +189,7 @@ export default function Dashboard() {
       </div>
 
       {/* Chart */}
-      {chartData.length > 1 && (
+      {chartData.length >= 1 && (
         <div className="card" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
             <div style={{ fontWeight: 700 }}>{t('cumulative_pnl')}</div>
@@ -176,7 +210,9 @@ export default function Dashboard() {
                 tickFormatter={v => `$${v.toLocaleString()}`} />
               <Tooltip content={<CustomTooltip />} />
               <Area type="monotone" dataKey="cumul" stroke="var(--green)" strokeWidth={2}
-                fill="url(#pnlGrad)" dot={false} />
+                fill="url(#pnlGrad)"
+                dot={chartData.length === 1 ? { r: 6, fill: 'var(--green)', stroke: 'var(--bg2)', strokeWidth: 2 } : false}
+                activeDot={{ r: 5 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -191,14 +227,16 @@ export default function Dashboard() {
           <table>
             <thead>
               <tr>
-                {tableHeaders.map(h => <th key={h}>{h}</th>)}
+                {tableHeaders.map((h, i) => (
+                  <SortableTh key={h} colIdx={i} sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>{h}</SortableTh>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {trades.length === 0 && (
+              {sortedTrades.length === 0 && (
                 <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--dim)', padding: 32 }}>{t('no_trades')}</td></tr>
               )}
-              {trades.map(tr => (
+              {sortedTrades.map(tr => (
                 <tr key={tr.id_trade || tr.id}
                   style={{ background: tr.status === 'win' ? 'rgba(0,230,118,0.03)' : 'rgba(255,71,87,0.03)' }}>
                   <td className="muted">{tr.date_trade}</td>

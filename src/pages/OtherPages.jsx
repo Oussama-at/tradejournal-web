@@ -1,10 +1,115 @@
 // Capital Archive
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useLang } from '../lang/LangContext';
 import { useAuth } from '../context/AuthContext';
+
+// ── Reusable SortableTable ─────────────────────────────────────────────────
+function SortableTable({ headers, sortableCount, rows, rowKey, renderRow }) {
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc' | null
+
+  function handleSort(idx) {
+    if (idx >= (sortableCount ?? headers.length)) return;
+    if (sortCol === idx) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else if (sortDir === 'desc') { setSortCol(null); setSortDir('asc'); }
+    } else { setSortCol(idx); setSortDir('asc'); }
+  }
+
+  const sorted = sortCol === null ? rows : [...rows].sort((a, b) => {
+    const aKeys = Object.values(a);
+    const bKeys = Object.values(b);
+    const av = aKeys[sortCol] ?? '';
+    const bv = bKeys[sortCol] ?? '';
+    const cmp = typeof av === 'number' && typeof bv === 'number'
+      ? av - bv
+      : String(av).localeCompare(String(bv));
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          {headers.map((h, i) => {
+            const sortable = i < (sortableCount ?? headers.length);
+            const isActive = sortCol === i;
+            return (
+              <th key={h} onClick={() => sortable && handleSort(i)} style={{ cursor: sortable ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {h}
+                  {sortable && (
+                    <span style={{ fontSize: 10, opacity: isActive ? 1 : 0.3, color: isActive ? 'var(--green)' : 'inherit' }}>
+                      {isActive ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+                    </span>
+                  )}
+                </span>
+              </th>
+            );
+          })}
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.length === 0 && (
+          <tr><td colSpan={headers.length} style={{ textAlign: 'center', color: 'var(--dim)', padding: 24 }}>No data</td></tr>
+        )}
+        {sorted.map(row => renderRow(row))}
+      </tbody>
+    </table>
+  );
+}
+
+// ── Searchable Select ──────────────────────────────────────────────────────
+function SearchableSelect({ value, onChange, options, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function outside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', outside);
+    return () => document.removeEventListener('mousedown', outside);
+  }, [open]);
+
+  const filtered = options.filter(o =>
+    o.label.toLowerCase().includes(search.toLowerCase())
+  );
+  const current = options.find(o => o.value === value);
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" onClick={() => { setOpen(o => !o); setSearch(''); }}
+        className="select"
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left' }}>
+        <span>{current?.label || placeholder || 'Select...'}</span>
+        <span style={{ fontSize: 10, opacity: 0.5 }}>▾</span>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 300, background: '#0e1420', border: '1px solid rgba(0,230,118,0.2)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', overflow: 'hidden', marginTop: 2 }}>
+          <div style={{ padding: '6px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <input autoFocus className="input" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
+              style={{ padding: '5px 8px', fontSize: 12, width: '100%' }} />
+          </div>
+          <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+            {filtered.map(o => (
+              <button key={o.value} type="button"
+                onClick={() => { onChange(o.value); setOpen(false); }}
+                style={{ width: '100%', padding: '8px 12px', background: o.value === value ? 'rgba(0,230,118,0.1)' : 'transparent', border: 'none', color: o.value === value ? 'var(--green)' : 'var(--text)', cursor: 'pointer', textAlign: 'left', fontSize: 13 }}>
+                {o.label}
+              </button>
+            ))}
+            {filtered.length === 0 && <div style={{ padding: '10px 12px', color: 'var(--dim)', fontSize: 12 }}>No results</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Capital() {
   const { t } = useLang();
   const [capitals, setCapitals] = useState([]);
@@ -82,36 +187,37 @@ export function Capital() {
 
       <div className="card">
         <div className="table-wrap">
-          <table>
-            <thead><tr>{[t('col_starting'), t('col_current'), t('col_net_pnl'), t('col_roi'), t('col_created'), t('col_status'), t('col_actions')].map(h => <th key={h}>{h}</th>)}</tr></thead>
-            <tbody>
-              {capitals.map(c => {
-                const cn = c.capital_now || 0, cd = c.capital_depart || c.capital_initial || 0;
-                const cn2 = cn - cd, roi2 = cd > 0 ? (cn2 / cd * 100) : 0;
-                const active = c.status === 'active';
-                return (
-                  <tr key={c.id}>
-                    <td className="mono">{cd.toLocaleString()}$</td>
-                    <td className="mono">{cn.toLocaleString()}$</td>
-                    <td className={`mono ${cn2 >= 0 ? 'green' : 'red'}`}>{(cn2 >= 0 ? '+' : '')}{parseFloat(cn2 || 0).toFixed(2)}$</td>
-                    <td className={roi2 >= 0 ? 'green' : 'red'}>{parseFloat(roi2 || 0).toFixed(2)}%</td>
-                    <td className="muted">{(c.date_creation || '').substring(0, 10)}</td>
-                    <td><span className={`badge ${active ? 'badge-green' : 'badge-red'}`}>{active ? t('active') || 'Active' : t('closed') || 'Closed'}</span></td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        {active ? (
-                          <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => deactivate(c.id)}>{ t('deactivate') || 'Deactivate' }</button>
-                        ) : (
-                          <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => activate(c.id)}>{ t('activate') || 'Activate' }</button>
-                        )}
-                        <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => deleteCapital(c.id)}>Delete</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <SortableTable
+            headers={[t('col_starting'), t('col_current'), t('col_net_pnl'), t('col_roi'), t('col_created'), t('col_status'), t('col_actions')]}
+            sortableCount={6}
+            rows={capitals}
+            rowKey={c => c.id}
+            renderRow={c => {
+              const cn = c.capital_now || 0, cd = c.capital_depart || c.capital_initial || 0;
+              const cn2 = cn - cd, roi2 = cd > 0 ? (cn2 / cd * 100) : 0;
+              const active = c.status === 'active';
+              return (
+                <tr key={c.id}>
+                  <td className="mono">{cd.toLocaleString()}$</td>
+                  <td className="mono">{cn.toLocaleString()}$</td>
+                  <td className={`mono ${cn2 >= 0 ? 'green' : 'red'}`}>{(cn2 >= 0 ? '+' : '')}{parseFloat(cn2 || 0).toFixed(2)}$</td>
+                  <td className={roi2 >= 0 ? 'green' : 'red'}>{parseFloat(roi2 || 0).toFixed(2)}%</td>
+                  <td className="muted">{(c.date_creation || '').substring(0, 10)}</td>
+                  <td><span className={`badge ${active ? 'badge-green' : 'badge-red'}`}>{active ? t('active') || 'Active' : t('closed') || 'Closed'}</span></td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {active ? (
+                        <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => deactivate(c.id)}>{ t('deactivate') || 'Deactivate' }</button>
+                      ) : (
+                        <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => activate(c.id)}>{ t('activate') || 'Activate' }</button>
+                      )}
+                      <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => deleteCapital(c.id)}>Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            }}
+          />
         </div>
       </div>
     </div>
@@ -698,28 +804,30 @@ export function Logs() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
             <div>
               <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Action Type</label>
-              <select className="select" value={actionFilter} onChange={e => { setActionFilter(e.target.value); setPage(0); }}>
-                <option value="all">All Actions</option>
-                {allActions.map(a => (
-                  <option key={a} value={a}>{actionIcon(a)} {a.replace(/_/g, ' ')}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                value={actionFilter}
+                onChange={v => { setActionFilter(v); setPage(0); }}
+                options={[{ value: 'all', label: 'All Actions' }, ...allActions.map(a => ({ value: a, label: a.replace(/_/g, ' ') }))]}
+                placeholder="All Actions"
+              />
             </div>
             <div>
               <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>User</label>
-              <select className="select" value={userFilter} onChange={e => { setUserFilter(e.target.value); setPage(0); }}>
-                <option value="all">All Users</option>
-                {allUsers.map(u => <option key={u} value={u}>{u}</option>)}
-              </select>
+              <SearchableSelect
+                value={userFilter}
+                onChange={v => { setUserFilter(v); setPage(0); }}
+                options={[{ value: 'all', label: 'All Users' }, ...allUsers.map(u => ({ value: u, label: u }))]}
+                placeholder="All Users"
+              />
             </div>
             <div>
               <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>From Date</label>
-              <input type="date" className="input" style={{ padding: '8px 10px', fontSize: 13 }}
+              <input type="date" className="input" style={{ padding: '8px 10px', fontSize: 13, width: '100%', colorScheme: 'dark' }}
                 value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(0); }} />
             </div>
             <div>
               <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>To Date</label>
-              <input type="date" className="input" style={{ padding: '8px 10px', fontSize: 13 }}
+              <input type="date" className="input" style={{ padding: '8px 10px', fontSize: 13, width: '100%', colorScheme: 'dark' }}
                 value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(0); }} />
             </div>
           </div>
@@ -839,22 +947,67 @@ export function Activations() {
 export function PasswordReset() {
   const { t } = useLang();
   const [reqs, setReqs] = useState([]);
+  const [pwdModal, setPwdModal] = useState(null); // { id, name }
+  const [pwdValue, setPwdValue] = useState('');
+  const [pwdError, setPwdError] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
   useEffect(() => { load(); }, []);
   async function load() {
     const res = await api.get('/admin/password-resets');
     setReqs(res?.data?.requests || []);
   }
   async function approve(id, name) {
-    const pw = window.prompt(`Set new password for ${name}:`);
-    if (!pw || pw.length < 4) return;
-    const res = await api.post(`/admin/password-resets/${id}/approve`, { new_password: pw });
-    alert(res?.success ? '✓ Password set' : res?.message); load();
+    setPwdModal({ id, name });
+    setPwdValue('');
+    setPwdError('');
+    setShowPwd(false);
+  }
+  async function submitApprove() {
+    if (!pwdValue || pwdValue.length < 4) { setPwdError('Password must be at least 4 characters'); return; }
+    const res = await api.post(`/admin/password-resets/${pwdModal.id}/approve`, { new_password: pwdValue });
+    if (res?.success) { setPwdModal(null); load(); }
+    else setPwdError(res?.message || 'Failed to set password');
   }
   const showConfirm = useConfirm();
   async function reject(id) { const ok = await showConfirm({ title: 'Reject Request?', message: 'The user will need to submit a new password reset request.', type: 'danger', confirmLabel: 'Reject', cancelLabel: 'Cancel' }); if (ok) { await api.post(`/admin/password-resets/${id}/reject`, {}); load(); } }
   const counts = reqs.reduce((a, r) => { a[r.status] = (a[r.status] || 0) + 1; return a; }, {});
   return (
     <div>
+      {/* Styled Password Modal */}
+      {pwdModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#111820', border: '1px solid rgba(0,230,118,0.25)', borderRadius: 16, padding: '32px 28px', maxWidth: 400, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(0,230,118,0.1)', border: '1px solid rgba(0,230,118,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🔑</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 16, color: '#e8edf3' }}>Set New Password</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>For user: <strong style={{ color: 'var(--green)' }}>{pwdModal.name}</strong></div>
+              </div>
+            </div>
+            <div style={{ position: 'relative', marginBottom: 8 }}>
+              <input
+                type={showPwd ? 'text' : 'password'}
+                className="input"
+                placeholder="New password (min 4 chars)..."
+                value={pwdValue}
+                onChange={e => { setPwdValue(e.target.value); setPwdError(''); }}
+                onKeyDown={e => e.key === 'Enter' && submitApprove()}
+                autoFocus
+                style={{ width: '100%', paddingRight: 44 }}
+              />
+              <button type="button" onClick={() => setShowPwd(s => !s)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 16 }}>
+                {showPwd ? '🙈' : '👁'}
+              </button>
+            </div>
+            {pwdError && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 10 }}>⚠ {pwdError}</div>}
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={submitApprove}>✓ Set Password</button>
+              <button className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setPwdModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="page-header"><div className="page-title">{t('pwd_resets_title')}</div></div>
       <div className="grid-4" style={{ marginBottom: 20 }}>
         {[[t('total') || 'Total', reqs.length, 'blue'], [t('pending') || 'Pending', counts.pending || 0, 'orange'], [t('approved') || 'Approved', counts.approved || 0, 'green'], [t('rejected') || 'Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
@@ -863,25 +1016,27 @@ export function PasswordReset() {
       </div>
       <div className="card">
         <div className="table-wrap">
-          <table>
-            <thead><tr>{[t('col_id'), t('col_user'), t('col_date'), t('col_status'), t('col_actions')].map(h => <th key={h}>{h}</th>)}</tr></thead>
-            <tbody>
-              {reqs.map(r => (
-                <tr key={r.id}>
-                  <td className="muted mono">{r.id}</td>
-                  <td style={{ fontWeight: 600 }}>{r.user_name}</td>
-                  <td className="muted">{(r.created_at || '').substring(0, 10)}</td>
-                  <td><span className={`badge ${r.status === 'pending' ? 'badge-orange' : r.status === 'approved' ? 'badge-green' : 'badge-red'}`}>{r.status}</span></td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {r.status === 'pending' && <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => approve(r.id, r.user_name)}>Set Password</button>}
-                      {r.status === 'pending' && <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => reject(r.id)}>Reject</button>}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <SortableTable
+            headers={[t('col_id')||'#', t('col_user')||'User', t('col_date')||'Date', t('col_status')||'Status', t('col_actions')||'Actions']}
+            sortableCount={4}
+            rows={reqs}
+            rowKey={r => r.id}
+            renderRow={r => (
+              <tr key={r.id}>
+                <td className="muted mono">{r.id}</td>
+                <td style={{ fontWeight: 600 }}>{r.user_name}</td>
+                <td className="muted">{(r.created_at || '').substring(0, 10)}</td>
+                <td><span className={`badge ${r.status === 'pending' ? 'badge-orange' : r.status === 'approved' ? 'badge-green' : 'badge-red'}`}>{r.status}</span></td>
+                <td>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {r.status === 'pending' && <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => approve(r.id, r.user_name)}>Set Password</button>}
+                    {r.status === 'pending' && <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => reject(r.id)}>Reject</button>}
+                    {r.status !== 'pending' && <span style={{ color: 'var(--dim)', fontSize: 11 }}>—</span>}
+                  </div>
+                </td>
+              </tr>
+            )}
+          />
         </div>
       </div>
     </div>
@@ -933,40 +1088,36 @@ export function EmailChangeRequests() {
       </div>
       <div className="card">
         <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                {[t('col_id') || '#', t('col_user') || 'User', 'Current Email', 'Requested Email', t('col_date') || 'Date', t('col_status') || 'Status', t('col_actions') || 'Actions'].map(h => <th key={h}>{h}</th>)}
+          <SortableTable
+            headers={[t('col_id') || '#', t('col_user') || 'User', 'Current Email', 'Requested Email', t('col_date') || 'Date', t('col_status') || 'Status', t('col_actions') || 'Actions']}
+            sortableCount={6}
+            rows={reqs}
+            rowKey={r => r.id}
+            renderRow={r => (
+              <tr key={r.id}>
+                <td className="muted mono">{r.id}</td>
+                <td style={{ fontWeight: 600 }}>{r.user_name}</td>
+                <td className="muted" style={{ fontSize: 12 }}>{r.current_email || <em>—</em>}</td>
+                <td style={{ color: 'var(--accent)', fontFamily: 'monospace', fontSize: 13 }}>{r.new_email}</td>
+                <td className="muted">{(r.created_at || '').substring(0, 10)}</td>
+                <td>
+                  <span className={`badge ${r.status === 'pending' ? 'badge-orange' : r.status === 'approved' ? 'badge-green' : 'badge-red'}`}>
+                    {r.status}
+                  </span>
+                </td>
+                <td>
+                  {r.status === 'pending' ? (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => approve(r.id, r.user_name, r.new_email)}>Approve</button>
+                      <button className="btn btn-danger"  style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => reject(r.id, r.user_name)}>Reject</button>
+                    </div>
+                  ) : (
+                    <span style={{ color: 'var(--dim)', fontSize: 11 }}>—</span>
+                  )}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {reqs.length === 0 && (
-                <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 24 }}>No requests yet</td></tr>
-              )}
-              {reqs.map(r => (
-                <tr key={r.id}>
-                  <td className="muted mono">{r.id}</td>
-                  <td style={{ fontWeight: 600 }}>{r.user_name}</td>
-                  <td className="muted" style={{ fontSize: 12 }}>{r.current_email || <em>—</em>}</td>
-                  <td style={{ color: 'var(--accent)', fontFamily: 'monospace', fontSize: 13 }}>{r.new_email}</td>
-                  <td className="muted">{(r.created_at || '').substring(0, 10)}</td>
-                  <td>
-                    <span className={`badge ${r.status === 'pending' ? 'badge-orange' : r.status === 'approved' ? 'badge-green' : 'badge-red'}`}>
-                      {r.status}
-                    </span>
-                  </td>
-                  <td>
-                    {r.status === 'pending' && (
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => approve(r.id, r.user_name, r.new_email)}>Approve</button>
-                        <button className="btn btn-danger"  style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => reject(r.id, r.user_name)}>Reject</button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            )}
+          />
         </div>
       </div>
     </div>

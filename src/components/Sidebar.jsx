@@ -260,10 +260,21 @@ function TrialCountdownWidget({ sub, navigate }) {
 // ── Luxury Language Switcher ──────────────────────────────
 function LangSwitcher({ lang, setLang }) {
   const [open, setOpen] = useState(false);
+  const ref = React.useRef(null);
   const current = LANGUAGES.find(l => l.code === lang) || LANGUAGES[0];
 
+  // Close when clicking outside
+  React.useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
   return (
-    <div style={{ margin: '0 12px 8px', position: 'relative' }}>
+    <div ref={ref} style={{ margin: '0 12px 8px', position: 'relative' }}>
       {/* Trigger button */}
       <button
         onClick={() => setOpen(o => !o)}
