@@ -3,6 +3,21 @@ import { useLang } from '../lang/LangContext';
 import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
 
+// Inline sortable headers for Trades table
+function SortableTh({ label, colIdx, sortCol, sortDir, onSort }) {
+  const isActive = sortCol === colIdx;
+  return (
+    <th onClick={() => onSort(colIdx)} style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {label}
+        <span style={{ fontSize: 10, opacity: isActive ? 1 : 0.3, color: isActive ? 'var(--green)' : 'inherit' }}>
+          {isActive ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+        </span>
+      </span>
+    </th>
+  );
+}
+
 export default function Trades() {
   const { t } = useLang();
   const showConfirm = useConfirm();
@@ -61,8 +76,25 @@ export default function Trades() {
     load();
   }
 
-  const tableHeaders = ['#', t('col_date'), t('col_market'), t('col_type'), t('col_entry'),
-    t('col_close'), t('col_qty'), t('col_status'), t('col_amount'), t('col_session'), t('col_actions')];
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
+
+  function handleSort(idx) {
+    if (sortCol === idx) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else if (sortDir === 'desc') { setSortCol(null); setSortDir('asc'); }
+    } else { setSortCol(idx); setSortDir('asc'); }
+  }
+
+  const SORT_KEYS = ['id', 'date_trade', 'marcher', 'type_trd', 'point_entree', 'point_sortie', 'nbr_contrat', 'status', 'montant', 'sessions'];
+  const sortedTrades = sortCol === null ? trades : [...trades].sort((a, b) => {
+    const key = SORT_KEYS[sortCol];
+    if (!key) return 0;
+    const av = a[key] ?? '';
+    const bv = b[key] ?? '';
+    const cmp = typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv));
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
 
   return (
     <div>
@@ -102,12 +134,18 @@ export default function Trades() {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr>{tableHeaders.map(h => <th key={h}>{h}</th>)}</tr>
+              <tr>
+                {['#', t('col_date'), t('col_market'), t('col_type'), t('col_entry'),
+                  t('col_close'), t('col_qty'), t('col_status'), t('col_amount'), t('col_session')].map((h, i) => (
+                  <SortableTh key={h} label={h} colIdx={i} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                ))}
+                <th>{t('col_actions')}</th>
+              </tr>
             </thead>
             <tbody>
               {loading && <tr><td colSpan={11} style={{ textAlign: 'center', padding: 32 }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>}
               {!loading && trades.length === 0 && <tr><td colSpan={11} style={{ textAlign: 'center', color: 'var(--dim)', padding: 32 }}>{t('no_trades_found')}</td></tr>}
-              {!loading && trades.map(tr => {
+              {!loading && sortedTrades.map(tr => {
                 const id = tr.id_trade || tr.id;
                 return (
                   <tr key={id} style={{ background: tr.status === 'win' ? 'rgba(0,230,118,0.025)' : 'rgba(255,71,87,0.025)' }}>

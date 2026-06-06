@@ -413,11 +413,30 @@ export function Users() {
     load();
   }
 
+  // Password reset modal state
+  const [pwdResetModal, setPwdResetModal] = useState(null); // { id, name }
+  const [pwdResetValue, setPwdResetValue] = useState('');
+  const [pwdResetShow, setPwdResetShow] = useState(false);
+  const [pwdResetError, setPwdResetError] = useState('');
+
   async function resetPassword(id, name) {
-    const pw = window.prompt(`New password for ${name}:`);
-    if (pw && pw.length >= 4) {
-      const res = await api.post(`/admin/users/${id}/reset-password`, { new_password: pw });
-      alert(res?.success ? '✓ Done' : res?.message);
+    setPwdResetModal({ id, name });
+    setPwdResetValue('');
+    setPwdResetError('');
+    setPwdResetShow(false);
+  }
+
+  async function submitResetPassword() {
+    if (!pwdResetValue || pwdResetValue.length < 4) {
+      setPwdResetError('Password must be at least 4 characters');
+      return;
+    }
+    const res = await api.post(`/admin/users/${pwdResetModal.id}/reset-password`, { new_password: pwdResetValue });
+    if (res?.success) {
+      setPwdResetModal(null);
+      setMsg({ type: 'success', text: `✓ Password updated for ${pwdResetModal.name}` });
+    } else {
+      setPwdResetError(res?.message || 'Failed to update password');
     }
   }
 
@@ -474,7 +493,40 @@ export function Users() {
 
   return (
     <div>
-      {/* ── Email Edit Modal ────────────────────────────────────────────── */}
+      {/* ── Professional Password Reset Modal ─────────────────────────── */}
+      {pwdResetModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#111820', border: '1px solid rgba(0,230,118,0.25)', borderRadius: 16, padding: '32px 28px', maxWidth: 400, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(0,230,118,0.1)', border: '1px solid rgba(0,230,118,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🔑</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 16, color: '#e8edf3' }}>Reset Password</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>For user: <strong style={{ color: 'var(--green)' }}>{pwdResetModal.name}</strong></div>
+              </div>
+            </div>
+            <div style={{ position: 'relative', marginBottom: 8 }}>
+              <input
+                type={pwdResetShow ? 'text' : 'password'}
+                className="input"
+                placeholder="New password (min 4 chars)..."
+                value={pwdResetValue}
+                onChange={e => { setPwdResetValue(e.target.value); setPwdResetError(''); }}
+                onKeyDown={e => e.key === 'Enter' && submitResetPassword()}
+                autoFocus
+                style={{ width: '100%', paddingRight: 44 }}
+              />
+              <button type="button" onClick={() => setPwdResetShow(s => !s)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 16 }}>
+                {pwdResetShow ? '🙈' : '👁'}
+              </button>
+            </div>
+            {pwdResetError && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 10 }}>⚠ {pwdResetError}</div>}
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={submitResetPassword}>✓ Set Password</button>
+              <button className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setPwdResetModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
       {emailEditModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div className="card" style={{ width: '100%', maxWidth: 420, margin: 16 }}>
@@ -917,26 +969,28 @@ export function Activations() {
       </div>
       <div className="card">
         <div className="table-wrap">
-          <table>
-            <thead><tr>{[t('col_id'), t('col_user'), t('col_device'), t('col_date'), t('col_status'), t('col_actions')].map(h => <th key={h}>{h}</th>)}</tr></thead>
-            <tbody>
-              {data.map(r => (
-                <tr key={r.id}>
-                  <td className="muted mono">{r.id}</td>
-                  <td style={{ fontWeight: 600 }}>{r.user_name}</td>
-                  <td className="muted mono" style={{ fontSize: 11 }}>{r.device_id?.substring(0, 20)}...</td>
-                  <td className="muted">{(r.requested_at || r.created_at || '').substring(0, 10)}</td>
-                  <td><span className={`badge ${r.status === 'pending' ? 'badge-orange' : r.status === 'activated' || r.status === 'approved' ? 'badge-green' : 'badge-red'}`}>{r.status}</span></td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {(r.status === 'pending') && <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => action(r.id, 'approve', r.user_id)}>Approve</button>}
-                      {(r.status === 'pending') && <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => action(r.id, 'reject')}>Reject</button>}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <SortableTable
+            headers={[t('col_id'), t('col_user'), t('col_device'), t('col_date'), t('col_status'), t('col_actions')]}
+            sortableCount={5}
+            rows={data}
+            rowKey={r => r.id}
+            renderRow={r => (
+              <tr key={r.id}>
+                <td className="muted mono">{r.id}</td>
+                <td style={{ fontWeight: 600 }}>{r.user_name}</td>
+                <td className="muted mono" style={{ fontSize: 11 }}>{r.device_id?.substring(0, 20)}...</td>
+                <td className="muted">{(r.requested_at || r.created_at || '').substring(0, 10)}</td>
+                <td><span className={`badge ${r.status === 'pending' ? 'badge-orange' : r.status === 'activated' || r.status === 'approved' ? 'badge-green' : 'badge-red'}`}>{r.status}</span></td>
+                <td>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {(r.status === 'pending') && <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => action(r.id, 'approve', r.user_id)}>Approve</button>}
+                    {(r.status === 'pending') && <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => action(r.id, 'reject')}>Reject</button>}
+                    {r.status !== 'pending' && <span style={{ color: 'var(--dim)', fontSize: 11 }}>—</span>}
+                  </div>
+                </td>
+              </tr>
+            )}
+          />
         </div>
       </div>
     </div>

@@ -13,9 +13,17 @@ const PAYMENT_OPTIONS = {
   lifetime:  ['manual'],
 };
 
-function packBadgeClass(pack, expired) {
-  if (expired) return 'sub-expired';
+function packBadgeClass(pack, status) {
+  if (status === 'suspended') return 'sub-expired';
+  if (status === 'expired') return 'sub-expired';
   return { trial: 'sub-trial', '6months': 'sub-6months', '1year': 'sub-yearly', lifetime: 'sub-lifetime' }[pack] || 'sub-monthly';
+}
+
+function getSubStatus(s) {
+  if (s.status === 'suspended') return 'suspended';
+  const days = daysLeft(s.expires_at);
+  if (s.pack !== 'lifetime' && (s.status === 'expired' || (s.status !== 'active' && days !== null && days <= 0))) return 'expired';
+  return 'active';
 }
 
 function daysLeft(dateStr) {
@@ -174,7 +182,6 @@ export default function Subscriptions() {
 
   async function updateSub(id, body) {
     // Append T12:00:00 so the date is noon local time, not UTC midnight
-    // This prevents timezone offset from shifting the date by one day
     const safeBody = { ...body };
     if (safeBody.expires_at && /^\d{4}-\d{2}-\d{2}$/.test(safeBody.expires_at)) {
       safeBody.expires_at = safeBody.expires_at + 'T12:00:00';
@@ -352,12 +359,10 @@ export default function Subscriptions() {
               )}
               {filtered.map(s => {
                 const days    = daysLeft(s.expires_at);
-                // Trust the server's status field when available;
-                // only fall back to date math if the API doesn't provide one.
-                const expired = s.pack !== 'lifetime' && (
-                  s.status === 'expired' ||
-                  (s.status !== 'active' && days !== null && days <= 0)
-                );
+                const subStatus = getSubStatus(s);
+                const expired = subStatus === 'expired';
+                const suspended = subStatus === 'suspended';
+                const isTrial = s.pack === 'trial';
                 const isEdit  = editSub?.id === s.id;
                 return (
                   <tr key={s.id}>
@@ -370,20 +375,22 @@ export default function Subscriptions() {
                           {PACK_OPTIONS.map(p => <option key={p} value={p}>{PACK_LABELS[p]}</option>)}
                         </select>
                       ) : (
-                        <span className={`sub-badge ${packBadgeClass(s.pack, expired)}`}>
+                        <span className={`sub-badge ${packBadgeClass(s.pack, subStatus)}`}>
                           {PACK_LABELS[s.pack] || s.pack}
                         </span>
                       )}
                     </td>
                     <td className="muted mono" style={{ fontSize: 12 }}>
                       {isEdit && editSub.pack !== 'lifetime' ? (
-                        <input
-                          type="date"
-                          className="input"
-                          style={{ fontSize: 12, padding: '2px 6px', width: 140 }}
-                          value={editSub.expires_at || ''}
-                          onChange={e => setEditSub(es => ({ ...es, expires_at: e.target.value }))}
-                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 8px' }}>
+                          <span style={{ fontSize: 10, color: 'var(--muted)' }}>📅</span>
+                          <input
+                            type="date"
+                            style={{ fontSize: 12, padding: '2px 4px', width: 130, background: 'transparent', border: 'none', color: 'var(--text)', colorScheme: 'dark', outline: 'none' }}
+                            value={editSub.expires_at || ''}
+                            onChange={e => setEditSub(es => ({ ...es, expires_at: e.target.value }))}
+                          />
+                        </div>
                       ) : (
                         s.pack === 'lifetime' ? '∞' : (s.expires_at || '').substring(0, 10)
                       )}
@@ -405,22 +412,41 @@ export default function Subscriptions() {
                           : '—'}
                     </td>
                     <td>
-                      <span className={`badge ${expired ? 'badge-red' : 'badge-green'}`}>
-                        {expired ? (t('expired') || 'Expired') : (t('active') || 'Active')}
-                      </span>
+                      {isEdit ? (
+                        <select className="select" style={{ width: 'auto', fontSize: 12 }}
+                          value={editSub.status || subStatus}
+                          onChange={e => setEditSub(es => ({ ...es, status: e.target.value }))}>
+                          <option value="active">Active</option>
+                          <option value="suspended">Suspended</option>
+                          <option value="expired">Expired</option>
+                        </select>
+                      ) : (
+                        <span className={`badge ${suspended ? 'badge-orange' : expired ? 'badge-red' : 'badge-green'}`}>
+                          {suspended ? 'Suspended' : expired ? (t('expired') || 'Expired') : (t('active') || 'Active')}
+                        </span>
+                      )}
                     </td>
                     <td>
                       {isEdit ? (
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 10px' }}
-                            onClick={() => updateSub(s.id, { pack: editSub.pack, expires_at: editSub.expires_at || null })}>{t('save_changes') || 'Save'}</button>
+                            onClick={() => updateSub(s.id, { pack: editSub.pack, expires_at: editSub.expires_at || null, status: editSub.status })}>{t('save_changes') || 'Save'}</button>
                           <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 10px' }}
                             onClick={() => setEditSub(null)}>{t('cancel')}</button>
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 8px' }}
-                            onClick={() => setEditSub({ id: s.id, pack: s.pack, expires_at: s.expires_at ? s.expires_at.substring(0,10) : '' })}>✏️ {t('edit')}</button>
+                            onClick={() => setEditSub({ id: s.id, pack: s.pack, expires_at: s.expires_at ? s.expires_at.substring(0,10) : '', status: subStatus })}>✏️ {t('edit')}</button>
+                          {/* Suspend / Reactivate — only for non-trial paid subs */}
+                          {!isTrial && subStatus === 'active' && (
+                            <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 8px', color: 'var(--orange)', borderColor: 'var(--orange)' }}
+                              onClick={() => updateSub(s.id, { status: 'suspended' })}>⏸ Suspend</button>
+                          )}
+                          {!isTrial && (subStatus === 'suspended' || subStatus === 'expired') && (
+                            <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 8px' }}
+                              onClick={() => updateSub(s.id, { status: 'active' })}>▶ Reactivate</button>
+                          )}
                           <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }}
                             onClick={() => revokeSub(s.id)}>{t('revoke') || 'Revoke'}</button>
                         </div>

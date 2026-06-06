@@ -212,8 +212,12 @@ export default function Chart() {
           netCapital: parseFloat(netCum.toFixed(2)),
         };
       });
-      setChartData(cd);
-      setCombinedData(cd);
+      // Prepend a $0 origin so the line always starts from zero
+      const cdWithOrigin = cd.length > 0
+        ? [{ day: '', fullDay: '', cumul: 0, net: 0, withdrawAmount: 0, netCapital: 0 }, ...cd]
+        : cd;
+      setChartData(cdWithOrigin);
+      setCombinedData(cdWithOrigin);
 
       // Monthly bar chart
       const byMonth = {};
@@ -300,12 +304,20 @@ export default function Chart() {
             </button>
           ))}
           {period === 'custom' && (
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input type="date" className="input" style={{ padding: '5px 10px', fontSize: 12, width: 140 }}
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 10px' }}>
+              <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>FROM</span>
+              <input type="date" className="input" colorScheme="dark"
+                style={{ padding: '4px 8px', fontSize: 12, width: 130, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, colorScheme: 'dark', color: 'var(--text)' }}
                 value={customFrom} onChange={e => setCustomFrom(e.target.value)} />
-              <span style={{ color: 'var(--muted)', fontSize: 12 }}>→</span>
-              <input type="date" className="input" style={{ padding: '5px 10px', fontSize: 12, width: 140 }}
+              <span style={{ color: 'var(--muted)', fontSize: 14, fontWeight: 300 }}>→</span>
+              <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>TO</span>
+              <input type="date" className="input"
+                style={{ padding: '4px 8px', fontSize: 12, width: 130, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, colorScheme: 'dark', color: 'var(--text)' }}
                 value={customTo} onChange={e => setCustomTo(e.target.value)} />
+              {(customFrom || customTo) && (
+                <button onClick={() => { setCustomFrom(''); setCustomTo(''); }}
+                  style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 14, padding: '0 2px', lineHeight: 1 }}>✕</button>
+              )}
             </div>
           )}
         </div>

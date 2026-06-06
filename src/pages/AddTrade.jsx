@@ -530,8 +530,10 @@ export default function AddTrade() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">QTY</label>
-                  <input className="input mono" type="number" step="any" min="0" value={form.nbr_contrat}
+                  <label className="form-label">QTY {form.qty_type === 'Lot' ? <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>(e.g. 1, 0.5, 0.01)</span> : <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>(e.g. 1, 1.5, 2.02)</span>}</label>
+                  <input className="input mono" type="number" step="0.01" min="0" inputMode="decimal"
+                    placeholder={form.qty_type === 'Lot' ? '0.01' : '1'}
+                    value={form.nbr_contrat}
                     onChange={e => set('nbr_contrat', e.target.value)} />
                 </div>
                 <div className="form-group">

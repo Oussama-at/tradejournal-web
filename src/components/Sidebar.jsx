@@ -376,6 +376,13 @@ function useAlerts(user) {
 
   // ── User notifications (auto-created by system) ───────────────────────────
   const [userNotifs, setUserNotifs] = useState([]);
+  // Track read IDs in localStorage so they persist across reconnects
+  const getLocalReadIds = () => {
+    try { return new Set(JSON.parse(localStorage.getItem('read_notif_ids') || '[]')); } catch { return new Set(); }
+  };
+  const saveLocalReadIds = (ids) => {
+    try { localStorage.setItem('read_notif_ids', JSON.stringify([...ids])); } catch {}
+  };
 
   // ── Admin pending counts ──────────────────────────────────────────────────
   const [pendingCounts, setPendingCounts] = useState({ email_changes: 0, password_resets: 0, activations: 0 });
@@ -388,9 +395,17 @@ function useAlerts(user) {
       .then(r => { if (r?.data?.alerts) setAlerts(r.data.alerts); })
       .catch(() => {});
 
-    // User notifications
+    // User notifications — merge local read state with server data
     api.get('/notifications')
-      .then(r => { if (r?.data?.notifications) setUserNotifs(r.data.notifications); })
+      .then(r => {
+        if (r?.data?.notifications) {
+          const localRead = getLocalReadIds();
+          const merged = r.data.notifications.map(n =>
+            n.is_read || localRead.has(n.id) ? { ...n, is_read: true } : n
+          );
+          setUserNotifs(merged);
+        }
+      })
       .catch(() => {});
 
     // Admin pending counts
@@ -414,15 +429,23 @@ function useAlerts(user) {
     try { sessionStorage.setItem('dismissed_alerts', JSON.stringify(next)); } catch {}
   };
 
-  // Mark a user notification as read
+  // Mark a user notification as read — persist in localStorage too
   const markRead = (id) => {
     setUserNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    const ids = getLocalReadIds();
+    ids.add(id);
+    saveLocalReadIds(ids);
     api.post(`/notifications/${id}/read`, {}).catch(() => {});
   };
 
   // Mark all user notifications as read
   const markAllRead = () => {
-    setUserNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
+    setUserNotifs(prev => {
+      const ids = getLocalReadIds();
+      prev.forEach(n => ids.add(n.id));
+      saveLocalReadIds(ids);
+      return prev.map(n => ({ ...n, is_read: true }));
+    });
     api.post('/notifications/read-all', {}).catch(() => {});
   };
 
