@@ -312,6 +312,14 @@ export default function AddTrade() {
     if (!form.point_entree || !form.point_sortie || !form.montant) {
       setMsg({ type: 'error', text: 'Entry, close and amount are required' }); return;
     }
+    // Validate QTY: mini/micro must be integer
+    const isIntQty = form.qty_type === 'contract mini' || form.qty_type === 'contract micro';
+    if (isIntQty) {
+      const qtyVal = parseFloat(form.nbr_contrat);
+      if (isNaN(qtyVal) || qtyVal % 1 !== 0 || qtyVal < 1) {
+        setMsg({ type: 'error', text: t('qty_integer_only') }); return;
+      }
+    }
     setLoading(true);
     try {
       const body = { ...form, point_entree: +form.point_entree, point_sortie: +form.point_sortie, montant: +form.montant, nbr_contrat: +form.nbr_contrat };
@@ -524,17 +532,71 @@ export default function AddTrade() {
                   <input className="input" type="date" value={form.date_trade} onChange={e => set('date_trade', e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Contract</label>
-                  <select className="select" value={form.qty_type} onChange={e => set('qty_type', e.target.value)}>
+                  <label className="form-label">
+                    Contract
+                  </label>
+                  <select className="select" value={form.qty_type} onChange={e => {
+                    const newType = e.target.value;
+                    set('qty_type', newType);
+                    // Reset QTY to integer when switching to mini/micro
+                    if (newType !== 'Lot') {
+                      const current = parseFloat(form.nbr_contrat);
+                      if (!isNaN(current) && current % 1 !== 0) {
+                        set('nbr_contrat', Math.max(1, Math.round(current)));
+                      }
+                    }
+                  }}>
                     {['contract mini', 'contract micro', 'Lot'].map(o => <option key={o}>{o}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">QTY {form.qty_type === 'Lot' ? <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>(e.g. 1, 0.5, 0.01)</span> : <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>(e.g. 1, 1.5, 2.02)</span>}</label>
-                  <input className="input mono" type="number" step="0.01" min="0" inputMode="decimal"
-                    placeholder={form.qty_type === 'Lot' ? '0.01' : '1'}
-                    value={form.nbr_contrat}
-                    onChange={e => set('nbr_contrat', e.target.value)} />
+                  {(() => {
+                    const isIntQty = form.qty_type === 'contract mini' || form.qty_type === 'contract micro';
+                    return (
+                      <>
+                        <label className="form-label">
+                          QTY {isIntQty
+                            ? <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>(e.g. 1, 2, 3)</span>
+                            : <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>(e.g. 0.5, 0.01)</span>}
+                        </label>
+                        <input
+                          className="input mono"
+                          type="number"
+                          step={isIntQty ? '1' : '0.01'}
+                          min="1"
+                          inputMode={isIntQty ? 'numeric' : 'decimal'}
+                          placeholder={isIntQty ? '1' : '0.01'}
+                          value={form.nbr_contrat}
+                          onKeyDown={e => {
+                            if (isIntQty && (e.key === '.' || e.key === ',')) {
+                              e.preventDefault();
+                            }
+                          }}
+                          onChange={e => {
+                            let val = e.target.value;
+                            if (isIntQty) {
+                              // Strip decimals for mini/micro
+                              val = val.replace(/[^0-9]/g, '');
+                              if (val === '') val = '';
+                            }
+                            set('nbr_contrat', val);
+                          }}
+                          onBlur={e => {
+                            const isIntQty2 = form.qty_type === 'contract mini' || form.qty_type === 'contract micro';
+                            if (isIntQty2) {
+                              const n = parseInt(e.target.value, 10);
+                              set('nbr_contrat', isNaN(n) ? 1 : Math.max(1, n));
+                            }
+                          }}
+                        />
+                        {isIntQty && form.nbr_contrat && String(form.nbr_contrat).includes('.') && (
+                          <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4 }}>
+                            {t('qty_integer_only')}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Signal</label>
