@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { useLang } from '../lang/LangContext';
 import { useAuth } from '../context/AuthContext';
+import PhotoCropDialog from '../components/PhotoCropDialog';
 
 const FREE_TRADE_LIMIT = 6;
 
@@ -150,14 +151,12 @@ function UpgradeModal({ onClose }) {
         textAlign: 'center',
         position: 'relative',
       }}>
-        {/* Close */}
         <button onClick={onClose} style={{
           position: 'absolute', top: 14, right: 16,
           background: 'none', border: 'none', color: '#5a7a9a',
           fontSize: 20, cursor: 'pointer', lineHeight: 1,
         }}>✕</button>
 
-        {/* Icon */}
         <div style={{
           width: 64, height: 64, borderRadius: '50%',
           background: 'rgba(0,230,118,0.1)',
@@ -166,7 +165,6 @@ function UpgradeModal({ onClose }) {
           fontSize: 28, margin: '0 auto 20px',
         }}>🔒</div>
 
-        {/* Title */}
         <div style={{ fontSize: 22, fontWeight: 800, color: '#e8edf3', marginBottom: 6 }}>
           Free Plan Limit Reached
         </div>
@@ -174,7 +172,6 @@ function UpgradeModal({ onClose }) {
           You have used all {FREE_TRADE_LIMIT} free trades
         </div>
 
-        {/* Features */}
         <div style={{
           background: '#0d1117',
           border: '1px solid rgba(255,255,255,0.06)',
@@ -201,7 +198,6 @@ function UpgradeModal({ onClose }) {
           ))}
         </div>
 
-        {/* CTA */}
         <a
           href="/pricing"
           style={{
@@ -231,6 +227,111 @@ function UpgradeModal({ onClose }) {
 }
 
 /* ─────────────────────────────────────────────
+   Screenshot Section with PhotoCropDialog
+───────────────────────────────────────────── */
+function ScreenshotSection({ image, preview, onImageSave, onRemove, t }) {
+  const fileInputRef = useRef(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [showCrop, setShowCrop] = useState(false);
+
+  function handleFileChange(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    // Reset immediately so same file can trigger onChange again
+    e.target.value = '';
+    setSelectedFile(f);
+    setShowCrop(true);
+  }
+
+  function openPicker() {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  }
+
+  function handleCropSave(blob) {
+    setShowCrop(false);
+    setSelectedFile(null);
+    // Convert blob to File object for upload
+    const file = new File([blob], 'screenshot.jpg', { type: 'image/jpeg' });
+    const localUrl = URL.createObjectURL(blob);
+    onImageSave(file, localUrl);
+  }
+
+  function handleCropCancel() {
+    setShowCrop(false);
+    setSelectedFile(null);
+  }
+
+  return (
+    <>
+      {/* Photo crop dialog */}
+      {showCrop && selectedFile && (
+        <PhotoCropDialog
+          file={selectedFile}
+          onSave={handleCropSave}
+          onCancel={handleCropCancel}
+        />
+      )}
+
+      <div className="card">
+        <div style={{ fontWeight: 700, marginBottom: 12 }}>Screenshot</div>
+
+        {/* Preview of the chosen/cropped image */}
+        {preview && (
+          <>
+            <img
+              src={preview}
+              alt="preview"
+              onClick={() => window.open(preview, '_blank')}
+              style={{
+                width: '100%', borderRadius: 8, marginBottom: 8,
+                maxHeight: 200, objectFit: 'cover', cursor: 'zoom-in',
+                border: '1px solid rgba(0,230,118,0.2)',
+              }}
+              title="Click to view full size"
+            />
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, textAlign: 'center' }}>
+              🔍 Click to view full size
+            </div>
+          </>
+        )}
+
+        {/* Hidden file input — single trigger via ref */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{ width: '100%', justifyContent: 'center' }}
+          onClick={openPicker}
+        >
+          📷 {image ? 'Change image' : 'Choose image'}
+        </button>
+
+        {image && (
+          <button
+            type="button"
+            className="btn btn-danger"
+            style={{ width: '100%', marginTop: 8, justifyContent: 'center' }}
+            onClick={onRemove}
+          >
+            ✕ Remove
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ─────────────────────────────────────────────
    AddTrade Page
 ───────────────────────────────────────────── */
 export default function AddTrade() {
@@ -250,11 +351,11 @@ export default function AddTrade() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
   const [logicWarning, setLogicWarning] = useState(null);
-  const fileInputRef = React.useRef(null);
+  // Inline qty decimal block message (shown while typing, not just on submit)
+  const [qtyBlockMsg, setQtyBlockMsg] = useState(null);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  // Load trade count for free plan limit check
   useEffect(() => {
     if (!isLifetime) {
       api.get('/trades?page=1&limit=1').then(r => {
@@ -271,15 +372,12 @@ export default function AddTrade() {
   };
   const pts = calcPnl();
 
-  // Check logic consistency: direction vs result vs price movement
   const checkLogic = (formData) => {
     const e = parseFloat(formData.point_entree), c = parseFloat(formData.point_sortie);
     if (isNaN(e) || isNaN(c) || e === 0 || c === 0) return null;
     const priceUp = c > e;
     const isBuy = formData.type_trd === 'buy';
     const isWin = formData.status === 'win';
-    // BUY + price up = WIN (logical), BUY + price down = LOSE (logical)
-    // SELL + price down = WIN (logical), SELL + price up = LOSE (logical)
     const logicalWin = isBuy ? priceUp : !priceUp;
     if (logicalWin !== isWin) {
       const direction = isBuy ? 'BUY' : 'SELL';
@@ -291,18 +389,21 @@ export default function AddTrade() {
     return null;
   };
 
-  // Recalculate logic warning whenever relevant fields change
   useEffect(() => {
     const w = checkLogic(form);
     setLogicWarning(w);
   // eslint-disable-next-line
   }, [form.type_trd, form.status, form.point_entree, form.point_sortie]);
 
+  // Clear qty block message when contract type changes
+  useEffect(() => {
+    setQtyBlockMsg(null);
+  }, [form.qty_type]);
+
   async function onSave(e) {
     e.preventDefault();
     setMsg(null);
 
-    // Free plan: max 6 trades — show upgrade modal
     if (!isLifetime && tradeCount !== null && tradeCount >= FREE_TRADE_LIMIT) {
       setShowUpgrade(true);
       return;
@@ -312,7 +413,6 @@ export default function AddTrade() {
     if (!form.point_entree || !form.point_sortie || !form.montant) {
       setMsg({ type: 'error', text: 'Entry, close and amount are required' }); return;
     }
-    // Validate QTY: mini/micro must be integer
     const isIntQty = form.qty_type === 'contract mini' || form.qty_type === 'contract micro';
     if (isIntQty) {
       const qtyVal = parseFloat(form.nbr_contrat);
@@ -322,7 +422,13 @@ export default function AddTrade() {
     }
     setLoading(true);
     try {
-      const body = { ...form, point_entree: +form.point_entree, point_sortie: +form.point_sortie, montant: +form.montant, nbr_contrat: +form.nbr_contrat };
+      const body = {
+        ...form,
+        point_entree: +form.point_entree,
+        point_sortie: +form.point_sortie,
+        montant: +form.montant,
+        nbr_contrat: +form.nbr_contrat,
+      };
 
       if (image) {
         const upRes = await api.uploadFile('/upload', image);
@@ -335,16 +441,16 @@ export default function AddTrade() {
       const res = await api.post('/trades', body);
       if (res?.success) {
         setMsg({ type: 'success', text: '✓ Trade saved!' });
-        // Reset form fully including market
         setForm({
           marcher: '', type_trd: 'buy', point_entree: '', point_sortie: '', montant: '',
           nbr_contrat: 1, qty_type: 'contract mini', status: 'win', type_close: 'Target',
           sessions: 'LON', date_trade: new Date().toISOString().split('T')[0], signal: '',
         });
-        setImage(null); setPreview(null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        // Revoke old preview URL and clear image state
+        if (preview) URL.revokeObjectURL(preview);
+        setImage(null);
+        setPreview(null);
         if (!isLifetime) setTradeCount(c => (c ?? 0) + 1);
-        // Notify other components (Dashboard, Chart) to refresh
         window.dispatchEvent(new CustomEvent('trade-saved'));
       } else if (res?.message === 'FREE_LIMIT_REACHED') {
         setShowUpgrade(true);
@@ -357,38 +463,35 @@ export default function AddTrade() {
     setLoading(false);
   }
 
-  function handleImageSelect(e) {
-    const f = e.target.files[0];
-    if (f) { setImage(f); setPreview(URL.createObjectURL(f)); }
-    // Reset input value so selecting the same file again works, and prevent re-opening
-    e.target.value = '';
+  // Called from ScreenshotSection after crop dialog saves
+  function handleImageSave(file, localUrl) {
+    if (preview) URL.revokeObjectURL(preview);
+    setImage(file);
+    setPreview(localUrl);
   }
 
   function removeImage() {
-    setImage(null); setPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (preview) URL.revokeObjectURL(preview);
+    setImage(null);
+    setPreview(null);
   }
+
+  const isIntQty = form.qty_type === 'contract mini' || form.qty_type === 'contract micro';
 
   return (
     <div>
-      {/* Upgrade modal */}
       {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
 
       <div className="page-header">
         <div className="page-title">{t('add_trade_title')}</div>
-        <div className="page-sub">Record a new trade entry</div>
+        <div className="page-sub">{t('add_trade_sub')}</div>
       </div>
       <form onSubmit={onSave}>
         {/* Free plan limit banner */}
         {!isLifetime && tradeCount !== null && (
           <div style={{
-            marginBottom: 16,
-            padding: '10px 14px',
-            borderRadius: 8,
-            fontSize: 13,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            marginBottom: 16, padding: '10px 14px', borderRadius: 8, fontSize: 13,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             background: tradeCount >= FREE_TRADE_LIMIT ? 'rgba(255,71,87,0.1)' : 'rgba(246,216,96,0.07)',
             border: `1px solid ${tradeCount >= FREE_TRADE_LIMIT ? 'rgba(255,71,87,0.3)' : 'rgba(246,216,96,0.25)'}`,
             color: 'var(--muted)',
@@ -401,7 +504,7 @@ export default function AddTrade() {
             {tradeCount >= FREE_TRADE_LIMIT && (
               <button type="button" onClick={() => setShowUpgrade(true)}
                 style={{ background: 'linear-gradient(135deg,#00e676,#00c853)', color: '#080c10', fontWeight: 800, fontSize: 12, border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', marginLeft: 12, whiteSpace: 'nowrap' }}>
-{t('upgrade_pro')}
+                {t('upgrade_pro')}
               </button>
             )}
           </div>
@@ -468,7 +571,6 @@ export default function AddTrade() {
                     <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
                       <button type="button"
                         onClick={() => {
-                          // Auto-correct: flip the status based on price movement
                           const e = parseFloat(form.point_entree), c = parseFloat(form.point_sortie);
                           if (!isNaN(e) && !isNaN(c)) {
                             const priceUp = c > e;
@@ -501,7 +603,7 @@ export default function AddTrade() {
                 <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 6,
                   background: pts >= 0 ? 'rgba(0,230,118,0.08)' : 'rgba(255,71,87,0.08)',
                   color: pts >= 0 ? 'var(--green)' : 'var(--red)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
-                  {pts >= 0 ? '+' : ''}{pts.toFixed(2)} pts preview
+                  {pts >= 0 ? '+' : ''}{pts.toFixed(2)} {t('pts_preview')}
                 </div>
               )}
             </div>
@@ -532,13 +634,11 @@ export default function AddTrade() {
                   <input className="input" type="date" value={form.date_trade} onChange={e => set('date_trade', e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">
-                    Contract
-                  </label>
+                  <label className="form-label">{t('contract')}</label>
                   <select className="select" value={form.qty_type} onChange={e => {
                     const newType = e.target.value;
                     set('qty_type', newType);
-                    // Reset QTY to integer when switching to mini/micro
+                    setQtyBlockMsg(null);
                     if (newType !== 'Lot') {
                       const current = parseFloat(form.nbr_contrat);
                       if (!isNaN(current) && current % 1 !== 0) {
@@ -549,95 +649,99 @@ export default function AddTrade() {
                     {['contract mini', 'contract micro', 'Lot'].map(o => <option key={o}>{o}</option>)}
                   </select>
                 </div>
+
+                {/* QTY field — integer-only for mini/micro */}
                 <div className="form-group">
-                  {(() => {
-                    const isIntQty = form.qty_type === 'contract mini' || form.qty_type === 'contract micro';
-                    return (
-                      <>
-                        <label className="form-label">
-                          QTY {isIntQty
-                            ? <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>(e.g. 1, 2, 3)</span>
-                            : <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>(e.g. 0.5, 0.01)</span>}
-                        </label>
-                        <input
-                          className="input mono"
-                          type="number"
-                          step={isIntQty ? '1' : '0.01'}
-                          min="1"
-                          inputMode={isIntQty ? 'numeric' : 'decimal'}
-                          placeholder={isIntQty ? '1' : '0.01'}
-                          value={form.nbr_contrat}
-                          onKeyDown={e => {
-                            if (isIntQty && (e.key === '.' || e.key === ',')) {
-                              e.preventDefault();
-                            }
-                          }}
-                          onChange={e => {
-                            let val = e.target.value;
-                            if (isIntQty) {
-                              // Strip decimals for mini/micro
-                              val = val.replace(/[^0-9]/g, '');
-                              if (val === '') val = '';
-                            }
-                            set('nbr_contrat', val);
-                          }}
-                          onBlur={e => {
-                            const isIntQty2 = form.qty_type === 'contract mini' || form.qty_type === 'contract micro';
-                            if (isIntQty2) {
-                              const n = parseInt(e.target.value, 10);
-                              set('nbr_contrat', isNaN(n) ? 1 : Math.max(1, n));
-                            }
-                          }}
-                        />
-                        {isIntQty && form.nbr_contrat && String(form.nbr_contrat).includes('.') && (
-                          <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4 }}>
-                            {t('qty_integer_only')}
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
+                  <label className="form-label">
+                    QTY{' '}
+                    {isIntQty
+                      ? <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>(e.g. 1, 2, 3)</span>
+                      : <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>(e.g. 0.5, 0.01)</span>
+                    }
+                  </label>
+                  <input
+                    className="input mono"
+                    type={isIntQty ? 'text' : 'number'}
+                    inputMode={isIntQty ? 'numeric' : 'decimal'}
+                    step={isIntQty ? undefined : '0.01'}
+                    min="1"
+                    placeholder={isIntQty ? '1' : '0.01'}
+                    value={form.nbr_contrat}
+                    style={{
+                      borderColor: qtyBlockMsg ? 'rgba(255,71,87,0.6)' : undefined,
+                      outline: qtyBlockMsg ? '1px solid rgba(255,71,87,0.4)' : undefined,
+                    }}
+                    onKeyDown={e => {
+                      if (!isIntQty) return;
+                      // Block decimal separators before they appear
+                      if (e.key === '.' || e.key === ',') {
+                        e.preventDefault();
+                        setQtyBlockMsg(t('qty_decimal_blocked'));
+                        // Auto-clear message after 3s
+                        setTimeout(() => setQtyBlockMsg(null), 3000);
+                      }
+                    }}
+                    onChange={e => {
+                      let val = e.target.value;
+                      if (isIntQty) {
+                        // Strip any non-digit characters (handles paste)
+                        const stripped = val.replace(/[^0-9]/g, '');
+                        if (stripped !== val) {
+                          setQtyBlockMsg(t('qty_decimal_blocked'));
+                          setTimeout(() => setQtyBlockMsg(null), 3000);
+                        }
+                        val = stripped;
+                      }
+                      set('nbr_contrat', val);
+                    }}
+                    onBlur={e => {
+                      if (isIntQty) {
+                        const n = parseInt(e.target.value, 10);
+                        set('nbr_contrat', isNaN(n) ? 1 : Math.max(1, n));
+                        setQtyBlockMsg(null);
+                      }
+                    }}
+                  />
+                  {/* Inline decimal-blocked warning */}
+                  {isIntQty && qtyBlockMsg && (
+                    <div style={{
+                      marginTop: 6,
+                      padding: '7px 10px',
+                      borderRadius: 6,
+                      background: 'rgba(255,71,87,0.08)',
+                      border: '1px solid rgba(255,71,87,0.35)',
+                      color: '#ff4757',
+                      fontSize: 11,
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 6,
+                    }}>
+                      <span style={{ flexShrink: 0, marginTop: 1 }}>🚫</span>
+                      <span>{qtyBlockMsg}</span>
+                    </div>
+                  )}
                 </div>
+
                 <div className="form-group">
-                  <label className="form-label">Signal</label>
-                  <input className="input" placeholder="Optional..." value={form.signal}
+                  <label className="form-label">{t('signal')}</label>
+                  <input className="input" placeholder={t('signal_placeholder')} value={form.signal}
                     onChange={e => set('signal', e.target.value)} />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right - image + submit */}
+          {/* Right - screenshot + submit */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div className="card">
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>Screenshot</div>
-              {preview && (
-                <>
-                  <img src={preview} alt="preview"
-                    onClick={() => window.open(preview, '_blank')}
-                    style={{ width: '100%', borderRadius: 6, marginBottom: 10, maxHeight: 200, objectFit: 'cover', cursor: 'zoom-in' }}
-                    title="Click to view full size" />
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, textAlign: 'center' }}>🔍 Click to view full size</div>
-                </>
-              )}
-              {/* Hidden file input — only one, controlled via ref */}
-              <input
-                ref={fileInputRef}
-                id="img-input"
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={handleImageSelect}
-              />
-              <button type="button" className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }}
-                onClick={() => fileInputRef.current && fileInputRef.current.click()}>
-                📷 {image ? image.name : 'Choose image'}
-              </button>
-              {image && (
-                <button type="button" className="btn btn-danger" style={{ width: '100%', marginTop: 8, justifyContent: 'center' }}
-                  onClick={removeImage}>✕ Remove</button>
-              )}
-            </div>
+
+            {/* Screenshot with crop dialog */}
+            <ScreenshotSection
+              image={image}
+              preview={preview}
+              onImageSave={handleImageSave}
+              onRemove={removeImage}
+              t={t}
+            />
 
             <div className="card">
               <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('summary')}</div>
@@ -660,7 +764,7 @@ export default function AddTrade() {
             <button className="btn btn-primary" type="submit"
               disabled={loading}
               style={{ padding: '14px', fontSize: 15, justifyContent: 'center' }}>
-              {loading ? 'Saving...' : '💾 Save Trade'}
+              {loading ? t('saving') : t('save_trade')}
             </button>
           </div>
         </div>
