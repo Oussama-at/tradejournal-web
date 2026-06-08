@@ -146,8 +146,6 @@ const translations = {
     col_starting:         'Starting',
     col_current:          'Current',
     col_created:          'Created',
-    col_status:           'Status',
-    col_actions:          'Actions',
     col_net_pnl:          'Net P&L',
     col_roi:              'ROI',
 
@@ -159,8 +157,6 @@ const translations = {
     withdraw_btn:         'Withdraw',
     withdrawal_history:   'Withdrawal History',
     col_note:             'Note',
-    col_amount:           'Amount',
-    col_date:             'Date',
     confirm_withdrawal:   'Confirm Withdrawal',
 
     // Users page
@@ -449,8 +445,6 @@ const translations = {
     col_starting:         'البداية',
     col_current:          'الحالي',
     col_created:          'تاريخ الإنشاء',
-    col_status:           'الحالة',
-    col_actions:          'الإجراءات',
     col_net_pnl:          'صافي الربح/الخسارة',
     col_roi:              'العائد',
 
@@ -462,8 +456,6 @@ const translations = {
     withdraw_btn:         'سحب',
     withdrawal_history:   'سجل السحوبات',
     col_note:             'ملاحظة',
-    col_amount:           'المبلغ',
-    col_date:             'التاريخ',
     confirm_withdrawal:   'تأكيد السحب',
 
     // Users page
@@ -741,7 +733,6 @@ const translations = {
     withdraw_btn:       'Retirer',
     withdrawal_history: 'Historique des retraits',
     col_note:           'Note',
-    col_amount:         'Montant',
     confirm_withdrawal: 'Confirmer le retrait',
 
     users_title:        'Gérer les utilisateurs',

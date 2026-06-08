@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLang } from '../lang/LangContext';
 import api from '../services/api';
 import {
-  AreaChart, Area, BarChart, Bar, ComposedChart, Line,
+  Area, BarChart, Bar, ComposedChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-  ReferenceLine, Scatter, ScatterChart, ZAxis
+  ReferenceLine
 } from 'recharts';
 
 const PERIODS = [
@@ -14,18 +14,6 @@ const PERIODS = [
 ];
 
 const fmt = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '$';
-const fmtAbs = v => parseFloat(v).toFixed(2) + '$';
-
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  const v = payload[0].value;
-  return (
-    <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 12px' }}>
-      <div style={{ fontSize: 11, color: 'var(--muted)' }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: v >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(v)}</div>
-    </div>
-  );
-};
 
 const DailyPnLTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -132,7 +120,6 @@ export default function Chart() {
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo]     = useState('');
   const [trades, setTrades]     = useState([]);
-  const [chartData, setChartData] = useState([]);
   const [monthData, setMonthData] = useState([]);
   const [dailyPnL, setDailyPnL]   = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
@@ -216,7 +203,6 @@ export default function Chart() {
       const cdWithOrigin = cd.length > 0
         ? [{ day: '', fullDay: '', cumul: 0, net: 0, withdrawAmount: 0, netCapital: 0 }, ...cd]
         : cd;
-      setChartData(cdWithOrigin);
       setCombinedData(cdWithOrigin);
 
       // Monthly bar chart

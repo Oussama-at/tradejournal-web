@@ -254,7 +254,6 @@ export default function Login() {
   const [showSavePwd,  setShowSavePwd]  = useState(false);
   const [lastUsername, setLastUsername] = useState('');
   const { login } = useAuth();
-  const { t } = useLang();
   const navigate  = useNavigate();
 
   const handleLogin = async (e) => {

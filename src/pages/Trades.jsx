@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLang } from '../lang/LangContext';
 import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
@@ -37,7 +37,7 @@ export default function Trades() {
     { val: 'Last Month', label: t('last_month') },
   ];
 
-  useEffect(() => { load(); }, [page, filters]);
+  useEffect(() => { load(); }, [load]);
 
   // Auto-refresh when a trade is added from AddTrade page
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function Trades() {
   // eslint-disable-next-line
   }, [page, filters]);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       let url = `/trades?page=${page}&limit=50`;
@@ -65,7 +65,7 @@ export default function Trades() {
       setTotalPages(Math.max(1, Math.ceil((res?.data?.total || 0) / 50)));
     } catch (e) { console.error(e); }
     setLoading(false);
-  }
+  }, [page, filters]);
 
   async function deleteTrade(id) {
     const ok = await showConfirm({

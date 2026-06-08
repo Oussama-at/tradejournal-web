@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
-import { useLang } from '../lang/LangContext';
 
 const TYPE_COLORS = {
   info:    '#00b4ff',
@@ -14,7 +13,6 @@ const TYPE_ICONS = { info: 'ℹ', warning: '⚠', success: '✓', danger: '✕' 
 const EMPTY = { message: '', type: 'info', target: 'all' };
 
 export default function AdminAlerts() {
-  const { t } = useLang();
   const [alerts, setAlerts]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm]       = useState(EMPTY);
@@ -27,16 +25,16 @@ export default function AdminAlerts() {
     setTimeout(() => setMsg(null), 3500);
   }
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const r = await api.get('/admin/alerts');
       setAlerts(r?.data?.alerts || []);
     } catch { flash('Failed to load alerts', false); }
     finally { setLoading(false); }
-  }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   async function handleSubmit(e) {
     e.preventDefault();

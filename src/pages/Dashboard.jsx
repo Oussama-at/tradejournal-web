@@ -60,7 +60,7 @@ export default function Dashboard() {
   async function load() {
     try {
       const param = period !== 'all' && period !== 'custom' ? `?period=${period}` : '';
-      const [statsRes, tradesRes, allTradesRes, capRes] = await Promise.all([
+      const [statsRes, , allTradesRes, capRes] = await Promise.all([
         api.get('/stats' + param),
         api.get('/trades?page=1&limit=9999'),
         api.get('/trades?page=1&limit=9999'),
