@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { useLang } from '../lang/LangContext';
 import { useAuth } from '../context/AuthContext';
-import PhotoCropDialog from '../components/PhotoCropDialog';
+
 
 const FREE_TRADE_LIMIT = 6;
 
@@ -227,20 +227,18 @@ function UpgradeModal({ onClose }) {
 }
 
 /* ─────────────────────────────────────────────
-   Screenshot Section with PhotoCropDialog
+   Screenshot Section — plain file picker only
+   (crop dialog is Profile photo only)
 ───────────────────────────────────────────── */
 function ScreenshotSection({ image, preview, onImageSave, onRemove, t }) {
   const fileInputRef = useRef(null);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [showCrop, setShowCrop] = useState(false);
 
   function handleFileChange(e) {
     const f = e.target.files[0];
     if (!f) return;
-    // Reset immediately so same file can trigger onChange again
-    e.target.value = '';
-    setSelectedFile(f);
-    setShowCrop(true);
+    e.target.value = ''; // reset so same file can be re-selected next time
+    const localUrl = URL.createObjectURL(f);
+    onImageSave(f, localUrl);
   }
 
   function openPicker() {
@@ -250,30 +248,8 @@ function ScreenshotSection({ image, preview, onImageSave, onRemove, t }) {
     }
   }
 
-  function handleCropSave(blob) {
-    setShowCrop(false);
-    setSelectedFile(null);
-    // Convert blob to File object for upload
-    const file = new File([blob], 'screenshot.jpg', { type: 'image/jpeg' });
-    const localUrl = URL.createObjectURL(blob);
-    onImageSave(file, localUrl);
-  }
-
-  function handleCropCancel() {
-    setShowCrop(false);
-    setSelectedFile(null);
-  }
-
   return (
     <>
-      {/* Photo crop dialog */}
-      {showCrop && selectedFile && (
-        <PhotoCropDialog
-          file={selectedFile}
-          onSave={handleCropSave}
-          onCancel={handleCropCancel}
-        />
-      )}
 
       <div className="card">
         <div style={{ fontWeight: 700, marginBottom: 12 }}>Screenshot</div>

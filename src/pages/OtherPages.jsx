@@ -1179,42 +1179,56 @@ export function EmailChangeRequests() {
 }
 
 // My Profile
-
 // My Profile
 export function Profile() {
   const { t } = useLang();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile]   = useState(null);
+  // Avatar: object URL (instant) or server URL
+  const [avatarSrc, setAvatarSrc] = useState(null);
+
+  // Photo flow
+  const fileInputRef             = useRef(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [showCrop, setShowCrop]  = useState(false);
+  const [uploadState, setUploadState] = useState('idle'); // 'idle'|'uploading'|'success'|'error'
+  const [uploadMsg, setUploadMsg] = useState('');
+
+  // Security questions
   const [q1, setQ1] = useState('');
   const [a1, setA1] = useState('');
   const [q2, setQ2] = useState('');
   const [a2, setA2] = useState('');
   const [questions, setQuestions] = useState([]);
   const [msg, setMsg] = useState(null);
-  const DEFAULTS = ['What is your favourite color?', 'Name of your best player?', 'What is your birthday?', "Mother's maiden name?", 'First pet name?', 'City you were born in?'];
 
-  // First-login security setup notification
-  const [showSecurityAlert, setShowSecurityAlert] = useState(false);
-
-  // Admin direct email set
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminEmailMsg, setAdminEmailMsg] = useState(null);
+  // Admin direct email
+  const [adminEmail, setAdminEmail]         = useState('');
+  const [adminEmailMsg, setAdminEmailMsg]   = useState(null);
   const [adminEmailLoading, setAdminEmailLoading] = useState(false);
 
-  // Email change state machine: 'idle' | 'verifying' | 'verified' | 'pending'
+  // Email change 3-step
   const [emailStep, setEmailStep] = useState('idle');
-  const [userQ1, setUserQ1] = useState('');
-  const [userQ2, setUserQ2] = useState('');
-  const [verifyA1, setVerifyA1] = useState('');
-  const [verifyA2, setVerifyA2] = useState('');
+  const [userQ1, setUserQ1]       = useState('');
+  const [userQ2, setUserQ2]       = useState('');
+  const [verifyA1, setVerifyA1]   = useState('');
+  const [verifyA2, setVerifyA2]   = useState('');
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [verifyMsg, setVerifyMsg] = useState(null);
-  const [verifyToken, setVerifyToken] = useState(null);
-  const [newEmail, setNewEmail] = useState('');
+  const [verifyToken, setVerifyToken]     = useState(null);
+  const [newEmail, setNewEmail]   = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitMsg, setSubmitMsg] = useState(null);
 
+  // First-login security setup
+  const [showSecurityAlert, setShowSecurityAlert] = useState(false);
+
+  const DEFAULTS = [
+    'What is your favourite color?', 'Name of your best player?',
+    'What is your birthday?', "Mother's maiden name?",
+    'First pet name?', 'City you were born in?',
+  ];
+
   useEffect(() => {
-    // Check if redirected here for first-login security setup
     const params = new URLSearchParams(window.location.search);
     if (params.get('setup_security') === '1') {
       setShowSecurityAlert(true);
@@ -1223,7 +1237,8 @@ export function Profile() {
     api.get('/profile').then(r => {
       const u = r?.data?.user || null;
       setProfile(u);
-      if (u?.email) setAdminEmail(u.email);
+      if (u?.avatar) setAvatarSrc(u.avatar);
+      if (u?.email)  setAdminEmail(u.email);
     });
     api.get('/secret-questions').then(r => {
       const qs = r?.data?.questions || [];
@@ -1235,14 +1250,62 @@ export function Profile() {
     // eslint-disable-next-line
   }, []);
 
-  // Admin: save email directly (no approval needed)
+  // ── Photo flow ─────────────────────────────────────────────────────────
+  // Step 1: button click → open picker via ref only (no label wrapper)
+  function openFilePicker() {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''; // allow same file re-select
+      fileInputRef.current.click();
+    }
+  }
+
+  // Step 2: file chosen → open crop dialog
+  function onFileChosen(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    e.target.value = ''; // reset immediately — prevents double-fire
+    setSelectedFile(f);
+    setShowCrop(true);
+  }
+
+  // Step 3: crop saved → show upload progress → instant avatar preview
+  async function handleCropSave(blob) {
+    setShowCrop(false);
+    setSelectedFile(null);
+
+    // Show instant local preview
+    const localUrl = URL.createObjectURL(blob);
+    setAvatarSrc(localUrl);
+
+    // Show uploading state
+    setUploadState('uploading');
+    setUploadMsg('');
+
+    const formFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+    const res = await api.uploadFile('/profile/picture', formFile);
+
+    if (res?.success) {
+      if (res?.data?.url) setAvatarSrc(res.data.url);
+      setUploadState('success');
+    } else {
+      setAvatarSrc(profile?.avatar || null); // revert on failure
+      setUploadState('error');
+      setUploadMsg(res?.message || 'Upload failed');
+    }
+    URL.revokeObjectURL(localUrl);
+  }
+
+  function handleCropCancel() {
+    setShowCrop(false);
+    setSelectedFile(null);
+  }
+
+  // ── Admin email ───────────────────────────────────────────────────────
   async function saveAdminEmail() {
     if (!adminEmail || !adminEmail.includes('@')) {
-      setAdminEmailMsg({ type: 'error', text: 'Enter a valid email address' });
-      return;
+      setAdminEmailMsg({ type: 'error', text: 'Enter a valid email address' }); return;
     }
-    setAdminEmailLoading(true);
-    setAdminEmailMsg(null);
+    setAdminEmailLoading(true); setAdminEmailMsg(null);
     const res = await api.put('/profile/email', { email: adminEmail });
     setAdminEmailLoading(false);
     if (res?.success) {
@@ -1253,27 +1316,21 @@ export function Profile() {
     }
   }
 
+  // ── Security questions ────────────────────────────────────────────────
   async function saveQuestions() {
     if (!q1 || !a1 || !q2 || !a2) { setMsg({ type: 'error', text: 'All fields required' }); return; }
     if (q1 === q2) { setMsg({ type: 'error', text: 'Questions must be different' }); return; }
     const res = await api.post('/set-secret-answers', { question_1: q1, answer_1: a1, question_2: q2, answer_2: a2 });
     if (res?.success) {
       setMsg({ type: 'success', text: '✓ Security questions saved!' });
-      setA1(''); setA2('');
-      setUserQ1(q1); setUserQ2(q2);
+      setA1(''); setA2(''); setUserQ1(q1); setUserQ2(q2);
       setShowSecurityAlert(false);
     } else {
       setMsg({ type: 'error', text: res?.message || 'Failed' });
     }
   }
 
-  async function changePhoto(file) {
-    if (!file) return;
-    const res = await api.uploadFile('/profile/picture', file);
-    if (res?.success) alert('✓ Photo updated!');
-  }
-
-  // Step 1: open email-change verify flow
+  // ── Email change ──────────────────────────────────────────────────────
   async function startEmailChange() {
     setVerifyA1(''); setVerifyA2(''); setVerifyMsg(null);
     setNewEmail(''); setSubmitMsg(null); setVerifyToken(null);
@@ -1289,111 +1346,128 @@ export function Profile() {
     setEmailStep('verifying');
   }
 
-  // Step 2: verify secret answers
   async function submitVerify() {
     if (!verifyA1.trim() || !verifyA2.trim()) {
-      setVerifyMsg({ type: 'error', text: 'Please answer both questions' });
-      return;
+      setVerifyMsg({ type: 'error', text: 'Please answer both questions' }); return;
     }
-    setVerifyLoading(true);
-    setVerifyMsg(null);
+    setVerifyLoading(true); setVerifyMsg(null);
     const res = await api.post('/profile/verify-for-email-change', { answer_1: verifyA1, answer_2: verifyA2 });
     setVerifyLoading(false);
     if (res?.success) {
-      setVerifyToken(res.data?.verify_token);
-      setEmailStep('verified');
+      setVerifyToken(res.data?.verify_token); setEmailStep('verified');
     } else {
       setVerifyMsg({ type: 'error', text: res?.message || 'Verification failed' });
     }
   }
 
-  // Step 3: submit new email with token
   async function submitEmailChange() {
     if (!newEmail || !newEmail.includes('@')) {
-      setSubmitMsg({ type: 'error', text: 'Please enter a valid email address' });
-      return;
+      setSubmitMsg({ type: 'error', text: 'Please enter a valid email address' }); return;
     }
     if (!verifyToken) {
       setSubmitMsg({ type: 'error', text: 'Verification expired — please start again' });
-      setEmailStep('idle');
-      return;
+      setEmailStep('idle'); return;
     }
-    setSubmitLoading(true);
-    setSubmitMsg(null);
+    setSubmitLoading(true); setSubmitMsg(null);
     const res = await api.post('/profile/request-email-change', { new_email: newEmail, verify_token: verifyToken });
     setSubmitLoading(false);
     if (res?.success) {
-      setEmailStep('pending');
-      setVerifyToken(null);
+      setEmailStep('pending'); setVerifyToken(null);
     } else {
       if (res?.message?.includes('expired') || res?.message?.includes('invalid')) setEmailStep('idle');
       setSubmitMsg({ type: 'error', text: res?.message || 'Failed to submit request' });
     }
   }
 
+  const initials = profile?.user_name?.[0]?.toUpperCase() || 'U';
+
   return (
     <div>
-      <div className="page-header"><div className="page-title">{t('my_profile')}</div></div>
+      {/* ── Photo crop dialog (Profile only) ─────────────────────────── */}
+      {showCrop && selectedFile && (
+        <PhotoCropDialogInline
+          file={selectedFile}
+          onSave={handleCropSave}
+          onCancel={handleCropCancel}
+          t={t}
+        />
+      )}
 
-      {/* First-login security setup banner */}
+      {/* ── Upload status overlay ─────────────────────────────────────── */}
+      {uploadState !== 'idle' && (
+        <UploadStatusOverlay
+          state={uploadState}
+          msg={uploadMsg}
+          onClose={() => setUploadState('idle')}
+          t={t}
+        />
+      )}
+
+      {/* Hidden file input — single ref trigger only, NO label wrapper */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={onFileChosen}
+      />
+
+      <div className="page-header">
+        <div className="page-title">{t('my_profile')}</div>
+      </div>
+
       {showSecurityAlert && (
         <div className="alert alert-warning" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <span>🔐 <strong>Setup Required:</strong> Please set your security questions on the right to protect your account.</span>
-          <button onClick={() => setShowSecurityAlert(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>✕</button>
+          <button onClick={() => setShowSecurityAlert(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 18 }}>✕</button>
         </div>
       )}
 
       <div className="grid-2">
-        {/* ── Identity card ─────────────────────────────────────── */}
+        {/* ── Identity card ──────────────────────────────────────────── */}
         <div className="card">
           {/* Avatar + name */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--bg4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: 'var(--blue)' }}>
-              {profile?.user_name?.[0]?.toUpperCase() || 'U'}
+            <div style={{
+              width: 68, height: 68, borderRadius: '50%',
+              background: 'var(--bg4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 24, fontWeight: 800, color: 'var(--blue)',
+              overflow: 'hidden', flexShrink: 0,
+              border: '2px solid rgba(0,230,118,0.2)',
+              position: 'relative',
+            }}>
+              {avatarSrc
+                ? <img src={avatarSrc} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : initials
+              }
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 18 }}>{profile?.user_name}</div>
               <span className={`badge ${profile?.role === 'admin' ? 'badge-purple' : 'badge-blue'}`}>{profile?.role}</span>
-              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{t('member_since')} {(profile?.created_at || '').substring(0, 10)}</div>
+              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                {t('member_since')} {(profile?.created_at || '').substring(0, 10)}
+              </div>
             </div>
           </div>
 
-          {/* ── Email section ──────────────────────────────────── */}
+          {/* ── Email section ─────────────────────────────────────────── */}
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginBottom: 14 }}>
-
             {profile?.role === 'admin' ? (
-              /* Admin: editable email field — no approval flow */
               <div className="form-group">
-                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  ✉️ Email Address
-                </label>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>✉️ Email Address</label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    className="input"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={adminEmail}
-                    onChange={e => { setAdminEmail(e.target.value); setAdminEmailMsg(null); }}
-                    onKeyDown={e => e.key === 'Enter' && saveAdminEmail()}
-                    style={{ flex: 1 }}
-                  />
-                  <button
-                    className="btn btn-primary"
-                    style={{ whiteSpace: 'nowrap' }}
-                    onClick={saveAdminEmail}
-                    disabled={adminEmailLoading}
-                  >
+                  <input className="input" type="email" placeholder="your@email.com"
+                    value={adminEmail} onChange={e => { setAdminEmail(e.target.value); setAdminEmailMsg(null); }}
+                    onKeyDown={e => e.key === 'Enter' && saveAdminEmail()} style={{ flex: 1 }} />
+                  <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}
+                    onClick={saveAdminEmail} disabled={adminEmailLoading}>
                     {adminEmailLoading ? '...' : '✓ Save'}
                   </button>
                 </div>
-                {adminEmailMsg && (
-                  <div className={`alert alert-${adminEmailMsg.type}`} style={{ marginTop: 8, fontSize: 12 }}>
-                    {adminEmailMsg.text}
-                  </div>
-                )}
+                {adminEmailMsg && <div className={`alert alert-${adminEmailMsg.type}`} style={{ marginTop: 8, fontSize: 12 }}>{adminEmailMsg.text}</div>}
               </div>
             ) : (
-              /* Regular user: read-only email + 3-step change flow */
               <>
                 <div className="form-group" style={{ marginBottom: 10 }}>
                   <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1404,22 +1478,12 @@ export function Profile() {
                     {profile?.email || <span style={{ opacity: 0.4 }}>Not set</span>}
                   </div>
                 </div>
-
-                {/* IDLE — button to start flow */}
                 {emailStep === 'idle' && (
-                  <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={startEmailChange}>
-                    🔐 Request email change
-                  </button>
+                  <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={startEmailChange}>🔐 Request email change</button>
                 )}
-
-                {/* PENDING — waiting for admin */}
                 {emailStep === 'pending' && (
-                  <div className="alert alert-warning" style={{ fontSize: 12 }}>
-                    ⏳ Your email change request is pending admin approval.
-                  </div>
+                  <div className="alert alert-warning" style={{ fontSize: 12 }}>⏳ Your email change request is pending admin approval.</div>
                 )}
-
-                {/* VERIFYING — answer security questions */}
                 {emailStep === 'verifying' && (
                   <div style={{ background: 'var(--bg3)', borderRadius: 8, padding: 14, border: '1px solid var(--border)' }}>
                     <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>🔒 Verify your identity</div>
@@ -1439,8 +1503,6 @@ export function Profile() {
                     </div>
                   </div>
                 )}
-
-                {/* VERIFIED — enter new email */}
                 {emailStep === 'verified' && (
                   <div style={{ background: 'var(--bg3)', borderRadius: 8, padding: 14, border: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -1450,7 +1512,8 @@ export function Profile() {
                     </div>
                     <div className="form-group" style={{ marginBottom: 10 }}>
                       <label className="form-label" style={{ fontSize: 12 }}>New email address</label>
-                      <input className="input" type="email" placeholder="new@email.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && submitEmailChange()} />
+                      <input className="input" type="email" placeholder="new@email.com" value={newEmail}
+                        onChange={e => setNewEmail(e.target.value)} autoFocus onKeyDown={e => e.key === 'Enter' && submitEmailChange()} />
                     </div>
                     {submitMsg && <div className={`alert alert-${submitMsg.type}`} style={{ marginBottom: 10, fontSize: 12 }}>{submitMsg.text}</div>}
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -1464,16 +1527,20 @@ export function Profile() {
             )}
           </div>
 
-          {/* Change photo */}
-          <label>
-            <div className="btn btn-ghost" style={{ cursor: 'pointer' }} onClick={() => document.getElementById('pic-input').click()}>
+          {/* ── Change photo — button only, NO label wrapper ──────────── */}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+              onClick={openFilePicker}
+            >
               {t('change_photo')}
-            </div>
-            <input id="pic-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={e => changePhoto(e.target.files[0])} />
-          </label>
+            </button>
+          </div>
         </div>
 
-        {/* ── Security Questions card ───────────────────────── */}
+        {/* ── Security questions ──────────────────────────────────────── */}
         <div className="card">
           <div style={{ fontWeight: 700, marginBottom: 16 }}>{t('security_questions')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1504,6 +1571,182 @@ export function Profile() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Inline crop dialog (only used inside Profile) ───────────────────────── */
+function PhotoCropDialogInline({ file, onSave, onCancel, t }) {
+  const CROP_SIZE = 260;
+  const [shape, setShape] = React.useState('circle');
+  const [zoom, setZoom]   = React.useState(1);
+  const [pos, setPos]     = React.useState({ x: 0, y: 0 });
+  const [imgSize, setImgSize] = React.useState({ w: 0, h: 0 });
+  const [saving, setSaving]   = React.useState(false);
+  const [src, setSrc]         = React.useState('');
+  const imgRef  = React.useRef(null);
+  const dragRef = React.useRef(null);
+  const objUrl  = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!file) return;
+    objUrl.current = URL.createObjectURL(file);
+    setSrc(objUrl.current);
+    return () => { if (objUrl.current) URL.revokeObjectURL(objUrl.current); };
+  }, [file]);
+
+  const handleImgLoad = React.useCallback(() => {
+    const el = imgRef.current; if (!el) return;
+    const w = el.naturalWidth, h = el.naturalHeight;
+    setImgSize({ w, h });
+    setZoom(Math.max(CROP_SIZE / w, CROP_SIZE / h));
+    setPos({ x: 0, y: 0 });
+  }, []);
+
+  function clamp({ x, y }) {
+    if (!imgSize.w) return { x, y };
+    const maxX = Math.max(0, (imgSize.w * zoom - CROP_SIZE) / 2);
+    const maxY = Math.max(0, (imgSize.h * zoom - CROP_SIZE) / 2);
+    return { x: Math.min(maxX, Math.max(-maxX, x)), y: Math.min(maxY, Math.max(-maxY, y)) };
+  }
+
+  React.useEffect(() => { setPos(p => clamp(p)); }, [zoom, imgSize]); // eslint-disable-line
+
+  const onMouseDown = React.useCallback((e) => {
+    e.preventDefault();
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
+    function onMove(ev) {
+      setPos(clamp({ x: dragRef.current.origX + ev.clientX - dragRef.current.startX, y: dragRef.current.origY + ev.clientY - dragRef.current.startY }));
+    }
+    function onUp() { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [pos]); // eslint-disable-line
+
+  const onTouchStart = React.useCallback((e) => {
+    const t0 = e.touches[0];
+    dragRef.current = { startX: t0.clientX, startY: t0.clientY, origX: pos.x, origY: pos.y };
+    function onMove(ev) {
+      const t1 = ev.touches[0];
+      setPos(clamp({ x: dragRef.current.origX + t1.clientX - dragRef.current.startX, y: dragRef.current.origY + t1.clientY - dragRef.current.startY }));
+    }
+    function onEnd() { window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd); }
+    window.addEventListener('touchmove', onMove);
+    window.addEventListener('touchend', onEnd);
+  }, [pos]); // eslint-disable-line
+
+  const onWheel = React.useCallback((e) => {
+    e.preventDefault();
+    const minZ = imgSize.w ? Math.max(CROP_SIZE / imgSize.w, CROP_SIZE / imgSize.h) : 0.5;
+    setZoom(z => Math.min(5, Math.max(minZ, z - e.deltaY * 0.001)));
+  }, [imgSize]);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const canvas = document.createElement('canvas');
+      const OUT = 400; canvas.width = OUT; canvas.height = OUT;
+      const ctx = canvas.getContext('2d');
+      if (shape === 'circle') { ctx.beginPath(); ctx.arc(OUT/2, OUT/2, OUT/2, 0, Math.PI*2); ctx.clip(); }
+      const scaledW = imgSize.w * zoom, scaledH = imgSize.h * zoom;
+      const imgLeft = (CROP_SIZE - scaledW) / 2 + pos.x;
+      const imgTop  = (CROP_SIZE - scaledH) / 2 + pos.y;
+      ctx.drawImage(imgRef.current, (0 - imgLeft)/zoom, (0 - imgTop)/zoom, CROP_SIZE/zoom, CROP_SIZE/zoom, 0, 0, OUT, OUT);
+      canvas.toBlob(blob => { if (blob) onSave(blob); setSaving(false); }, 'image/jpeg', 0.92);
+    } catch { setSaving(false); }
+  }
+
+  const minZoom = imgSize.w ? Math.max(CROP_SIZE / imgSize.w, CROP_SIZE / imgSize.h) : 0.5;
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:99999, background:'rgba(0,0,0,0.82)', display:'flex', alignItems:'center', justifyContent:'center', padding:16, backdropFilter:'blur(4px)' }}
+      onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div style={{ background:'linear-gradient(160deg,#111820 0%,#0d1117 100%)', border:'1px solid rgba(0,230,118,0.2)', borderRadius:20, padding:'28px 28px 24px', width:'100%', maxWidth:420, boxShadow:'0 32px 80px rgba(0,0,0,0.7)', position:'relative' }}>
+        <button onClick={onCancel} style={{ position:'absolute', top:16, right:16, background:'rgba(255,255,255,0.06)', border:'none', color:'#5a7a9a', fontSize:18, cursor:'pointer', width:32, height:32, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontSize:18, fontWeight:800, color:'#e8edf3', marginBottom:4 }}>{t('photo_dialog_title')}</div>
+          <div style={{ fontSize:12, color:'#5a7a9a' }}>{t('photo_dialog_sub')}</div>
+        </div>
+        {/* Crop box */}
+        <div style={{ width:CROP_SIZE, height:CROP_SIZE, margin:'0 auto 18px', position:'relative', overflow:'hidden', borderRadius: shape==='circle'?'50%':12, border:'2px solid rgba(0,230,118,0.5)', cursor:'grab', userSelect:'none', touchAction:'none' }}
+          onMouseDown={onMouseDown} onTouchStart={onTouchStart} onWheel={onWheel}>
+          <div style={{ position:'absolute', inset:0, zIndex:2, pointerEvents:'none', backgroundImage:`linear-gradient(rgba(255,255,255,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.07) 1px,transparent 1px)`, backgroundSize:`${CROP_SIZE/3}px ${CROP_SIZE/3}px` }} />
+          {src && (
+            <img ref={imgRef} src={src} alt="crop" onLoad={handleImgLoad} draggable={false}
+              style={{ position:'absolute', width:imgSize.w*zoom, height:imgSize.h*zoom, top:'50%', left:'50%', transform:`translate(calc(-50% + ${pos.x}px),calc(-50% + ${pos.y}px))`, pointerEvents:'none' }} />
+          )}
+        </div>
+        <div style={{ fontSize:11, color:'#3a5a7a', textAlign:'center', marginBottom:16 }}>🖱 Drag to reposition · Scroll to zoom</div>
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          {/* Shape toggle */}
+          <div style={{ display:'flex', gap:8 }}>
+            {['circle','square'].map(s => (
+              <button key={s} type="button" onClick={() => setShape(s)} style={{ flex:1, padding:'8px', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', border: shape===s?'1px solid rgba(0,230,118,0.6)':'1px solid var(--border,#1e2d3d)', background: shape===s?'rgba(0,230,118,0.12)':'var(--bg3,#0d1f2d)', color: shape===s?'#00e676':'#5a7a9a', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                {s==='circle' ? <><span style={{fontSize:16}}>◯</span> {t('photo_shape_circle')}</> : <><span style={{fontSize:16}}>⬜</span> {t('photo_shape_square')}</>}
+              </button>
+            ))}
+          </div>
+          {/* Zoom */}
+          <div>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+              <span style={{ fontSize:12, color:'#5a7a9a', fontWeight:600 }}>🔍 {t('photo_zoom')}</span>
+              <span style={{ fontSize:11, color:'#3a5a7a', fontFamily:'monospace' }}>{Math.round(zoom*100)}%</span>
+            </div>
+            <input type="range" min={Math.round(minZoom*100)} max={500} step={1} value={Math.round(zoom*100)} onChange={e => setZoom(Number(e.target.value)/100)} style={{ width:'100%', accentColor:'#00e676', cursor:'pointer' }} />
+          </div>
+          {/* Buttons */}
+          <div style={{ display:'flex', gap:10, marginTop:4 }}>
+            <button type="button" onClick={onCancel} style={{ flex:1, padding:'11px', borderRadius:10, border:'1px solid var(--border,#1e2d3d)', background:'var(--bg3,#0d1f2d)', color:'#5a7a9a', fontWeight:700, fontSize:13, cursor:'pointer' }}>{t('photo_cancel')}</button>
+            <button type="button" onClick={handleSave} disabled={saving||!src} style={{ flex:2, padding:'11px', borderRadius:10, background: saving?'rgba(0,230,118,0.3)':'linear-gradient(135deg,#00e676,#00c853)', border:'none', color:'#080c10', fontWeight:800, fontSize:13, cursor: saving?'wait':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+              {saving ? <><span style={{animation:'spin 1s linear infinite',display:'inline-block'}}>⟳</span> Saving...</> : <>💾 {t('photo_save')}</>}
+            </button>
+          </div>
+        </div>
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg);}}`}</style>
+    </div>
+  );
+}
+
+/* ── Upload status overlay — replaces the native alert() ────────────────── */
+function UploadStatusOverlay({ state, msg, onClose, t }) {
+  const isLoading = state === 'uploading';
+  const isSuccess = state === 'success';
+
+  // Auto-close on success after 2.5s
+  React.useEffect(() => {
+    if (isSuccess) {
+      const timer = setTimeout(onClose, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccess, onClose]);
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:99998, background:'rgba(0,0,0,0.65)', display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(3px)' }}>
+      <div style={{ background:'linear-gradient(160deg,#111820,#0d1117)', border:`1px solid ${isSuccess?'rgba(0,230,118,0.35)':isLoading?'rgba(255,255,255,0.08)':'rgba(255,71,87,0.35)'}`, borderRadius:20, padding:'36px 40px', maxWidth:360, width:'100%', textAlign:'center', boxShadow:'0 32px 80px rgba(0,0,0,0.7)' }}>
+        {/* Icon */}
+        {isLoading && (
+          <div style={{ width:64, height:64, margin:'0 auto 20px', borderRadius:'50%', border:'3px solid rgba(0,230,118,0.2)', borderTop:'3px solid #00e676', animation:'spin 0.9s linear infinite' }} />
+        )}
+        {isSuccess && (
+          <div style={{ width:64, height:64, margin:'0 auto 20px', borderRadius:'50%', background:'rgba(0,230,118,0.12)', border:'2px solid rgba(0,230,118,0.5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28 }}>✓</div>
+        )}
+        {state === 'error' && (
+          <div style={{ width:64, height:64, margin:'0 auto 20px', borderRadius:'50%', background:'rgba(255,71,87,0.1)', border:'2px solid rgba(255,71,87,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28 }}>✕</div>
+        )}
+        {/* Title */}
+        <div style={{ fontSize:18, fontWeight:800, color: isSuccess?'#00e676': state==='error'?'#ff4757':'#e8edf3', marginBottom:8 }}>
+          {isLoading ? 'Uploading photo…' : isSuccess ? t('photo_updated') : 'Upload failed'}
+        </div>
+        <div style={{ fontSize:13, color:'#5a7a9a', marginBottom: state==='error'?20:0 }}>
+          {isLoading ? 'Please wait while your photo is being saved.' : isSuccess ? 'Your profile photo has been updated successfully.' : msg || 'Something went wrong. Please try again.'}
+        </div>
+        {/* Error close button */}
+        {state === 'error' && (
+          <button onClick={onClose} style={{ background:'rgba(255,71,87,0.15)', border:'1px solid rgba(255,71,87,0.35)', color:'#ff4757', borderRadius:10, padding:'10px 24px', fontWeight:700, fontSize:13, cursor:'pointer' }}>Close</button>
+        )}
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg);}}`}</style>
     </div>
   );
 }
