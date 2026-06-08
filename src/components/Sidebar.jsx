@@ -631,7 +631,7 @@ function NotificationBell({ user }) {
 
 // ── Main Sidebar ──────────────────────────────────────────
 export default function Sidebar({ capitalInfo }) {
-  const { user, logout, sub } = useAuth();
+  const { user, logout, sub, avatar } = useAuth();
   const { lang, t, setLang } = useLang();
   const isAdmin  = user?.role === 'admin';
   const navigate = useNavigate();
@@ -656,7 +656,12 @@ export default function Sidebar({ capitalInfo }) {
       </div>
 
       <div className="sidebar-user">
-        <div className="user-avatar">{user?.username?.[0]?.toUpperCase() || 'U'}</div>
+        <div className="user-avatar" style={{ overflow: 'hidden', border: avatar ? '2px solid rgba(0,230,118,0.35)' : undefined }}>
+          {avatar
+            ? <img src={avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+            : (user?.username?.[0]?.toUpperCase() || 'U')
+          }
+        </div>
         <div className="user-info">
           <div className="user-name">{user?.username}</div>
           {capitalInfo && (

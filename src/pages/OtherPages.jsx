@@ -279,19 +279,19 @@ export function Withdraw() {
       <div className="card">
         <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('withdrawal_history')}</div>
         <div className="table-wrap">
-          <table>
-            <thead><tr>{[t('col_date'), t('col_amount'), t('col_note')].map(h => <th key={h}>{h}</th>)}</tr></thead>
-            <tbody>
-              {history.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--dim)', padding: 24 }}>No withdrawals</td></tr>}
-              {history.map((w, i) => (
-                <tr key={i}>
-                  <td className="muted">{(w.created_at || '').substring(0, 10)}</td>
-                  <td className="mono red bold">{parseFloat(w.amount || 0).toFixed(2)}$</td>
-                  <td className="muted">{w.note || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <SortableTable
+            headers={[t('col_date'), t('col_amount'), t('col_note')]}
+            sortableCount={2}
+            rows={history}
+            rowKey={(w, i) => i}
+            renderRow={(w, i) => (
+              <tr key={i}>
+                <td className="muted">{(w.created_at || '').substring(0, 10)}</td>
+                <td className="mono red bold">{parseFloat(w.amount || 0).toFixed(2)}$</td>
+                <td className="muted">{w.note || '—'}</td>
+              </tr>
+            )}
+          />
         </div>
       </div>
     </div>
@@ -793,10 +793,10 @@ export function Logs() {
     api.get('/admin/logs?page=1&limit=1000').then(r => setLogs(r?.data?.logs || []));
   }, []);
 
-  const DOT_COLOR = { LOGIN:'var(--blue)', LOGIN_FAILED:'var(--red)', TRADE_SAVED:'var(--green)', TRADE_DELETED:'var(--red)', ADMIN_ADD_USER:'var(--purple)', WITHDRAWAL:'var(--orange)', CAPITAL_ADDED:'var(--green)', ADMIN_CREATE_ALERT:'var(--orange)', ADMIN_TOGGLE_ACCESS:'var(--purple)', REGISTER:'var(--blue)' };
+  const DOT_COLOR = { LOGIN:'var(--blue)', LOGIN_FAILED:'var(--red)', TRADE_SAVED:'var(--green)', TRADE_DELETED:'var(--red)', TRADE_EDITED:'var(--blue)', ADMIN_ADD_USER:'var(--purple)', WITHDRAWAL:'var(--orange)', CAPITAL_ADDED:'var(--green)', ADMIN_CREATE_ALERT:'var(--orange)', ADMIN_TOGGLE_ACCESS:'var(--purple)', REGISTER:'var(--blue)', PROFILE_PHOTO_UPDATED:'var(--green)', SECRET_ANSWERS_SET:'var(--blue)', EMAIL_CHANGE_REQUEST:'var(--orange)', EMAIL_CHANGE_VERIFIED:'var(--blue)', ADMIN_APPROVE_EMAIL_CHANGE:'var(--purple)', ADMIN_IMPERSONATE:'var(--purple)', SUBSCRIPTION_ASSIGNED:'var(--green)', SUBSCRIPTION_REVOKED:'var(--red)', PASSWORD_CHANGED:'var(--orange)' };
   const dotColor = a => DOT_COLOR[a] || 'var(--dim)';
 
-  const ACTION_ICONS = { LOGIN:'🔑', LOGIN_FAILED:'🚫', TRADE_SAVED:'📈', TRADE_DELETED:'🗑️', ADMIN_ADD_USER:'👤', WITHDRAWAL:'💸', CAPITAL_ADDED:'💰', ADMIN_CREATE_ALERT:'🔔', ADMIN_TOGGLE_ACCESS:'🔒', REGISTER:'✅' };
+  const ACTION_ICONS = { LOGIN:'🔑', LOGIN_FAILED:'🚫', TRADE_SAVED:'📈', TRADE_DELETED:'🗑️', TRADE_EDITED:'✏️', ADMIN_ADD_USER:'👤', WITHDRAWAL:'💸', CAPITAL_ADDED:'💰', ADMIN_CREATE_ALERT:'🔔', ADMIN_TOGGLE_ACCESS:'🔒', REGISTER:'✅', PROFILE_PHOTO_UPDATED:'🖼️', SECRET_ANSWERS_SET:'🔐', EMAIL_CHANGE_REQUEST:'✉️', EMAIL_CHANGE_VERIFIED:'✅', ADMIN_APPROVE_EMAIL_CHANGE:'📧', ADMIN_IMPERSONATE:'👁️', SUBSCRIPTION_ASSIGNED:'🎫', SUBSCRIPTION_REVOKED:'❌', PASSWORD_CHANGED:'🔑' };
   const actionIcon = a => ACTION_ICONS[a] || '•';
 
   // Unique action types and users from log data
@@ -885,7 +885,7 @@ export function Logs() {
           </div>
           {/* Quick action type badges */}
           <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {['LOGIN', 'TRADE_SAVED', 'WITHDRAWAL', 'REGISTER', 'ADMIN_TOGGLE_ACCESS'].map(a => (
+            {['LOGIN', 'TRADE_SAVED', 'TRADE_DELETED', 'WITHDRAWAL', 'PROFILE_PHOTO_UPDATED', 'ADMIN_TOGGLE_ACCESS', 'SUBSCRIPTION_ASSIGNED'].map(a => (
               <button key={a} onClick={() => { setActionFilter(actionFilter === a ? 'all' : a); setPage(0); }}
                 style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
                   background: actionFilter === a ? dotColor(a) : 'var(--bg3)',
@@ -1182,6 +1182,7 @@ export function EmailChangeRequests() {
 // My Profile
 export function Profile() {
   const { t } = useLang();
+  const { updateAvatar } = useAuth();
   const [profile, setProfile]   = useState(null);
   // Avatar: object URL (instant) or server URL
   const [avatarSrc, setAvatarSrc] = useState(null);
@@ -1282,11 +1283,21 @@ export function Profile() {
     setUploadMsg('');
 
     const formFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
-    const res = await api.uploadFile('/profile/picture', formFile);
+    const res = await api.uploadFile('/profile/picture', formFile, 'picture');
 
     if (res?.success) {
-      if (res?.data?.url) setAvatarSrc(res.data.url);
+      const serverUrl = res?.data?.url || res?.data?.avatar || res?.data?.avatar_url || res?.data?.picture || res?.url || null;
+      if (serverUrl) { setAvatarSrc(serverUrl); updateAvatar(serverUrl); }
+      else {
+        // Reload profile to get updated avatar URL
+        api.get('/profile').then(r => {
+          const av = r?.data?.user?.avatar || r?.data?.user?.avatar_url || r?.data?.user?.picture;
+          if (av) { setAvatarSrc(av); updateAvatar(av); }
+        }).catch(() => {});
+      }
       setUploadState('success');
+      // Log to backend
+      api.post('/log', { action: 'PROFILE_PHOTO_UPDATED', details: 'Profile photo updated' }).catch(() => {});
     } else {
       setAvatarSrc(profile?.avatar || null); // revert on failure
       setUploadState('error');
@@ -1325,6 +1336,7 @@ export function Profile() {
       setMsg({ type: 'success', text: '✓ Security questions saved!' });
       setA1(''); setA2(''); setUserQ1(q1); setUserQ2(q2);
       setShowSecurityAlert(false);
+      api.post('/log', { action: 'SECRET_ANSWERS_SET', details: 'User set security questions' }).catch(() => {});
     } else {
       setMsg({ type: 'error', text: res?.message || 'Failed' });
     }
@@ -1764,7 +1776,8 @@ export function Password() {
     if (np !== conf) { setMsg({ type: 'error', text: "Passwords don't match" }); return; }
     if (np.length < 6) { setMsg({ type: 'error', text: 'Minimum 6 characters' }); return; }
     const res = await api.post('/change-password', { current_password: cur, new_password: np });
-    if (res?.success) { setMsg({ type: 'success', text: '✓ Password changed!' }); setCur(''); setNp(''); setConf(''); }
+    if (res?.success) { setMsg({ type: 'success', text: '✓ Password changed!' }); setCur(''); setNp(''); setConf('');
+      api.post('/log', { action: 'PASSWORD_CHANGED', details: 'Password changed successfully' }).catch(() => {}); }
     else setMsg({ type: 'error', text: res?.message || 'Failed' });
   }
 

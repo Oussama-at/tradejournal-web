@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar from './components/Sidebar';
 import ExpiryBanner from './components/ExpiryBanner';
 import AlertBanner from './components/AlertBanner';
+import SessionGuard from './components/SessionGuard';
+import CookieBanner from './components/CookieBanner';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -143,6 +145,10 @@ export default function App() {
           {/* Protected app */}
           <Route path="/*" element={<AppLayout />} />
         </Routes>
+        {/* Global: session expiry guard (monitors JWT + idle timeout) */}
+        <SessionGuard />
+        {/* Global: cookie consent banner (shown once until user decides) */}
+        <CookieBanner />
       </BrowserRouter>
     </AuthProvider>
     </ConfirmProvider>

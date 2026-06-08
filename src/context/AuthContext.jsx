@@ -109,6 +109,7 @@ function LifetimeFlash({ username, onDone }) {
 // ── Auth Provider ─────────────────────────────────────────
 export function AuthProvider({ children }) {
   const [user,    setUser]    = useState(null);
+  const [avatar,  setAvatar]  = useState(() => localStorage.getItem('avatar') || null);
   const [loading, setLoading] = useState(true);
   const [sub,     setSub]     = useState(null);
   const [showExpiredPopup,  setShowExpiredPopup]  = useState(false);
@@ -135,6 +136,12 @@ export function AuthProvider({ children }) {
               setSub(r.data);
               maybeShowNotifications(r.data, false);
             }
+          }).catch(() => {});
+          // Load avatar from profile (robust: try multiple field shapes)
+          api.get('/profile').then(r => {
+            const u = r?.data?.user || r?.data || {};
+            const av = u.avatar || u.avatar_url || u.picture || null;
+            if (av) { setAvatar(av); localStorage.setItem('avatar', av); }
           }).catch(() => {});
         } else {
           clearStorage();
@@ -170,7 +177,7 @@ export function AuthProvider({ children }) {
   }
 
   function clearStorage() {
-    ['token','username','role','device_id','trial_start'].forEach(k => localStorage.removeItem(k));
+    ['token','username','role','device_id','trial_start','avatar'].forEach(k => localStorage.removeItem(k));
   }
 
   const login = (token, username, role) => {
@@ -192,11 +199,20 @@ export function AuthProvider({ children }) {
   const logout = () => {
     clearStorage();
     setUser(null);
+    setAvatar(null);
     setSub(null);
     setShowExpiredPopup(false);
     setShowLifetimeFlash(false);
     expiredShownRef.current   = false;
     lifetimeShownRef.current = false;
+  };
+
+  const updateAvatar = (url) => {
+    setAvatar(url);
+    if (url) localStorage.setItem('avatar', url);
+    else localStorage.removeItem('avatar');
+    // Notify sidebar and any other listeners
+    window.dispatchEvent(new CustomEvent('profile-updated', { detail: { avatar: url } }));
   };
 
   const refreshSub = () => {
@@ -206,7 +222,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, sub, refreshSub }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, sub, refreshSub, avatar, updateAvatar }}>
       {children}
       {showLifetimeFlash && user && (
         <LifetimeFlash username={user.username} onDone={() => setShowLifetimeFlash(false)} />

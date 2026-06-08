@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLang } from '../lang/LangContext';
 import api from '../services/api';
+import { getConsent, getSavedUsername, saveSavedUsername, clearSavedUsername } from '../utils/cookies';
 
 function generateDeviceId() {
   let id = localStorage.getItem('device_id');
@@ -185,15 +187,74 @@ function ForgotPasswordModal({ onClose }) {
   );
 }
 
+// ── Save Password Prompt ──────────────────────────────────
+function SavePasswordPrompt({ username, onSave, onDismiss }) {
+  const { t } = useLang();
+  const [visible, setVisible] = useState(false);
+  useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
+  const style = {
+    transform: visible ? 'translateY(0) scale(1)' : 'translateY(16px) scale(0.95)',
+    opacity: visible ? 1 : 0,
+    transition: 'all 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+  };
+  return (
+    <div style={{
+      position: 'fixed', bottom: 24, right: 24, zIndex: 99995,
+      maxWidth: 320, width: 'calc(100vw - 48px)', ...style,
+    }}>
+      <div style={{
+        background: 'linear-gradient(160deg,#111820,#0d1117)',
+        border: '1px solid rgba(0,230,118,0.25)',
+        borderRadius: 16, padding: '18px 20px',
+        boxShadow: '0 20px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)',
+      }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+            background: 'rgba(0,230,118,0.1)', border: '1px solid rgba(0,230,118,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+          }}>🔑</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: '#e8edf3', marginBottom: 4 }}>
+              {t('save_pwd_title')}
+            </div>
+            <div style={{ fontSize: 12, color: '#5a7a9a', lineHeight: 1.5 }}>
+              {t('save_pwd_desc')}
+            </div>
+            <div style={{ marginTop: 6, fontSize: 11, color: '#3a6a4a', fontFamily: 'monospace' }}>
+              👤 {username}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onDismiss} style={{
+            flex: 1, padding: '8px', borderRadius: 8, cursor: 'pointer',
+            border: '1px solid rgba(255,255,255,0.1)', background: 'transparent',
+            color: '#5a7a9a', fontWeight: 600, fontSize: 12,
+          }}>{t('save_pwd_no')}</button>
+          <button onClick={onSave} style={{
+            flex: 1, padding: '8px', borderRadius: 8, cursor: 'pointer',
+            border: 'none', background: 'linear-gradient(135deg,#00e676,#00c853)',
+            color: '#080c10', fontWeight: 800, fontSize: 12,
+          }}>💾 {t('save_pwd_yes')}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Login Page ───────────────────────────────────────
 export default function Login() {
-  const [username,     setUsername]     = useState('');
+  const [username,     setUsername]     = useState(() => getSavedUsername() || '');
   const [password,     setPassword]     = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error,        setError]        = useState('');
   const [loading,      setLoading]      = useState(false);
   const [showForgot,   setShowForgot]   = useState(false);
+  const [showSavePwd,  setShowSavePwd]  = useState(false);
+  const [lastUsername, setLastUsername] = useState('');
   const { login } = useAuth();
+  const { t } = useLang();
   const navigate  = useNavigate();
 
   const handleLogin = async (e) => {
@@ -216,7 +277,19 @@ export default function Login() {
           role = payload.role || 'user';
         } catch {}
         login(res.data.token, username.trim(), role);
-        // On first login (no security questions set), redirect to profile to prompt setup
+
+        // Offer to save username if cookie consent allows saved login
+        const consent = getConsent();
+        if (consent.savedLogin) {
+          saveSavedUsername(username.trim());
+        } else if (consent.decided) {
+          // consent was made but savedLogin not enabled — skip prompt
+        } else {
+          // Consent not yet decided — offer prompt
+          setLastUsername(username.trim());
+          setShowSavePwd(true);
+        }
+
         if (res.data.first_login) {
           navigate('/profile?setup_security=1');
         } else {
@@ -232,6 +305,15 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  function handleSaveYes() {
+    saveSavedUsername(lastUsername);
+    setShowSavePwd(false);
+  }
+  function handleSaveNo() {
+    clearSavedUsername();
+    setShowSavePwd(false);
+  }
 
   return (
     <div className="login-page">
@@ -255,6 +337,21 @@ export default function Login() {
               onChange={e => setUsername(e.target.value)}
               autoFocus
             />
+            {getSavedUsername() && (
+              <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10, color: '#3a6a4a' }}>💾 Saved:</span>
+                <span style={{
+                  fontSize: 11, color: '#00e676', fontFamily: 'monospace',
+                  background: 'rgba(0,230,118,0.08)', border: '1px solid rgba(0,230,118,0.2)',
+                  borderRadius: 4, padding: '1px 6px',
+                }}>{getSavedUsername()}</span>
+                <button
+                  type="button"
+                  onClick={() => { clearSavedUsername(); setUsername(''); }}
+                  style={{ background: 'none', border: 'none', color: '#5a7a9a', cursor: 'pointer', fontSize: 11, padding: 0 }}
+                >✕ clear</button>
+              </div>
+            )}
           </div>
           <div className="form-group">
             <label className="form-label">PASSWORD</label>
@@ -305,6 +402,13 @@ export default function Login() {
       </div>
 
       {showForgot && <ForgotPasswordModal onClose={() => setShowForgot(false)} />}
+      {showSavePwd && (
+        <SavePasswordPrompt
+          username={lastUsername}
+          onSave={handleSaveYes}
+          onDismiss={handleSaveNo}
+        />
+      )}
     </div>
   );
 }

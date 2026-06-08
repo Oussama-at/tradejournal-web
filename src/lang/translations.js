@@ -272,6 +272,37 @@ const translations = {
     activate:            'Activate',
     delete_trade_confirm:'This trade will be permanently removed.',
     maybe_later:         'Maybe later',
+
+    // Session expiry warning dialog
+    session_warning_title:   'Session Expiring Soon',
+    session_warning_msg:     'Your session will expire in {minutes} minute(s). Do you want to stay logged in?',
+    session_stay:            'Stay Logged In',
+    session_logout_now:      'Logout Now',
+    session_expired_title:   'Session Expired',
+    session_expired_msg:     'Your session has ended. Please log in again.',
+    session_login_again:     'Go to Login',
+
+    // Cookie consent
+    cookie_title:            'We use cookies',
+    cookie_desc:             'We use cookies to improve your experience, save your preferences, and keep you signed in. You can customize which cookies you accept.',
+    cookie_accept_all:       'Accept All',
+    cookie_reject_all:       'Reject All',
+    cookie_customize:        'Customize',
+    cookie_save_prefs:       'Save Preferences',
+    cookie_necessary:        'Necessary',
+    cookie_necessary_desc:   'Required for the site to function. Cannot be disabled.',
+    cookie_analytics:        'Analytics',
+    cookie_analytics_desc:   'Helps us understand how you use the app to improve it.',
+    cookie_preferences:      'Preferences',
+    cookie_preferences_desc: 'Saves your settings like language and theme.',
+    cookie_saved_login:      'Saved Login',
+    cookie_saved_login_desc: 'Remembers your username for faster sign-in.',
+
+    // Save password prompt
+    save_pwd_title:          'Save your login?',
+    save_pwd_desc:           'Would you like to save your username for faster sign-in next time?',
+    save_pwd_yes:            'Save',
+    save_pwd_no:             'Not now',
   },
 
   ar: {
@@ -544,6 +575,37 @@ const translations = {
     activate:            'تفعيل',
     delete_trade_confirm:'سيتم حذف الصفقة نهائياً.',
     maybe_later:         'ربما لاحقاً',
+
+    // Session expiry warning dialog
+    session_warning_title:   'الجلسة على وشك الانتهاء',
+    session_warning_msg:     'ستنتهي جلستك خلال {minutes} دقيقة/دقائق. هل تريد البقاء متصلاً؟',
+    session_stay:            'البقاء متصلاً',
+    session_logout_now:      'تسجيل الخروج الآن',
+    session_expired_title:   'انتهت الجلسة',
+    session_expired_msg:     'انتهت جلستك. يرجى تسجيل الدخول مجدداً.',
+    session_login_again:     'العودة إلى تسجيل الدخول',
+
+    // Cookie consent
+    cookie_title:            'نستخدم ملفات تعريف الارتباط',
+    cookie_desc:             'نستخدم الكوكيز لتحسين تجربتك وحفظ إعداداتك وإبقائك متصلاً. يمكنك تخصيص ما تقبله.',
+    cookie_accept_all:       'قبول الكل',
+    cookie_reject_all:       'رفض الكل',
+    cookie_customize:        'تخصيص',
+    cookie_save_prefs:       'حفظ الإعدادات',
+    cookie_necessary:        'ضروري',
+    cookie_necessary_desc:   'مطلوب لعمل الموقع ولا يمكن تعطيله.',
+    cookie_analytics:        'التحليلات',
+    cookie_analytics_desc:   'يساعدنا على فهم كيفية استخدامك للتطبيق.',
+    cookie_preferences:      'التفضيلات',
+    cookie_preferences_desc: 'يحفظ إعداداتك مثل اللغة والمظهر.',
+    cookie_saved_login:      'تسجيل الدخول المحفوظ',
+    cookie_saved_login_desc: 'يحفظ اسم المستخدم لتسجيل دخول أسرع.',
+
+    // Save password prompt
+    save_pwd_title:          'حفظ بيانات الدخول؟',
+    save_pwd_desc:           'هل تريد حفظ اسم المستخدم لتسجيل دخول أسرع في المرة القادمة؟',
+    save_pwd_yes:            'حفظ',
+    save_pwd_no:             'ليس الآن',
   },
 
   fr: {
@@ -786,6 +848,37 @@ const translations = {
     activate:            'Activer',
     delete_trade_confirm: 'Ce trade sera définitivement supprimé.',
     maybe_later:         'Plus tard',
+
+    // Session expiry warning dialog
+    session_warning_title:   'Session bientôt expirée',
+    session_warning_msg:     'Votre session expire dans {minutes} minute(s). Voulez-vous rester connecté ?',
+    session_stay:            'Rester connecté',
+    session_logout_now:      'Se déconnecter',
+    session_expired_title:   'Session expirée',
+    session_expired_msg:     'Votre session est terminée. Veuillez vous reconnecter.',
+    session_login_again:     'Aller à la connexion',
+
+    // Cookie consent
+    cookie_title:            'Nous utilisons des cookies',
+    cookie_desc:             'Nous utilisons des cookies pour améliorer votre expérience, sauvegarder vos préférences et vous maintenir connecté.',
+    cookie_accept_all:       'Tout accepter',
+    cookie_reject_all:       'Tout refuser',
+    cookie_customize:        'Personnaliser',
+    cookie_save_prefs:       'Enregistrer',
+    cookie_necessary:        'Nécessaires',
+    cookie_necessary_desc:   'Indispensables au fonctionnement du site.',
+    cookie_analytics:        'Analytiques',
+    cookie_analytics_desc:   'Nous aide à comprendre comment vous utilisez l'application.',
+    cookie_preferences:      'Préférences',
+    cookie_preferences_desc: 'Enregistre vos réglages comme la langue et le thème.',
+    cookie_saved_login:      'Connexion sauvegardée',
+    cookie_saved_login_desc: 'Mémorise votre nom d'utilisateur pour une connexion rapide.',
+
+    // Save password prompt
+    save_pwd_title:          'Sauvegarder la connexion ?',
+    save_pwd_desc:           'Voulez-vous sauvegarder votre identifiant pour vous connecter plus vite ?',
+    save_pwd_yes:            'Sauvegarder',
+    save_pwd_no:             'Pas maintenant',
   },
 };
 

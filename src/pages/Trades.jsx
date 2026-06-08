@@ -39,6 +39,14 @@ export default function Trades() {
 
   useEffect(() => { load(); }, [page, filters]);
 
+  // Auto-refresh when a trade is added from AddTrade page
+  useEffect(() => {
+    function onTradeSaved() { load(); }
+    window.addEventListener('trade-saved', onTradeSaved);
+    return () => window.removeEventListener('trade-saved', onTradeSaved);
+  // eslint-disable-next-line
+  }, [page, filters]);
+
   async function load() {
     setLoading(true);
     try {
