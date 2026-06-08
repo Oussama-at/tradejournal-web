@@ -868,11 +868,11 @@ const translations = {
     cookie_necessary:        'Nécessaires',
     cookie_necessary_desc:   'Indispensables au fonctionnement du site.',
     cookie_analytics:        'Analytiques',
-    cookie_analytics_desc:   'Nous aide à comprendre comment vous utilisez l'application.',
+    cookie_analytics_desc:   "Nous aide à comprendre comment vous utilisez l'application.",
     cookie_preferences:      'Préférences',
     cookie_preferences_desc: 'Enregistre vos réglages comme la langue et le thème.',
     cookie_saved_login:      'Connexion sauvegardée',
-    cookie_saved_login_desc: 'Mémorise votre nom d'utilisateur pour une connexion rapide.',
+    cookie_saved_login_desc: "Mémorise votre nom d'utilisateur pour une connexion rapide.",
 
     // Save password prompt
     save_pwd_title:          'Sauvegarder la connexion ?',
