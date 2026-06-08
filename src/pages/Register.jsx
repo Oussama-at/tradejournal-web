@@ -7,6 +7,7 @@ const PACKS = {
   lifetime: { label: 'Lifetime', price: 700, originalPrice: 1000, discount: '-30%', isFree: false, currency: 'DH' },
 };
 
+// eslint-disable-next-line no-unused-vars
 const CRYPTO_OPTIONS = [
   { symbol: 'BTC',  name: 'Bitcoin',  icon: '₿',  address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh' },
   { symbol: 'USDT', name: 'USDT (TRC20)', icon: '₮', address: 'TJCuJngR7M3KVBh5JXgAnbvhPhAKHRoKqN' },
@@ -21,12 +22,12 @@ export default function Register() {
   const [step,   setStep]   = useState(1); // 1=email, 2=pack, 3=payment, 4=confirm
   const [email,  setEmail]  = useState('');
   const [pack,   setPack]   = useState(initPack);
-  // eslint-disable-next-line no-unused-vars
   const [method, setMethod] = useState('card'); // 'card' | 'crypto'
-  // eslint-disable-next-line no-unused-vars
   const [crypto, setCrypto] = useState('BTC');
+  const [copied, setCopied] = useState(false);
   const [loading,setLoading]= useState(false);
   const [msg,    setMsg]    = useState(null);
+  const [cardForm, setCardForm] = useState({ number: '', expiry: '', cvv: '', name: '' });
 
   const selectedPack = PACKS[pack] || PACKS.trial;
   const isFree = selectedPack.isFree;
@@ -56,6 +57,11 @@ export default function Register() {
   }
 
   async function submitPayment() {
+    if (method === 'card') {
+      if (!cardForm.number || !cardForm.expiry || !cardForm.cvv || !cardForm.name) {
+        setMsg({ type: 'error', text: 'Please fill all card fields' }); return;
+      }
+    }
     // Move to final confirmation
     setStep(4);
   }
@@ -81,6 +87,14 @@ export default function Register() {
       setMsg({ type: 'error', text: 'Cannot reach server. Please try again.' });
     }
     setLoading(false);
+  }
+
+  function copyAddress() {
+    const addr = CRYPTO_OPTIONS.find(c => c.symbol === crypto)?.address || '';
+    navigator.clipboard.writeText(addr).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   }
 
   const currentStep = isFree
