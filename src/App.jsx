@@ -21,6 +21,7 @@ import {
   Activations, PasswordReset, EmailChangeRequests, Profile, Password
 } from './pages/OtherPages';
 import AdminAlerts from './pages/AdminAlerts';
+import { Ranking, RankingPopup } from './pages/Ranking';
 import api from './services/api';
 import './index.css';
 import { LangProvider } from './lang/LangContext';
@@ -71,6 +72,7 @@ function AppLayout() {
       <main className="main-content">
         <AlertBanner />
         <ExpiryBanner />
+        <RankingPopup />
         <Routes>
           <Route path="/"                 element={<Dashboard />} />
           <Route path="/chart"            element={<Chart />} />
@@ -85,6 +87,7 @@ function AppLayout() {
           <Route path="/password-resets"  element={<AdminRoute><PasswordReset /></AdminRoute>} />
           <Route path="/email-changes"    element={<AdminRoute><EmailChangeRequests /></AdminRoute>} />
           <Route path="/alerts"            element={<AdminRoute><AdminAlerts /></AdminRoute>} />
+          <Route path="/ranking"          element={<AdminRoute><Ranking /></AdminRoute>} />
           <Route path="/my-plan"          element={<MyPlan />} />
           <Route path="/profile"          element={<Profile />} />
           <Route path="/password"         element={<Password />} />

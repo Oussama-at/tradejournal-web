@@ -734,3 +734,15 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   .land-pricing-section { padding: 48px 20px; }
   .land-cta-section { padding: 60px 20px; }
 }
+
+
+/* ── Ranking podium + popup animations ───────────────────── */
+@keyframes podiumRise { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.podium-item { animation: podiumRise 0.6s ease both; }
+.podium-item.p2 { animation-delay: 0.10s; }
+.podium-item.p1 { animation-delay: 0.25s; }
+.podium-item.p3 { animation-delay: 0.40s; }
+@keyframes rankPopIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.ranking-pop { animation: rankPopIn 0.3s ease both; }
+@keyframes rankGlow { 0% { box-shadow: 0 0 0 rgba(212,175,55,0.0); } 50% { box-shadow: 0 0 24px rgba(212,175,55,0.55); } 100% { box-shadow: 0 0 0 rgba(212,175,55,0.0); } }
+.rank-glow { animation: rankGlow 2.2s ease-in-out infinite; }

@@ -179,6 +179,7 @@ export function AuthProvider({ children }) {
 
   function clearStorage() {
     ['token','username','role','device_id','trial_start','avatar'].forEach(k => localStorage.removeItem(k));
+    try { sessionStorage.removeItem('tj_ranking_seen'); } catch (e) {}
   }
 
   const login = (token, username, role) => {

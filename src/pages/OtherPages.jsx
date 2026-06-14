@@ -1,5 +1,6 @@
 // Capital Archive
 import React, { useState, useEffect, useRef } from 'react';
+import { PhotoViewModal } from './Ranking';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
@@ -1193,6 +1194,7 @@ export function Profile() {
   const [showCrop, setShowCrop]  = useState(false);
   const [uploadState, setUploadState] = useState('idle'); // 'idle'|'uploading'|'success'|'error'
   const [uploadMsg, setUploadMsg] = useState('');
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   // Security questions
   const [q1, setQ1] = useState('');
@@ -1407,6 +1409,16 @@ export function Profile() {
         />
       )}
 
+      {showPhotoModal && (
+        <PhotoViewModal
+          avatarSrc={avatarSrc}
+          initials={initials}
+          userName={profile?.user_name || ''}
+          onClose={() => setShowPhotoModal(false)}
+          onChange={openFilePicker}
+        />
+      )}
+
       {/* ── Upload status overlay ─────────────────────────────────────── */}
       {uploadState !== 'idle' && (
         <UploadStatusOverlay
@@ -1450,7 +1462,7 @@ export function Profile() {
               overflow: 'hidden', flexShrink: 0,
               border: '2px solid rgba(0,230,118,0.2)',
               position: 'relative',
-            }}>
+            }} onClick={() => setShowPhotoModal(true)} title="View / change photo" role="button">
               {avatarSrc
                 ? <img src={avatarSrc} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : initials

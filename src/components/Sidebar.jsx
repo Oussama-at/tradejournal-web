@@ -20,6 +20,7 @@ const NAV = [
   { key: 'passreset',   path: '/password-resets', tkey: 'nav_pwd_resets',     icon: '⟳', admin: true },
   { key: 'emailchange', path: '/email-changes',   tkey: 'nav_email_changes',  icon: '✉️', admin: true },
   { key: 'alerts',   path: '/alerts',          tkey: 'nav_alerts',      icon: '📢', admin: true },
+  { key: 'ranking',  path: '/ranking',         tkey: 'nav_ranking',     icon: '🏆', admin: true },
   null,
   { key: 'pass',      path: '/password',        tkey: 'nav_password',    icon: '🔒' },
   { key: 'profile',   path: '/profile',         tkey: 'nav_profile',     icon: '👤' },
