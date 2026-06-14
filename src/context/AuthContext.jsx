@@ -140,7 +140,7 @@ export function AuthProvider({ children }) {
           // Load avatar from profile (robust: try multiple field shapes)
           api.get('/profile').then(r => {
             const u = r?.data?.user || r?.data || {};
-            const av = u.avatar || u.avatar_url || u.picture || null;
+            const av = u.profile_pic || u.avatar || u.avatar_url || u.picture || null;
             if (av) { setAvatar(av); localStorage.setItem('avatar', av); }
           }).catch(() => {});
         } else {

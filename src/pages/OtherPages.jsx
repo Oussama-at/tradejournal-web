@@ -1238,7 +1238,9 @@ export function Profile() {
     api.get('/profile').then(r => {
       const u = r?.data?.user || null;
       setProfile(u);
-      if (u?.avatar) setAvatarSrc(u.avatar);
+      // The backend stores the photo in `profile_pic`; fall back to other shapes.
+      const pic = u?.profile_pic || u?.avatar || u?.avatar_url || u?.picture || null;
+      if (pic) { setAvatarSrc(pic); updateAvatar(pic); }
       if (u?.email)  setAdminEmail(u.email);
     });
     api.get('/secret-questions').then(r => {
@@ -1251,7 +1253,7 @@ export function Profile() {
     // eslint-disable-next-line
   }, []);
 
-  // ── Photo flow ─────────────────────────────────────────────────────────
+  // ── Photo flow ────────────────────────��────────────────────────────────
   // Step 1: button click → open picker via ref only (no label wrapper)
   function openFilePicker() {
     if (fileInputRef.current) {
@@ -1286,12 +1288,12 @@ export function Profile() {
     const res = await api.uploadFile('/profile/picture', formFile, 'picture');
 
     if (res?.success) {
-      const serverUrl = res?.data?.url || res?.data?.avatar || res?.data?.avatar_url || res?.data?.picture || res?.url || null;
+      const serverUrl = res?.data?.url || res?.data?.profile_pic || res?.data?.avatar || res?.data?.avatar_url || res?.data?.picture || res?.url || null;
       if (serverUrl) { setAvatarSrc(serverUrl); updateAvatar(serverUrl); }
       else {
         // Reload profile to get updated avatar URL
         api.get('/profile').then(r => {
-          const av = r?.data?.user?.avatar || r?.data?.user?.avatar_url || r?.data?.user?.picture;
+          const av = r?.data?.user?.profile_pic || r?.data?.user?.avatar || r?.data?.user?.avatar_url || r?.data?.user?.picture;
           if (av) { setAvatarSrc(av); updateAvatar(av); }
         }).catch(() => {});
       }
@@ -1299,7 +1301,7 @@ export function Profile() {
       // Log to backend
       api.post('/log', { action: 'PROFILE_PHOTO_UPDATED', details: 'Profile photo updated' }).catch(() => {});
     } else {
-      setAvatarSrc(profile?.avatar || null); // revert on failure
+      setAvatarSrc(profile?.profile_pic || profile?.avatar || null); // revert on failure
       setUploadState('error');
       setUploadMsg(res?.message || 'Upload failed');
     }
@@ -1311,7 +1313,7 @@ export function Profile() {
     setSelectedFile(null);
   }
 
-  // ── Admin email ───────────────────────────────────────────────────────
+  // ── Admin email ────────────────────────────────────────────────────���──
   async function saveAdminEmail() {
     if (!adminEmail || !adminEmail.includes('@')) {
       setAdminEmailMsg({ type: 'error', text: 'Enter a valid email address' }); return;
@@ -1583,6 +1585,180 @@ export function Profile() {
           </div>
         </div>
       </div>
+
+      {/* ── All users' security questions (view list + edit) ──────────── */}
+      <AllSecurityQuestions
+        t={t}
+        isAdmin={profile?.role === 'admin'}
+        currentUser={profile?.user_name}
+        questionBank={questions}
+        onEditMine={(uq1, uq2) => {
+          if (uq1) setQ1(uq1);
+          if (uq2) setQ2(uq2);
+          setA1(''); setA2('');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
+    </div>
+  );
+}
+
+/* ── All Users' Security Questions (view + admin edit) ───────────────────── */
+function AllSecurityQuestions({ t, isAdmin, currentUser, questionBank, onEditMine }) {
+  const [rows, setRows]       = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError]     = React.useState('');
+  const [editId, setEditId]   = React.useState(null);
+  const [eq1, setEq1]         = React.useState('');
+  const [ea1, setEa1]         = React.useState('');
+  const [eq2, setEq2]         = React.useState('');
+  const [ea2, setEa2]         = React.useState('');
+  const [saving, setSaving]   = React.useState(false);
+  const [rowMsg, setRowMsg]   = React.useState(null);
+
+  const SQ = {
+    card: { marginTop: 16 },
+    head: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    title: { fontWeight: 700, fontSize: 16 },
+    scroll: { overflowX: 'auto' },
+    table: { width: '100%', borderCollapse: 'collapse' },
+    thL: { textAlign: 'left', padding: 8, opacity: 0.7, fontSize: 13 },
+    thR: { textAlign: 'right', padding: 8, opacity: 0.7, fontSize: 13 },
+    rowTr: { borderTop: '1px solid rgba(255,255,255,0.08)' },
+    tdName: { padding: 8, fontWeight: 600 },
+    td: { padding: 8 },
+    tdR: { padding: 8, textAlign: 'right' },
+    you: { marginLeft: 6 },
+    editTd: { padding: 12, background: 'rgba(255,255,255,0.03)' },
+    grid: { gap: 12 },
+    actions: { display: 'flex', gap: 8, marginTop: 8 },
+  };
+
+  const bank = (questionBank && questionBank.length) ? questionBank : [
+    'What is your favourite color?', 'Name of your best player?',
+    'What is your birthday?', "Mother's maiden name?",
+    'First pet name?', 'City you were born in?',
+  ];
+
+  const load = React.useCallback(() => {
+    setLoading(true); setError('');
+    api.get('/secret-questions/all').then(r => {
+      if (r && r.success) setRows((r.data && r.data.users) || []);
+      else setError((r && r.message) || 'Failed to load');
+    }).catch(() => setError('Failed to load')).finally(() => setLoading(false));
+  }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  function startEdit(row) {
+    setRowMsg(null);
+    setEditId(row.id);
+    setEq1(row.question_1 || '');
+    setEq2(row.question_2 || '');
+    setEa1(''); setEa2('');
+  }
+
+  function cancelEdit() { setEditId(null); setRowMsg(null); }
+
+  async function saveEdit(row) {
+    if (!eq1 || !ea1 || !eq2 || !ea2) { setRowMsg({ type: 'error', text: 'All fields required' }); return; }
+    if (eq1 === eq2) { setRowMsg({ type: 'error', text: 'Questions must be different' }); return; }
+    setSaving(true); setRowMsg(null);
+    const res = await api.post('/admin/users/' + row.id + '/set-secret-answers', {
+      question_1: eq1, answer_1: ea1, question_2: eq2, answer_2: ea2,
+    });
+    setSaving(false);
+    if (res && res.success) {
+      setRowMsg({ type: 'success', text: 'Saved' });
+      setEditId(null);
+      load();
+    } else {
+      setRowMsg({ type: 'error', text: (res && res.message) || 'Failed' });
+    }
+  }
+
+  return (
+    <div className="card" style={SQ.card}>
+      <div style={SQ.head}>
+        <div style={SQ.title}>{t('all_security_questions') || 'All Security Questions'}</div>
+        <button className="btn btn-ghost" onClick={load} disabled={loading}>{t('refresh') || 'Refresh'}</button>
+      </div>
+
+      {error && <div className="alert alert-error">{error}</div>}
+      {loading ? (
+        <div className="muted">Loading...</div>
+      ) : rows.length === 0 ? (
+        <div className="muted">No security questions found.</div>
+      ) : (
+        <div style={SQ.scroll}>
+          <table style={SQ.table}>
+            <thead>
+              <tr>
+                <th style={SQ.thL}>User</th>
+                <th style={SQ.thL}>Question 1</th>
+                <th style={SQ.thL}>Question 2</th>
+                <th style={SQ.thR}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(row => (
+                <React.Fragment key={row.id}>
+                  <tr style={SQ.rowTr}>
+                    <td style={SQ.tdName}>
+                      {row.user_name}
+                      {row.user_name === currentUser && <span className="badge badge-blue" style={SQ.you}>you</span>}
+                    </td>
+                    <td style={SQ.td}>{row.question_1 || <span className="muted">not set</span>}</td>
+                    <td style={SQ.td}>{row.question_2 || <span className="muted">not set</span>}</td>
+                    <td style={SQ.tdR}>
+                      {isAdmin ? (
+                        <button className="btn btn-ghost" onClick={() => startEdit(row)}>Edit</button>
+                      ) : row.user_name === currentUser ? (
+                        <button className="btn btn-ghost" onClick={() => onEditMine(row.question_1, row.question_2)}>Edit</button>
+                      ) : <span className="muted">-</span>}
+                    </td>
+                  </tr>
+                  {isAdmin && editId === row.id && (
+                    <tr>
+                      <td colSpan={4} style={SQ.editTd}>
+                        <div className="grid-2" style={SQ.grid}>
+                          <div className="form-group">
+                            <label className="form-label">Question 1</label>
+                            <select className="select" value={eq1} onChange={e => setEq1(e.target.value)}>
+                              <option value="">Select...</option>
+                              {bank.map(q => <option key={q}>{q}</option>)}
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Answer 1</label>
+                            <input className="input" placeholder="New answer..." value={ea1} onChange={e => setEa1(e.target.value)} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Question 2</label>
+                            <select className="select" value={eq2} onChange={e => setEq2(e.target.value)}>
+                              <option value="">Select...</option>
+                              {bank.filter(q => q !== eq1).map(q => <option key={q}>{q}</option>)}
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Answer 2</label>
+                            <input className="input" placeholder="New answer..." value={ea2} onChange={e => setEa2(e.target.value)} />
+                          </div>
+                        </div>
+                        {rowMsg && <div className={'alert alert-' + rowMsg.type}>{rowMsg.text}</div>}
+                        <div style={SQ.actions}>
+                          <button className="btn btn-primary" onClick={() => saveEdit(row)} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+                          <button className="btn btn-ghost" onClick={cancelEdit}>Cancel</button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
