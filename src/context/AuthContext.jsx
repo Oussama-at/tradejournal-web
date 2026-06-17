@@ -184,6 +184,7 @@ export function AuthProvider({ children }) {
       const u = r?.data?.user || r?.data || {};
       const av = u.profile_pic || u.avatar || u.avatar_url || u.picture || null;
       if (av) { setAvatar(av); localStorage.setItem('avatar', av); }
+      else { setAvatar(null); localStorage.removeItem('avatar'); }
     }).catch(() => {});
   }
 
@@ -192,6 +193,9 @@ export function AuthProvider({ children }) {
     localStorage.setItem('username',    username);
     localStorage.setItem('role',        role || 'user');
     localStorage.setItem('trial_start', Date.now().toString()); // record exact login time
+    // Clear any avatar left over from a previous account so it doesn't bleed into this session
+    setAvatar(null);
+    localStorage.removeItem('avatar');
     setUser({ username, token, role: role || 'user' });
     expiredShownRef.current   = false;
     lifetimeShownRef.current = false;
