@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import PaymentDialog from '../components/PaymentDialog';
 
 function daysLeft(dateStr) {
   if (!dateStr) return null;
@@ -65,6 +66,7 @@ const PLANS = [
 
 export default function MyPlan() {
   const { sub } = useAuth();
+  const [payOpen, setPayOpen] = React.useState(false);
 
   const days = sub?.expires_at ? daysLeft(sub.expires_at) : null;
   const expired = sub?.pack !== 'lifetime' && days !== null && days <= 0;
@@ -86,6 +88,8 @@ export default function MyPlan() {
         <div className="page-title">💳 My Plan</div>
         <div className="page-sub">Your current subscription &amp; upgrade options</div>
       </div>
+
+      <PaymentDialog open={payOpen} onClose={() => setPayOpen(false)} />
 
       {/* Current Plan Card */}
       <div className="card" style={{ marginBottom: 28, padding: 24 }}>
@@ -162,9 +166,8 @@ export default function MyPlan() {
                 </ul>
 
                 <a
-                  href="https://wa.me/your-number"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); setPayOpen(true); }}
                   style={{
                     display: 'block', textAlign: 'center',
                     background: plan.color, color: '#1a0a00',
@@ -173,7 +176,7 @@ export default function MyPlan() {
                     letterSpacing: 0.5,
                   }}
                 >
-                  Contact Admin →
+                  💳 Pay / Upgrade →
                 </a>
               </div>
             ))}
