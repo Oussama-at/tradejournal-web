@@ -15,6 +15,9 @@ const PAYMENT_OPTIONS = {
 };
 
 const PAYPAL_ACCOUNT = 'ousssatt@gmail.com';
+const PAYPAL_ME = 'https://paypal.me/Atouchi';
+const WHATSAPP_NUMBER = '212635925986';
+const PACK_PRICE_USD = { '6months': 20, '1year': 50, lifetime: 70 };
 
 // Top-level payment methods shown in the admin Add-Subscription panel.
 const PAY_METHODS = [
@@ -26,9 +29,9 @@ const PAY_METHODS = [
 
 // Real crypto wallets that receive payments.
 const CRYPTO_COINS = [
-  { key: 'btc',  label: 'Bitcoin',  store: 'BTC',          network: 'Bitcoin network',  icon: '₿', address: '153R4TXbRmNDaymXM5ySmjF7hmWqbTu5fB', note: 'Send only BTC on the Bitcoin network to this address.' },
+  { key: 'btc',  label: 'Bitcoin',  store: 'BTC',          network: 'Bitcoin network',  icon: '₿', address: '153R4TXbRmNDaymXM5ySmjF7hmWqbTu5fB', uri: 'bitcoin:153R4TXbRmNDaymXM5ySmjF7hmWqbTu5fB', note: 'Send only BTC on the Bitcoin network to this address.' },
   { key: 'usdt', label: 'USDT',     store: 'USDT (TRC20)', network: 'TRC20 (Tron)',     icon: '₮', address: 'TShrmLSuNgdKiLgCur492aW3Z5akyUxQx8', note: 'TRC20 network ONLY — another network will lose the funds.' },
-  { key: 'eth',  label: 'Ethereum', store: 'ETH',          network: 'Ethereum (ERC20)', icon: 'Ξ', address: '0xb9b2e0b9d8f9cbb786730cf933043ed9f0da7f74', note: 'Ethereum mainnet (ERC20) only.' },
+  { key: 'eth',  label: 'Ethereum', store: 'ETH',          network: 'Ethereum (ERC20)', icon: 'Ξ', address: '0xb9b2e0b9d8f9cbb786730cf933043ed9f0da7f74', uri: 'ethereum:0xb9b2e0b9d8f9cbb786730cf933043ed9f0da7f74', note: 'Ethereum mainnet (ERC20) only.' },
 ];
 
 const PAY_STYLES = {
@@ -49,6 +52,9 @@ const PAY_STYLES = {
   copyBtn:      { whiteSpace: 'nowrap', padding: '10px 14px', borderRadius: 8, border: '1px solid #00e676', background: 'transparent', color: '#00e676', cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   note:         { marginTop: 12, fontSize: 12, color: '#f0b429', lineHeight: 1.5 },
   info:         { fontSize: 13, color: '#cdd7e1', lineHeight: 1.5 },
+  payBtn:       { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: '12px 16px', borderRadius: 10, border: 'none', background: '#25d366', color: '#06210f', cursor: 'pointer', fontWeight: 800, fontSize: 14, textDecoration: 'none' },
+  payBtnBlue:   { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: '12px 16px', borderRadius: 10, border: 'none', background: '#0070ba', color: '#fff', cursor: 'pointer', fontWeight: 800, fontSize: 14, textDecoration: 'none' },
+  payBtnAddr:   { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: '12px 16px', borderRadius: 10, border: '1px solid #00e676', background: 'transparent', color: '#00e676', cursor: 'pointer', fontWeight: 800, fontSize: 14, textDecoration: 'none' },
   payLaterRow:  { display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, padding: '10px 12px', borderRadius: 10, border: '1px dashed #2a3a48', background: '#0d1117', cursor: 'pointer' },
   payLaterText: { fontSize: 13, color: '#e8edf3', fontWeight: 600 },
   payLaterSub:  { fontSize: 11, color: '#7a8a9a', marginTop: 2 },
@@ -292,6 +298,9 @@ export default function Subscriptions() {
 
   const isFreePack = !PAYMENT_OPTIONS[newSub.pack];
   const cryptoSel  = CRYPTO_COINS.find(c => c.key === newSub.coin);
+  const payAmountUSD = PACK_PRICE_USD[newSub.pack] || null;
+  const paypalCheckoutUrl = payAmountUSD ? `${PAYPAL_ME}/${payAmountUSD}USD` : PAYPAL_ME;
+  const whatsappPurchaseUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent('Hello, I want to purchase the ' + (PACK_LABELS[newSub.pack] || newSub.pack) + ' plan on TradeJournal.')}`;
 
   return (
     <div>
@@ -427,6 +436,11 @@ export default function Subscriptions() {
                           </button>
                         </div>
                         <div style={PAY_STYLES.note}>⚠️ {cryptoSel.note}</div>
+                        {cryptoSel.uri && (
+                          <a href={cryptoSel.uri} style={PAY_STYLES.payBtnAddr}>
+                            {cryptoSel.icon} {t('open_in_wallet')}
+                          </a>
+                        )}
                       </>
                     )}
                   </>
@@ -448,11 +462,19 @@ export default function Subscriptions() {
                       </button>
                     </div>
                     <div style={PAY_STYLES.note}>⚠️ Send as Friends & Family to avoid extra fees.</div>
+                    <a href={paypalCheckoutUrl} target="_blank" rel="noopener noreferrer" style={PAY_STYLES.payBtnBlue}>
+                      🅿 {t('open_paypal_checkout')}{payAmountUSD ? ` · ${payAmountUSD}` : ''}
+                    </a>
                   </>
                 )}
 
                 {newSub.method === 'whatsapp' && (
-                  <div style={PAY_STYLES.info}>💬 {t('pay_whatsapp_hint') || 'Payment will be arranged and confirmed manually over WhatsApp.'}</div>
+                  <div>
+                    <div style={PAY_STYLES.info}>💬 {t('pay_whatsapp_hint')}</div>
+                    <a href={whatsappPurchaseUrl} target="_blank" rel="noopener noreferrer" style={PAY_STYLES.payBtn}>
+                      💬 {t('open_whatsapp_purchase')}
+                    </a>
+                  </div>
                 )}
 
                 {newSub.method === 'card' && (

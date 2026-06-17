@@ -65,7 +65,7 @@ function SessionWarningDialog({ minutesLeft, onStay, onLogout }) {
 
         {/* Message */}
         <div style={{ fontSize: 14, color: '#8aabb8', marginBottom: 8, lineHeight: 1.6 }}>
-          {t('session_warning_msg').replace('{minutes}', count)}
+          {t('session_warning_msg', { minutes: count })}
         </div>
 
         {/* Countdown bar */}
