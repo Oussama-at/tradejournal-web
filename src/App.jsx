@@ -6,6 +6,7 @@ import ExpiryBanner from './components/ExpiryBanner';
 import AlertBanner from './components/AlertBanner';
 import SessionGuard from './components/SessionGuard';
 import CookieBanner from './components/CookieBanner';
+import OnboardingGuide from './components/OnboardingGuide';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -73,6 +74,7 @@ function AppLayout() {
         <AlertBanner />
         <ExpiryBanner />
         <RankingPopup />
+        <OnboardingGuide />
         <Routes>
           <Route path="/"                 element={<Dashboard />} />
           <Route path="/chart"            element={<Chart />} />

@@ -2029,6 +2029,8 @@ export function Password() {
     if (np.length < 6) { setMsg({ type: 'error', text: 'Minimum 6 characters' }); return; }
     const res = await api.post('/change-password', { current_password: cur, new_password: np });
     if (res?.success) { setMsg({ type: 'success', text: '✓ Password changed!' }); setCur(''); setNp(''); setConf('');
+      localStorage.setItem('tj_onboard_pw_' + (localStorage.getItem('username') || ''), '1');
+      window.dispatchEvent(new CustomEvent('onboard-refresh'));
       api.post('/log', { action: 'PASSWORD_CHANGED', details: 'Password changed successfully' }).catch(() => {}); }
     else setMsg({ type: 'error', text: res?.message || 'Failed' });
   }
