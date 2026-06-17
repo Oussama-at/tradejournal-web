@@ -656,7 +656,14 @@ export default function Sidebar({ capitalInfo }) {
         <NotificationBell user={user} />
       </div>
 
-      <div className="sidebar-user">
+      <div
+        className="sidebar-user clickable"
+        onClick={() => navigate('/profile')}
+        role="button"
+        tabIndex={0}
+        title={t('nav_profile')}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/profile'); } }}
+      >
         <div className="user-avatar" style={{ overflow: 'hidden', border: avatar ? '2px solid rgba(0,230,118,0.35)' : undefined }}>
           {avatar
             ? <img src={avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />

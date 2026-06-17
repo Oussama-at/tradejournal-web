@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import DatePicker from '../components/DatePicker';
 import { useLang } from '../lang/LangContext';
 import api from '../services/api';
 import {
@@ -292,14 +293,14 @@ export default function Chart() {
           {period === 'custom' && (
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 10px' }}>
               <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>FROM</span>
-              <input type="date" className="input" colorScheme="dark"
+              <DatePicker
                 style={{ padding: '4px 8px', fontSize: 12, width: 130, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, colorScheme: 'dark', color: 'var(--text)' }}
-                value={customFrom} onChange={e => setCustomFrom(e.target.value)} />
+                value={customFrom} onChange={v => setCustomFrom(v)} placeholder="From" />
               <span style={{ color: 'var(--muted)', fontSize: 14, fontWeight: 300 }}>→</span>
               <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>TO</span>
-              <input type="date" className="input"
+              <DatePicker
                 style={{ padding: '4px 8px', fontSize: 12, width: 130, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, colorScheme: 'dark', color: 'var(--text)' }}
-                value={customTo} onChange={e => setCustomTo(e.target.value)} />
+                value={customTo} onChange={v => setCustomTo(v)} placeholder="To" />
               {(customFrom || customTo) && (
                 <button onClick={() => { setCustomFrom(''); setCustomTo(''); }}
                   style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 14, padding: '0 2px', lineHeight: 1 }}>✕</button>

@@ -138,11 +138,7 @@ export function AuthProvider({ children }) {
             }
           }).catch(() => {});
           // Load avatar from profile (robust: try multiple field shapes)
-          api.get('/profile').then(r => {
-            const u = r?.data?.user || r?.data || {};
-            const av = u.profile_pic || u.avatar || u.avatar_url || u.picture || null;
-            if (av) { setAvatar(av); localStorage.setItem('avatar', av); }
-          }).catch(() => {});
+          loadAvatarFromProfile();
         } else {
           clearStorage();
         }
@@ -182,6 +178,15 @@ export function AuthProvider({ children }) {
     try { sessionStorage.removeItem('tj_ranking_seen'); } catch (e) {}
   }
 
+  // Fetch the profile picture from the server (robust: try multiple field shapes)
+  function loadAvatarFromProfile() {
+    api.get('/profile').then(r => {
+      const u = r?.data?.user || r?.data || {};
+      const av = u.profile_pic || u.avatar || u.avatar_url || u.picture || null;
+      if (av) { setAvatar(av); localStorage.setItem('avatar', av); }
+    }).catch(() => {});
+  }
+
   const login = (token, username, role) => {
     localStorage.setItem('token',       token);
     localStorage.setItem('username',    username);
@@ -196,6 +201,8 @@ export function AuthProvider({ children }) {
         maybeShowNotifications(r.data, true);
       }
     }).catch(() => {});
+    // Load the user's profile picture right after login so the avatar shows immediately
+    loadAvatarFromProfile();
   };
 
   const logout = () => {

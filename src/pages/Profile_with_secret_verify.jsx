@@ -10,11 +10,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
 import { useLang } from '../lang/LangContext';
+import { useAuth } from '../context/AuthContext';
 import PhotoCropDialog from '../components/PhotoCropDialog';
 import PhotoSuccessToast from '../components/PhotoSuccessToast';
 
 export function Profile() {
   const { t } = useLang();
+  const { updateAvatar } = useAuth();
   const [profile, setProfile] = useState(null);
   // Local avatar URL (object URL or server URL) for instant update
   const [avatarSrc, setAvatarSrc] = useState(null);
@@ -104,7 +106,10 @@ export function Profile() {
 
     if (res?.success) {
       // Replace object URL with server URL if available
-      if (res?.data?.url) setAvatarSrc(res.data.url);
+      const serverUrl = res?.data?.url || null;
+      if (serverUrl) setAvatarSrc(serverUrl);
+      // Update the sidebar avatar instantly (and persist it)
+      if (updateAvatar) updateAvatar(serverUrl || localUrl);
       setShowToast(true);
     } else {
       // Revert on failure

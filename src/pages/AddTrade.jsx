@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { useLang } from '../lang/LangContext';
 import { useAuth } from '../context/AuthContext';
+import DatePicker from '../components/DatePicker';
 
 
 const FREE_TRADE_LIMIT = 6;
@@ -331,6 +332,7 @@ export default function AddTrade() {
   const [qtyBlockMsg, setQtyBlockMsg] = useState(null);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const beHintStyle = { fontSize: 12, marginTop: 6, lineHeight: 1.45 };
 
   useEffect(() => {
     if (!isLifetime) {
@@ -370,6 +372,15 @@ export default function AddTrade() {
     setLogicWarning(w);
   // eslint-disable-next-line
   }, [form.type_trd, form.status, form.point_entree, form.point_sortie]);
+
+  // Keep "Close by" consistent with the result:
+  //  - A winning trade can never be closed by Stop Loss
+  //  - A losing trade can never be closed by Target
+  useEffect(() => {
+    if (form.status === 'win' && form.type_close === 'Stop Loss') set('type_close', 'Target');
+    if (form.status === 'lose' && form.type_close === 'Target') set('type_close', 'Stop Loss');
+  // eslint-disable-next-line
+  }, [form.status]);
 
   // Clear qty block message when contract type changes
   useEffect(() => {
@@ -602,12 +613,25 @@ export default function AddTrade() {
                 <div className="form-group">
                   <label className="form-label">{t('close_by')}</label>
                   <select className="select" value={form.type_close} onChange={e => set('type_close', e.target.value)}>
-                    {['Target', 'Stop Loss', 'Manual'].map(o => <option key={o}>{o}</option>)}
+                    {['Target', 'Stop Loss', 'Break Even', 'Manual'].map(o => {
+                      const disabled = (form.status === 'win' && o === 'Stop Loss')
+                        || (form.status === 'lose' && o === 'Target');
+                      return (
+                        <option key={o} value={o} disabled={disabled}>
+                          {o}{disabled ? ' — N/A' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
+                  {form.type_close === 'Break Even' && (
+                    <div className="muted" style={beHintStyle}>
+                      🛡️ Stop moved into profit to secure the gain — counts as a win even though Target wasn’t reached.
+                    </div>
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Date</label>
-                  <input className="input" type="date" value={form.date_trade} onChange={e => set('date_trade', e.target.value)} />
+                  <DatePicker value={form.date_trade} onChange={v => set('date_trade', v)} placeholder="Select trade date" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">{t('contract')}</label>

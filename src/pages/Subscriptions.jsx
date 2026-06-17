@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useLang } from '../lang/LangContext';
+import DatePicker from '../components/DatePicker';
 
 const PACK_OPTIONS = ['trial', '6months', '1year', 'lifetime'];
 const PACK_LABELS  = { trial: '24h Trial', '6months': '6 Months', '1year': '1 Year', lifetime: 'Lifetime' };
@@ -187,8 +188,13 @@ export default function Subscriptions() {
       safeBody.expires_at = safeBody.expires_at + 'T12:00:00';
     }
     const res = await api.put(`/admin/subscriptions/${id}`, safeBody);
-    if (res?.success) { setEditSub(null); load(); }
-    else setMsg({ type: 'error', text: res?.message || 'Failed' });
+    if (res?.success) {
+      setEditSub(null);
+      setMsg({ type: 'success', text: '✓ ' + (res.message || 'Subscription updated') });
+      load();
+    } else {
+      setMsg({ type: 'error', text: res?.message || 'Failed to update subscription' });
+    }
   }
 
   async function revokeSub(id) {
@@ -384,11 +390,10 @@ export default function Subscriptions() {
                       {isEdit && editSub.pack !== 'lifetime' ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 8px' }}>
                           <span style={{ fontSize: 10, color: 'var(--muted)' }}>📅</span>
-                          <input
-                            type="date"
+                          <DatePicker
                             style={{ fontSize: 12, padding: '2px 4px', width: 130, background: 'transparent', border: 'none', color: 'var(--text)', colorScheme: 'dark', outline: 'none' }}
                             value={editSub.expires_at || ''}
-                            onChange={e => setEditSub(es => ({ ...es, expires_at: e.target.value }))}
+                            onChange={v => setEditSub(es => ({ ...es, expires_at: v }))}
                           />
                         </div>
                       ) : (
@@ -441,11 +446,11 @@ export default function Subscriptions() {
                           {/* Suspend / Reactivate — only for non-trial paid subs */}
                           {!isTrial && subStatus === 'active' && (
                             <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 8px', color: 'var(--orange)', borderColor: 'var(--orange)' }}
-                              onClick={() => updateSub(s.id, { status: 'suspended' })}>⏸ Suspend</button>
+                              onClick={() => updateSub(s.id, { status: 'suspended', pack: s.pack, expires_at: s.expires_at ? s.expires_at.substring(0, 10) : null })}>⏸ Suspend</button>
                           )}
                           {!isTrial && (subStatus === 'suspended' || subStatus === 'expired') && (
                             <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 8px' }}
-                              onClick={() => updateSub(s.id, { status: 'active' })}>▶ Reactivate</button>
+                              onClick={() => updateSub(s.id, { status: 'active', pack: s.pack, expires_at: s.expires_at ? s.expires_at.substring(0, 10) : null })}>▶ Reactivate</button>
                           )}
                           <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }}
                             onClick={() => revokeSub(s.id)}>{t('revoke') || 'Revoke'}</button>

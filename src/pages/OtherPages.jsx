@@ -6,6 +6,7 @@ import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useLang } from '../lang/LangContext';
 import { useAuth } from '../context/AuthContext';
+import DatePicker from '../components/DatePicker';
 
 // ── Reusable SortableTable ─────────────────────────────────────────────────
 function SortableTable({ headers, sortableCount, rows, rowKey, renderRow }) {
@@ -316,6 +317,8 @@ export function Users() {
   const [contactModal, setContactModal] = useState(null); // { userId, userName, email }
   const [contactForm, setContactForm] = useState({ subject: '', message: '' });
   const [contactSending, setContactSending] = useState(false);
+  const [contactAttachment, setContactAttachment] = useState(null); // { name, content(base64) }
+  const contactMsgRef = useRef(null);
 
   // Admin direct email-edit modal
   const [emailEditModal, setEmailEditModal] = useState(null); // { userId, userName, currentEmail }
@@ -458,14 +461,50 @@ export function Users() {
       return;
     }
     setContactSending(true);
-    const res = await api.post(`/admin/users/${contactModal.userId}/contact`, contactForm);
+    const payload = {
+      subject: contactForm.subject,
+      message: contactForm.message,
+      html: contactForm.message.replace(/\n/g, '<br>'),
+      attachment: contactAttachment || undefined,
+    };
+    const res = await api.post(`/admin/users/${contactModal.userId}/contact`, payload);
     setContactSending(false);
     if (res?.success) {
       setContactModal(null);
+      setContactAttachment(null);
+      setContactForm({ subject: '', message: '' });
       setMsg({ type: 'success', text: `✓ Email sent to ${contactModal.userName}` });
     } else {
       setMsg({ type: 'error', text: res?.message || 'Failed to send email' });
     }
+  }
+
+  const emailToolbarStyle = { display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' };
+  const emailAttachLabelStyle = { cursor: 'pointer', marginLeft: 'auto' };
+  const emailHiddenInputStyle = { display: 'none' };
+  const emailAttachInfoStyle = { display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 12 };
+
+  function wrapContactSelection(before, after) {
+    const el = contactMsgRef.current;
+    const msg = contactForm.message || '';
+    if (!el) { setContactForm(f => ({ ...f, message: msg + before + after })); return; }
+    const s = el.selectionStart ?? msg.length;
+    const e = el.selectionEnd ?? msg.length;
+    const sel = msg.substring(s, e) || 'text';
+    const next = msg.substring(0, s) + before + sel + after + msg.substring(e);
+    setContactForm(f => ({ ...f, message: next }));
+  }
+
+  function onContactAttach(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setMsg({ type: 'error', text: 'Attachment must be under 5 MB' }); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = String(reader.result).split(',')[1] || '';
+      setContactAttachment({ name: file.name, content: base64 });
+    };
+    reader.readAsDataURL(file);
   }
 
   // Admin direct email set
@@ -580,14 +619,30 @@ export function Users() {
             </div>
             <div className="form-group" style={{ marginBottom: 14 }}>
               <label className="form-label">Message</label>
+              <div style={emailToolbarStyle}>
+                <button type="button" className="btn btn-ghost" onClick={() => wrapContactSelection('<strong>', '</strong>')}><b>B</b></button>
+                <button type="button" className="btn btn-ghost" onClick={() => wrapContactSelection('<em>', '</em>')}><i>I</i></button>
+                <button type="button" className="btn btn-ghost" onClick={() => wrapContactSelection('<u>', '</u>')}><u>U</u></button>
+                <label className="btn btn-ghost" style={emailAttachLabelStyle}>
+                  📎 Attach
+                  <input type="file" onChange={onContactAttach} style={emailHiddenInputStyle} />
+                </label>
+              </div>
               <textarea
                 className="input"
                 rows={5}
+                ref={contactMsgRef}
                 placeholder="Write your message here..."
                 style={{ resize: 'vertical', minHeight: 100 }}
                 value={contactForm.message}
                 onChange={e => setContactForm(f => ({ ...f, message: e.target.value }))}
               />
+              {contactAttachment && (
+                <div className="muted" style={emailAttachInfoStyle}>
+                  📎 {contactAttachment.name}
+                  <button type="button" className="btn btn-ghost" onClick={() => setContactAttachment(null)}>✕</button>
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button className="btn btn-ghost" onClick={() => setContactModal(null)}>Cancel</button>
@@ -608,7 +663,7 @@ export function Users() {
         <button className="btn btn-primary" onClick={() => setShowAdd(true)}>{t('add_user')}</button>
       </div>
 
-      {/* ── Search ─────────────────────────────────────────────────────── */}
+      {/* ── Search ──────────────────────────────��──────────────────────── */}
       <div className="card" style={{ marginBottom: 16 }}>
         <input className="input" placeholder={t('search_users')} value={search} onChange={e => setSearch(e.target.value)} />
       </div>
@@ -875,13 +930,13 @@ export function Logs() {
             </div>
             <div>
               <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>From Date</label>
-              <input type="date" className="input" style={{ padding: '8px 10px', fontSize: 13, width: '100%', colorScheme: 'dark' }}
-                value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(0); }} />
+              <DatePicker style={{ padding: '8px 10px', fontSize: 13, width: '100%', colorScheme: 'dark' }}
+                value={dateFrom} onChange={v => { setDateFrom(v); setPage(0); }} placeholder="From date" />
             </div>
             <div>
               <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>To Date</label>
-              <input type="date" className="input" style={{ padding: '8px 10px', fontSize: 13, width: '100%', colorScheme: 'dark' }}
-                value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(0); }} />
+              <DatePicker style={{ padding: '8px 10px', fontSize: 13, width: '100%', colorScheme: 'dark' }}
+                value={dateTo} onChange={v => { setDateTo(v); setPage(0); }} placeholder="To date" />
             </div>
           </div>
           {/* Quick action type badges */}
@@ -1208,6 +1263,7 @@ export function Profile() {
   const [adminEmail, setAdminEmail]         = useState('');
   const [adminEmailMsg, setAdminEmailMsg]   = useState(null);
   const [adminEmailLoading, setAdminEmailLoading] = useState(false);
+  const [emailEditMode, setEmailEditMode] = useState(false);
 
   // Email change 3-step
   const [emailStep, setEmailStep] = useState('idle');
@@ -1326,6 +1382,7 @@ export function Profile() {
     if (res?.success) {
       setAdminEmailMsg({ type: 'success', text: '✓ Email saved!' });
       setProfile(p => ({ ...p, email: adminEmail }));
+      setEmailEditMode(false);
     } else {
       setAdminEmailMsg({ type: 'error', text: res?.message || 'Failed' });
     }
@@ -1485,11 +1542,14 @@ export function Profile() {
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input className="input" type="email" placeholder="your@email.com"
                     value={adminEmail} onChange={e => { setAdminEmail(e.target.value); setAdminEmailMsg(null); }}
-                    onKeyDown={e => e.key === 'Enter' && saveAdminEmail()} style={{ flex: 1 }} />
+                    onKeyDown={e => e.key === 'Enter' && saveAdminEmail()} readOnly={!emailEditMode} style={{ flex: 1 }} />
                   <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}
-                    onClick={saveAdminEmail} disabled={adminEmailLoading}>
+                    onClick={saveAdminEmail} disabled={adminEmailLoading} hidden={!emailEditMode}>
                     {adminEmailLoading ? '...' : '✓ Save'}
                   </button>
+                  {!emailEditMode && (
+                    <button className="btn btn-ghost" onClick={() => { setEmailEditMode(true); setAdminEmailMsg(null); }}>✏️ Edit</button>
+                  )}
                 </div>
                 {adminEmailMsg && <div className={`alert alert-${adminEmailMsg.type}`} style={{ marginTop: 8, fontSize: 12 }}>{adminEmailMsg.text}</div>}
               </div>
@@ -1689,6 +1749,8 @@ function AllSecurityQuestions({ t, isAdmin, currentUser, questionBank, onEditMin
     }
   }
 
+  const visibleRows = isAdmin ? rows : rows.filter(r => r.user_name === currentUser);
+
   return (
     <div className="card" style={SQ.card}>
       <div style={SQ.head}>
@@ -1699,7 +1761,7 @@ function AllSecurityQuestions({ t, isAdmin, currentUser, questionBank, onEditMin
       {error && <div className="alert alert-error">{error}</div>}
       {loading ? (
         <div className="muted">Loading...</div>
-      ) : rows.length === 0 ? (
+      ) : visibleRows.length === 0 ? (
         <div className="muted">No security questions found.</div>
       ) : (
         <div style={SQ.scroll}>
@@ -1709,11 +1771,12 @@ function AllSecurityQuestions({ t, isAdmin, currentUser, questionBank, onEditMin
                 <th style={SQ.thL}>User</th>
                 <th style={SQ.thL}>Question 1</th>
                 <th style={SQ.thL}>Question 2</th>
+                <th style={SQ.thL}>Answers</th>
                 <th style={SQ.thR}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map(row => (
+              {visibleRows.map(row => (
                 <React.Fragment key={row.id}>
                   <tr style={SQ.rowTr}>
                     <td style={SQ.tdName}>
@@ -1722,6 +1785,7 @@ function AllSecurityQuestions({ t, isAdmin, currentUser, questionBank, onEditMin
                     </td>
                     <td style={SQ.td}>{row.question_1 || <span className="muted">not set</span>}</td>
                     <td style={SQ.td}>{row.question_2 || <span className="muted">not set</span>}</td>
+                    <td style={SQ.td}>{row.has_answers ? <span className="badge badge-blue">✓ Set</span> : <span className="muted">Not set</span>}</td>
                     <td style={SQ.tdR}>
                       {isAdmin ? (
                         <button className="btn btn-ghost" onClick={() => startEdit(row)}>Edit</button>
@@ -1732,7 +1796,7 @@ function AllSecurityQuestions({ t, isAdmin, currentUser, questionBank, onEditMin
                   </tr>
                   {isAdmin && editId === row.id && (
                     <tr>
-                      <td colSpan={4} style={SQ.editTd}>
+                      <td colSpan={5} style={SQ.editTd}>
                         <div className="grid-2" style={SQ.grid}>
                           <div className="form-group">
                             <label className="form-label">Question 1</label>

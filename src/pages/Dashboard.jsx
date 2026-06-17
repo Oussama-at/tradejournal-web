@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import DatePicker from '../components/DatePicker';
 import { useLang } from '../lang/LangContext';
 import api from '../services/api';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -165,11 +166,11 @@ export default function Dashboard() {
           </select>
           {period === 'custom' && (
             <>
-              <input type="date" className="input" style={{ padding: '5px 10px', fontSize: 12, width: 140 }}
-                value={customFrom} onChange={e => setCustomFrom(e.target.value)} />
+              <DatePicker style={{ padding: '5px 10px', fontSize: 12, width: 140 }}
+                value={customFrom} onChange={v => setCustomFrom(v)} placeholder="From" />
               <span style={{ color: 'var(--muted)', fontSize: 12 }}>→</span>
-              <input type="date" className="input" style={{ padding: '5px 10px', fontSize: 12, width: 140 }}
-                value={customTo} onChange={e => setCustomTo(e.target.value)} />
+              <DatePicker style={{ padding: '5px 10px', fontSize: 12, width: 140 }}
+                value={customTo} onChange={v => setCustomTo(v)} placeholder="To" />
             </>
           )}
           <button className="btn btn-ghost" onClick={load}>↺ {t('refresh') || 'Refresh'}</button>
