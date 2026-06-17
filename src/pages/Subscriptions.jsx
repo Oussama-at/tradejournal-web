@@ -9,9 +9,29 @@ const PACK_LABELS  = { trial: '24h Trial', '6months': '6 Months', '1year': '1 Ye
 
 const PAYMENT_OPTIONS = {
   trial:     null,
-  '6months': ['manual', 'card', 'btc', 'usdt', 'eth'],
-  '1year':   ['manual', 'card', 'btc', 'usdt', 'eth'],
-  lifetime:  ['manual'],
+  '6months': ['manual', 'card', 'btc', 'usdt', 'eth', 'paypal'],
+  '1year':   ['manual', 'card', 'btc', 'usdt', 'eth', 'paypal'],
+  lifetime:  ['manual', 'btc', 'usdt', 'eth', 'paypal'],
+};
+
+// Real payment destinations shown in the admin Add-Subscription panel.
+const PAYMENT_DETAILS = {
+  btc:    { label: 'Bitcoin (BTC)',  icon: '₿', address: '153R4TXbRmNDaymXM5ySmjF7hmWqbTu5fB', note: 'Send only BTC on the Bitcoin network to this address.' },
+  usdt:   { label: 'USDT (TRC20)',   icon: '₮', address: 'TShrmLSuNgdKiLgCur492aW3Z5akyUxQx8', note: 'TRC20 network ONLY — sending on another network will lose the funds.' },
+  eth:    { label: 'Ethereum (ETH)', icon: 'Ξ', address: '0xb9b2e0b9d8f9cbb786730cf933043ed9f0da7f74', note: 'Ethereum mainnet (ERC20) only.' },
+  paypal: { label: 'PayPal',         icon: '🅿', address: 'ousssatt@gmail.com', note: 'Send as Friends & Family to avoid extra fees.' },
+};
+
+const PAY_STYLES = {
+  box:     { marginTop: 14, padding: 16, borderRadius: 12, background: '#11181f', border: '1px solid #1e2a36' },
+  head:    { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 },
+  iconBox: { fontSize: 20, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 9, background: '#0d1117', border: '1px solid #1e2a36', color: '#00e676', flex: '0 0 auto' },
+  title:   { fontWeight: 700, color: '#e8edf3', fontSize: 14, lineHeight: 1.2 },
+  net:     { fontSize: 11, color: '#7a8a9a', marginTop: 2 },
+  addrRow: { display: 'flex', alignItems: 'center', gap: 8 },
+  addr:    { flex: 1, fontFamily: 'monospace', fontSize: 13, color: '#00e676', wordBreak: 'break-all', background: '#0d1117', border: '1px solid #1e2a36', borderRadius: 8, padding: '10px 12px' },
+  copyBtn: { whiteSpace: 'nowrap', padding: '10px 14px', borderRadius: 8, border: '1px solid #00e676', background: 'transparent', color: '#00e676', cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+  note:    { marginTop: 12, fontSize: 12, color: '#f0b429', lineHeight: 1.5 },
 };
 
 function packBadgeClass(pack, status) {
@@ -128,6 +148,7 @@ export default function Subscriptions() {
   const [showAddUser,  setShowAddUser]  = useState(false);   // ← quick-add user modal
 
   const [newSub, setNewSub] = useState({ user_id: '', pack: 'trial', payment_method: '' });
+  const [copiedAddr, setCopiedAddr] = useState(false);
 
   useEffect(() => { loadSubs(); loadUsers(); }, []);
 
@@ -320,11 +341,41 @@ export default function Subscriptions() {
                 <select className="select" value={newSub.payment_method}
                   onChange={e => setNewSub(s => ({ ...s, payment_method: e.target.value }))}>
                   {paymentOpts.map(m => (
-                    <option key={m} value={m}>{m === 'manual' ? `${m} (WhatsApp)` : m}</option>
+                    <option key={m} value={m}>{PAYMENT_DETAILS[m] ? PAYMENT_DETAILS[m].label : (m === 'manual' ? `${m} (WhatsApp)` : m)}</option>
                   ))}
                 </select>
               )}
             </div>
+
+            {/* PAYMENT DESTINATION PANEL */}
+            {!isFreePack && PAYMENT_DETAILS[newSub.payment_method] && (
+              <div style={PAY_STYLES.box}>
+                <div style={PAY_STYLES.head}>
+                  <div style={PAY_STYLES.iconBox}>{PAYMENT_DETAILS[newSub.payment_method].icon}</div>
+                  <div>
+                    <div style={PAY_STYLES.title}>{PAYMENT_DETAILS[newSub.payment_method].label}</div>
+                    <div style={PAY_STYLES.net}>
+                      {newSub.payment_method === 'paypal'
+                        ? (t('paypal_account') || 'PayPal account (Friends & Family)')
+                        : (t('deposit_address') || 'Deposit address')}
+                    </div>
+                  </div>
+                </div>
+                <div style={PAY_STYLES.addrRow}>
+                  <code style={PAY_STYLES.addr}>{PAYMENT_DETAILS[newSub.payment_method].address}</code>
+                  <button type="button" style={PAY_STYLES.copyBtn}
+                    onClick={() => {
+                      const a = PAYMENT_DETAILS[newSub.payment_method].address;
+                      try { navigator.clipboard.writeText(a); } catch (err) {}
+                      setCopiedAddr(true);
+                      setTimeout(() => setCopiedAddr(false), 1500);
+                    }}>
+                    {copiedAddr ? (t('copied') || 'Copied ✓') : (t('copy') || 'Copy')}
+                  </button>
+                </div>
+                <div style={PAY_STYLES.note}>⚠️ {PAYMENT_DETAILS[newSub.payment_method].note}</div>
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-primary" onClick={createSub}>{t('assign') || 'Assign'}</button>
