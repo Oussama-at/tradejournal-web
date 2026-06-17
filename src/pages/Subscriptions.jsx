@@ -29,9 +29,9 @@ const PAY_METHODS = [
 
 // Real crypto wallets that receive payments.
 const CRYPTO_COINS = [
-  { key: 'btc',  label: 'Bitcoin',  store: 'BTC',          network: 'Bitcoin network',  icon: '₿', address: '153R4TXbRmNDaymXM5ySmjF7hmWqbTu5fB', uri: 'bitcoin:153R4TXbRmNDaymXM5ySmjF7hmWqbTu5fB', note: 'Send only BTC on the Bitcoin network to this address.' },
-  { key: 'usdt', label: 'USDT',     store: 'USDT (TRC20)', network: 'TRC20 (Tron)',     icon: '₮', address: 'TShrmLSuNgdKiLgCur492aW3Z5akyUxQx8', note: 'TRC20 network ONLY — another network will lose the funds.' },
-  { key: 'eth',  label: 'Ethereum', store: 'ETH',          network: 'Ethereum (ERC20)', icon: 'Ξ', address: '0xb9b2e0b9d8f9cbb786730cf933043ed9f0da7f74', uri: 'ethereum:0xb9b2e0b9d8f9cbb786730cf933043ed9f0da7f74', note: 'Ethereum mainnet (ERC20) only.' },
+  { key: 'btc',  label: 'Bitcoin',  store: 'BTC',          network: 'Bitcoin network',  icon: '₿', address: '153R4TXbRmNDaymXM5ySmjF7hmWqbTu5fB', uri: 'bitcoin:153R4TXbRmNDaymXM5ySmjF7hmWqbTu5fB', explorer: 'https://mempool.space/address/153R4TXbRmNDaymXM5ySmjF7hmWqbTu5fB', note: 'Send only BTC on the Bitcoin network to this address.' },
+  { key: 'usdt', label: 'USDT',     store: 'USDT (TRC20)', network: 'TRC20 (Tron)',     icon: '₮', address: 'TShrmLSuNgdKiLgCur492aW3Z5akyUxQx8', uri: 'tron:TShrmLSuNgdKiLgCur492aW3Z5akyUxQx8', explorer: 'https://tronscan.org/#/address/TShrmLSuNgdKiLgCur492aW3Z5akyUxQx8', note: 'TRC20 network ONLY — another network will lose the funds.' },
+  { key: 'eth',  label: 'Ethereum', store: 'ETH',          network: 'Ethereum (ERC20)', icon: 'Ξ', address: '0xb9b2e0b9d8f9cbb786730cf933043ed9f0da7f74', uri: 'ethereum:0xb9b2e0b9d8f9cbb786730cf933043ed9f0da7f74', explorer: 'https://etherscan.io/address/0xb9b2e0b9d8f9cbb786730cf933043ed9f0da7f74', note: 'Ethereum mainnet (ERC20) only.' },
 ];
 
 const PAY_STYLES = {
@@ -55,6 +55,11 @@ const PAY_STYLES = {
   payBtn:       { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: '12px 16px', borderRadius: 10, border: 'none', background: '#25d366', color: '#06210f', cursor: 'pointer', fontWeight: 800, fontSize: 14, textDecoration: 'none' },
   payBtnBlue:   { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: '12px 16px', borderRadius: 10, border: 'none', background: '#0070ba', color: '#fff', cursor: 'pointer', fontWeight: 800, fontSize: 14, textDecoration: 'none' },
   payBtnAddr:   { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: '12px 16px', borderRadius: 10, border: '1px solid #00e676', background: 'transparent', color: '#00e676', cursor: 'pointer', fontWeight: 800, fontSize: 14, textDecoration: 'none' },
+  payActions:   { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  payAct:       { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 14px', borderRadius: 10, border: '1px solid #00e676', background: 'transparent', color: '#00e676', cursor: 'pointer', fontWeight: 700, fontSize: 13, textDecoration: 'none' },
+  qrWrap:       { marginTop: 12, display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, border: '1px solid #1e2a36', background: '#ffffff', width: 'fit-content' },
+  qrImg:        { width: 180, height: 180, display: 'block' },
+  qrCaption:    { fontSize: 12, color: '#0d1117', fontWeight: 700 },
   payLaterRow:  { display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, padding: '10px 12px', borderRadius: 10, border: '1px dashed #2a3a48', background: '#0d1117', cursor: 'pointer' },
   payLaterText: { fontSize: 13, color: '#e8edf3', fontWeight: 600 },
   payLaterSub:  { fontSize: 11, color: '#7a8a9a', marginTop: 2 },
@@ -175,6 +180,7 @@ export default function Subscriptions() {
 
   const [newSub, setNewSub] = useState({ user_id: '', pack: 'trial', method: '', coin: '', payLater: false });
   const [copiedAddr, setCopiedAddr] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
   useEffect(() => { loadSubs(); loadUsers(); }, []);
 
@@ -436,10 +442,26 @@ export default function Subscriptions() {
                           </button>
                         </div>
                         <div style={PAY_STYLES.note}>⚠️ {cryptoSel.note}</div>
-                        {cryptoSel.uri && (
-                          <a href={cryptoSel.uri} style={PAY_STYLES.payBtnAddr}>
-                            {cryptoSel.icon} {t('open_in_wallet')}
-                          </a>
+                        <div style={PAY_STYLES.payActions}>
+                          <button type="button" style={PAY_STYLES.payAct} onClick={() => setQrOpen(o => !o)}>
+                            📷 {t('pay_show_qr')}
+                          </button>
+                          {cryptoSel.uri && (
+                            <a href={cryptoSel.uri} style={PAY_STYLES.payAct}>
+                              👛 {t('open_in_wallet')}
+                            </a>
+                          )}
+                          {cryptoSel.explorer && (
+                            <a href={cryptoSel.explorer} target="_blank" rel="noopener noreferrer" style={PAY_STYLES.payAct}>
+                              🔎 {t('view_on_explorer')}
+                            </a>
+                          )}
+                        </div>
+                        {qrOpen && (
+                          <div style={PAY_STYLES.qrWrap}>
+                            <img alt="QR" style={PAY_STYLES.qrImg} src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(cryptoSel.address)}`} />
+                            <div style={PAY_STYLES.qrCaption}>{cryptoSel.store}</div>
+                          </div>
                         )}
                       </>
                     )}

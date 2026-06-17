@@ -3,6 +3,22 @@
 // ─────────────────────────────────────────────────────────
 const translations = {
   en: {
+    // Payment / checkout
+    pay_whatsapp_hint:      'Contact us on WhatsApp to arrange and confirm this payment.',
+    pay_card_hint:          'Card payment is handled externally, then recorded here.',
+    paypal_account:         'PayPal account (Friends & Family)',
+    pay_later:              'Assign now, pay later',
+    pay_later_hint:         'Activate the pack now and mark the payment as pending.',
+    deposit_address:        'deposit address',
+    copy:                   'Copy',
+    copied:                 'Copied ✓',
+    select_payment:         'Select a payment method',
+    select_crypto:          'Select which crypto',
+    open_paypal_checkout:   'Open PayPal checkout',
+    open_whatsapp_purchase: 'Open WhatsApp to purchase',
+    open_in_wallet:         'Open in wallet app',
+    pay_show_qr:            'Show QR code',
+    view_on_explorer:       'View on explorer',
     // Sidebar nav
     nav_dashboard:      'Dashboard',
     nav_chart:          'P&L Chart',
@@ -303,6 +319,22 @@ const translations = {
   },
 
   ar: {
+    // Payment / checkout
+    pay_whatsapp_hint:      'تواصل معنا عبر واتساب لترتيب وتأكيد هذه الدفعة.',
+    pay_card_hint:          'تتم معالجة الدفع بالبطاقة خارجياً ثم تُسجَّل هنا.',
+    paypal_account:         'حساب باي بال (أصدقاء وعائلة)',
+    pay_later:              'فعّل الآن، وادفع لاحقاً',
+    pay_later_hint:         'فعّل الباقة الآن وحدد الدفع كمعلّق.',
+    deposit_address:        'عنوان الإيداع',
+    copy:                   'نسخ',
+    copied:                 'تم النسخ ✓',
+    select_payment:         'اختر طريقة الدفع',
+    select_crypto:          'اختر العملة الرقمية',
+    open_paypal_checkout:   'فتح دفع باي بال',
+    open_whatsapp_purchase: 'فتح واتساب للشراء',
+    open_in_wallet:         'فتح في تطبيق المحفظة',
+    pay_show_qr:            'إظهار رمز QR',
+    view_on_explorer:       'عرض على المستكشف',
     // Sidebar nav
     nav_dashboard:      'لوحة التحكم',
     nav_chart:          'مخطط الأرباح',
@@ -325,7 +357,7 @@ const translations = {
 
     // Dashboard
     dashboard_title:    'لوحة التحكم',
-    dashboard_sub:      'نظرة عامة على الأداء',
+    dashboard_sub:      'نظرة ��امة على الأداء',
     total_trades:       'إجمالي الصفقات',
     win_rate:           'نسبة الفوز',
     total_pnl:          'إجمالي الربح/الخسارة',
@@ -603,6 +635,22 @@ const translations = {
   },
 
   fr: {
+    // Payment / checkout
+    pay_whatsapp_hint:      'Contactez-nous sur WhatsApp pour organiser et confirmer ce paiement.',
+    pay_card_hint:          'Le paiement par carte est géré en externe, puis enregistré ici.',
+    paypal_account:         'Compte PayPal (Amis et famille)',
+    pay_later:              'Attribuer maintenant, payer plus tard',
+    pay_later_hint:         'Activez le pack maintenant et marquez le paiement comme en attente.',
+    deposit_address:        'adresse de dépôt',
+    copy:                   'Copier',
+    copied:                 'Copié ✓',
+    select_payment:         'Choisissez un mode de paiement',
+    select_crypto:          'Choisissez la crypto',
+    open_paypal_checkout:   'Ouvrir le paiement PayPal',
+    open_whatsapp_purchase: 'Ouvrir WhatsApp pour acheter',
+    open_in_wallet:         'Ouvrir dans le portefeuille',
+    pay_show_qr:            'Afficher le QR code',
+    view_on_explorer:       'Voir sur l’explorateur',
     nav_dashboard:      'Tableau de bord',
     nav_chart:          'Graphique P&L',
     nav_trades:         'Trades',
