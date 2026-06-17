@@ -14,24 +14,44 @@ const PAYMENT_OPTIONS = {
   lifetime:  ['manual', 'btc', 'usdt', 'eth', 'paypal'],
 };
 
-// Real payment destinations shown in the admin Add-Subscription panel.
-const PAYMENT_DETAILS = {
-  btc:    { label: 'Bitcoin (BTC)',  icon: '₿', address: '153R4TXbRmNDaymXM5ySmjF7hmWqbTu5fB', note: 'Send only BTC on the Bitcoin network to this address.' },
-  usdt:   { label: 'USDT (TRC20)',   icon: '₮', address: 'TShrmLSuNgdKiLgCur492aW3Z5akyUxQx8', note: 'TRC20 network ONLY — sending on another network will lose the funds.' },
-  eth:    { label: 'Ethereum (ETH)', icon: 'Ξ', address: '0xb9b2e0b9d8f9cbb786730cf933043ed9f0da7f74', note: 'Ethereum mainnet (ERC20) only.' },
-  paypal: { label: 'PayPal',         icon: '🅿', address: 'ousssatt@gmail.com', note: 'Send as Friends & Family to avoid extra fees.' },
-};
+const PAYPAL_ACCOUNT = 'ousssatt@gmail.com';
+
+// Top-level payment methods shown in the admin Add-Subscription panel.
+const PAY_METHODS = [
+  { key: 'whatsapp', label: 'WhatsApp', icon: '💬' },
+  { key: 'card',     label: 'Card',     icon: '💳' },
+  { key: 'paypal',   label: 'PayPal',   icon: '🅿' },
+  { key: 'crypto',   label: 'Crypto',   icon: '🪙' },
+];
+
+// Real crypto wallets that receive payments.
+const CRYPTO_COINS = [
+  { key: 'btc',  label: 'Bitcoin',  store: 'BTC',          network: 'Bitcoin network',  icon: '₿', address: '153R4TXbRmNDaymXM5ySmjF7hmWqbTu5fB', note: 'Send only BTC on the Bitcoin network to this address.' },
+  { key: 'usdt', label: 'USDT',     store: 'USDT (TRC20)', network: 'TRC20 (Tron)',     icon: '₮', address: 'TShrmLSuNgdKiLgCur492aW3Z5akyUxQx8', note: 'TRC20 network ONLY — another network will lose the funds.' },
+  { key: 'eth',  label: 'Ethereum', store: 'ETH',          network: 'Ethereum (ERC20)', icon: 'Ξ', address: '0xb9b2e0b9d8f9cbb786730cf933043ed9f0da7f74', note: 'Ethereum mainnet (ERC20) only.' },
+];
 
 const PAY_STYLES = {
-  box:     { marginTop: 14, padding: 16, borderRadius: 12, background: '#11181f', border: '1px solid #1e2a36' },
-  head:    { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 },
-  iconBox: { fontSize: 20, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 9, background: '#0d1117', border: '1px solid #1e2a36', color: '#00e676', flex: '0 0 auto' },
-  title:   { fontWeight: 700, color: '#e8edf3', fontSize: 14, lineHeight: 1.2 },
-  net:     { fontSize: 11, color: '#7a8a9a', marginTop: 2 },
-  addrRow: { display: 'flex', alignItems: 'center', gap: 8 },
-  addr:    { flex: 1, fontFamily: 'monospace', fontSize: 13, color: '#00e676', wordBreak: 'break-all', background: '#0d1117', border: '1px solid #1e2a36', borderRadius: 8, padding: '10px 12px' },
-  copyBtn: { whiteSpace: 'nowrap', padding: '10px 14px', borderRadius: 8, border: '1px solid #00e676', background: 'transparent', color: '#00e676', cursor: 'pointer', fontWeight: 600, fontSize: 13 },
-  note:    { marginTop: 12, fontSize: 12, color: '#f0b429', lineHeight: 1.5 },
+  methodRow:    { display: 'flex', flexWrap: 'wrap', gap: 8 },
+  methodBtn:    { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, border: '1px solid #1e2a36', background: '#0d1117', color: '#e8edf3', cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+  methodBtnOn:  { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, border: '1px solid #00e676', background: 'rgba(0,230,118,0.12)', color: '#00e676', cursor: 'pointer', fontWeight: 700, fontSize: 13 },
+  methodIcon:   { fontSize: 16 },
+  box:          { marginTop: 14, padding: 16, borderRadius: 12, background: '#11181f', border: '1px solid #1e2a36' },
+  coinRow:      { display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
+  coinBtn:      { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 9, border: '1px solid #1e2a36', background: '#0d1117', color: '#e8edf3', cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+  coinBtnOn:    { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 9, border: '1px solid #00e676', background: 'rgba(0,230,118,0.12)', color: '#00e676', cursor: 'pointer', fontWeight: 700, fontSize: 13 },
+  head:         { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 },
+  iconBox:      { fontSize: 20, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 9, background: '#0d1117', border: '1px solid #1e2a36', color: '#00e676', flex: '0 0 auto' },
+  title:        { fontWeight: 700, color: '#e8edf3', fontSize: 14, lineHeight: 1.2 },
+  net:          { fontSize: 11, color: '#7a8a9a', marginTop: 2 },
+  addrRow:      { display: 'flex', alignItems: 'center', gap: 8 },
+  addr:         { flex: 1, fontFamily: 'monospace', fontSize: 13, color: '#00e676', wordBreak: 'break-all', background: '#0d1117', border: '1px solid #1e2a36', borderRadius: 8, padding: '10px 12px' },
+  copyBtn:      { whiteSpace: 'nowrap', padding: '10px 14px', borderRadius: 8, border: '1px solid #00e676', background: 'transparent', color: '#00e676', cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+  note:         { marginTop: 12, fontSize: 12, color: '#f0b429', lineHeight: 1.5 },
+  info:         { fontSize: 13, color: '#cdd7e1', lineHeight: 1.5 },
+  payLaterRow:  { display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, padding: '10px 12px', borderRadius: 10, border: '1px dashed #2a3a48', background: '#0d1117', cursor: 'pointer' },
+  payLaterText: { fontSize: 13, color: '#e8edf3', fontWeight: 600 },
+  payLaterSub:  { fontSize: 11, color: '#7a8a9a', marginTop: 2 },
 };
 
 function packBadgeClass(pack, status) {
@@ -147,7 +167,7 @@ export default function Subscriptions() {
   const [editSub,      setEditSub]      = useState(null);
   const [showAddUser,  setShowAddUser]  = useState(false);   // ← quick-add user modal
 
-  const [newSub, setNewSub] = useState({ user_id: '', pack: 'trial', payment_method: '' });
+  const [newSub, setNewSub] = useState({ user_id: '', pack: 'trial', method: '', coin: '', payLater: false });
   const [copiedAddr, setCopiedAddr] = useState(false);
 
   useEffect(() => { loadSubs(); loadUsers(); }, []);
@@ -172,8 +192,31 @@ export default function Subscriptions() {
   }
 
   function handlePackChange(pack) {
-    const opts = PAYMENT_OPTIONS[pack];
-    setNewSub(s => ({ ...s, pack, payment_method: opts ? opts[0] : '' }));
+    const paid = !!PAYMENT_OPTIONS[pack];
+    setNewSub(s => ({
+      ...s,
+      pack,
+      method: paid ? (s.method || 'whatsapp') : '',
+      coin: paid && s.method === 'crypto' ? (s.coin || 'btc') : '',
+      payLater: paid ? s.payLater : false,
+    }));
+  }
+
+  function buildPaymentMethod(s) {
+    let base;
+    if (s.method === 'crypto') {
+      const c = CRYPTO_COINS.find(x => x.key === s.coin);
+      base = c ? c.store : 'Crypto';
+    } else if (s.method === 'paypal') base = 'PayPal';
+    else if (s.method === 'card') base = 'Card';
+    else base = 'WhatsApp';
+    return s.payLater ? base + ' (Pay later)' : base;
+  }
+
+  function copyText(txt) {
+    try { navigator.clipboard.writeText(txt); } catch (e) {}
+    setCopiedAddr(true);
+    setTimeout(() => setCopiedAddr(false), 1500);
   }
 
   /* Called after quick-add succeeds — auto-select the new user */
@@ -189,13 +232,17 @@ export default function Subscriptions() {
 
   async function createSub() {
     if (!newSub.user_id) { setMsg({ type: 'error', text: t('select_user') || 'Select a user' }); return; }
-    const payload = { ...newSub };
-    if (!PAYMENT_OPTIONS[newSub.pack]) delete payload.payment_method;
+    const payload = { user_id: newSub.user_id, pack: newSub.pack };
+    if (PAYMENT_OPTIONS[newSub.pack]) {
+      if (!newSub.method) { setMsg({ type: 'error', text: t('select_payment') || 'Select a payment method' }); return; }
+      if (newSub.method === 'crypto' && !newSub.coin) { setMsg({ type: 'error', text: t('select_crypto') || 'Select which crypto' }); return; }
+      payload.payment_method = buildPaymentMethod(newSub);
+    }
     const res = await api.post('/admin/subscriptions', payload);
     if (res?.success) {
       setMsg({ type: 'success', text: '✓ ' + (t('sub_created') || 'Subscription created!') });
       setShowAdd(false);
-      setNewSub({ user_id: '', pack: 'trial', payment_method: '' });
+      setNewSub({ user_id: '', pack: 'trial', method: '', coin: '', payLater: false });
       load();
     } else {
       setMsg({ type: 'error', text: res?.message || 'Failed' });
@@ -243,8 +290,8 @@ export default function Subscriptions() {
     !search || s.user_name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const paymentOpts = PAYMENT_OPTIONS[newSub.pack];
-  const isFreePack  = !paymentOpts;
+  const isFreePack = !PAYMENT_OPTIONS[newSub.pack];
+  const cryptoSel  = CRYPTO_COINS.find(c => c.key === newSub.coin);
 
   return (
     <div>
@@ -338,42 +385,88 @@ export default function Subscriptions() {
                   🎁 {t('free_pack') || 'Free — No Payment'}
                 </div>
               ) : (
-                <select className="select" value={newSub.payment_method}
-                  onChange={e => setNewSub(s => ({ ...s, payment_method: e.target.value }))}>
-                  {paymentOpts.map(m => (
-                    <option key={m} value={m}>{PAYMENT_DETAILS[m] ? PAYMENT_DETAILS[m].label : (m === 'manual' ? `${m} (WhatsApp)` : m)}</option>
+                <div style={PAY_STYLES.methodRow}>
+                  {PAY_METHODS.map(m => (
+                    <button key={m.key} type="button"
+                      style={newSub.method === m.key ? PAY_STYLES.methodBtnOn : PAY_STYLES.methodBtn}
+                      onClick={() => setNewSub(s => ({ ...s, method: m.key, coin: m.key === 'crypto' ? (s.coin || 'btc') : '' }))}>
+                      <span style={PAY_STYLES.methodIcon}>{m.icon}</span>{m.label}
+                    </button>
                   ))}
-                </select>
+                </div>
               )}
             </div>
 
             {/* PAYMENT DESTINATION PANEL */}
-            {!isFreePack && PAYMENT_DETAILS[newSub.payment_method] && (
+            {!isFreePack && newSub.method && (
               <div style={PAY_STYLES.box}>
-                <div style={PAY_STYLES.head}>
-                  <div style={PAY_STYLES.iconBox}>{PAYMENT_DETAILS[newSub.payment_method].icon}</div>
-                  <div>
-                    <div style={PAY_STYLES.title}>{PAYMENT_DETAILS[newSub.payment_method].label}</div>
-                    <div style={PAY_STYLES.net}>
-                      {newSub.payment_method === 'paypal'
-                        ? (t('paypal_account') || 'PayPal account (Friends & Family)')
-                        : (t('deposit_address') || 'Deposit address')}
+                {newSub.method === 'crypto' && (
+                  <>
+                    <div style={PAY_STYLES.coinRow}>
+                      {CRYPTO_COINS.map(c => (
+                        <button key={c.key} type="button"
+                          style={newSub.coin === c.key ? PAY_STYLES.coinBtnOn : PAY_STYLES.coinBtn}
+                          onClick={() => setNewSub(s => ({ ...s, coin: c.key }))}>
+                          <span>{c.icon}</span>{c.label} · {c.store}
+                        </button>
+                      ))}
                     </div>
+                    {cryptoSel && (
+                      <>
+                        <div style={PAY_STYLES.head}>
+                          <div style={PAY_STYLES.iconBox}>{cryptoSel.icon}</div>
+                          <div>
+                            <div style={PAY_STYLES.title}>{cryptoSel.label} ({cryptoSel.store})</div>
+                            <div style={PAY_STYLES.net}>{cryptoSel.network} · {t('deposit_address') || 'deposit address'}</div>
+                          </div>
+                        </div>
+                        <div style={PAY_STYLES.addrRow}>
+                          <code style={PAY_STYLES.addr}>{cryptoSel.address}</code>
+                          <button type="button" style={PAY_STYLES.copyBtn} onClick={() => copyText(cryptoSel.address)}>
+                            {copiedAddr ? (t('copied') || 'Copied ✓') : (t('copy') || 'Copy')}
+                          </button>
+                        </div>
+                        <div style={PAY_STYLES.note}>⚠️ {cryptoSel.note}</div>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {newSub.method === 'paypal' && (
+                  <>
+                    <div style={PAY_STYLES.head}>
+                      <div style={PAY_STYLES.iconBox}>🅿</div>
+                      <div>
+                        <div style={PAY_STYLES.title}>PayPal</div>
+                        <div style={PAY_STYLES.net}>{t('paypal_account') || 'PayPal account (Friends & Family)'}</div>
+                      </div>
+                    </div>
+                    <div style={PAY_STYLES.addrRow}>
+                      <code style={PAY_STYLES.addr}>{PAYPAL_ACCOUNT}</code>
+                      <button type="button" style={PAY_STYLES.copyBtn} onClick={() => copyText(PAYPAL_ACCOUNT)}>
+                        {copiedAddr ? (t('copied') || 'Copied ✓') : (t('copy') || 'Copy')}
+                      </button>
+                    </div>
+                    <div style={PAY_STYLES.note}>⚠️ Send as Friends & Family to avoid extra fees.</div>
+                  </>
+                )}
+
+                {newSub.method === 'whatsapp' && (
+                  <div style={PAY_STYLES.info}>💬 {t('pay_whatsapp_hint') || 'Payment will be arranged and confirmed manually over WhatsApp.'}</div>
+                )}
+
+                {newSub.method === 'card' && (
+                  <div style={PAY_STYLES.info}>💳 {t('pay_card_hint') || 'Card payment is handled externally, then recorded here.'}</div>
+                )}
+
+                {/* Assign now / pay later */}
+                <div style={PAY_STYLES.payLaterRow} onClick={() => setNewSub(s => ({ ...s, payLater: !s.payLater }))}>
+                  <input type="checkbox" checked={!!newSub.payLater} readOnly />
+                  <div>
+                    <div style={PAY_STYLES.payLaterText}>{t('pay_later') || 'Assign now, pay later'}</div>
+                    <div style={PAY_STYLES.payLaterSub}>{t('pay_later_hint') || 'Activate the pack now and mark the payment as pending.'}</div>
                   </div>
                 </div>
-                <div style={PAY_STYLES.addrRow}>
-                  <code style={PAY_STYLES.addr}>{PAYMENT_DETAILS[newSub.payment_method].address}</code>
-                  <button type="button" style={PAY_STYLES.copyBtn}
-                    onClick={() => {
-                      const a = PAYMENT_DETAILS[newSub.payment_method].address;
-                      try { navigator.clipboard.writeText(a); } catch (err) {}
-                      setCopiedAddr(true);
-                      setTimeout(() => setCopiedAddr(false), 1500);
-                    }}>
-                    {copiedAddr ? (t('copied') || 'Copied ✓') : (t('copy') || 'Copy')}
-                  </button>
-                </div>
-                <div style={PAY_STYLES.note}>⚠️ {PAYMENT_DETAILS[newSub.payment_method].note}</div>
               </div>
             )}
 
