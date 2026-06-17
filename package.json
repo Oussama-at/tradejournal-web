@@ -17,6 +17,7 @@
     "test:coverage": "react-scripts test --coverage --watchAll=false",
     "test:unit": "react-scripts test --testPathPattern=src/__tests__/unit --watchAll=false",
     "test:integration": "react-scripts test --testPathPattern=src/__tests__/integration --watchAll=false",
+    "test:e2e": "playwright test", 
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
