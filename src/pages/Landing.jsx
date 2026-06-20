@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 // ─── Voice helpers ─────────────────────────────────────────────────────────
 function getBestVoice(lang) {
@@ -153,7 +154,7 @@ const CONTENT = {
     whatsappNote: 'الدفع عبر واتساب',
     scenes: [
       { id:'intro',     dur:5500, title:'TradeJournal PRO',  subtitle:'يوميات التداول الاحترافية',    voice:'مرحباً بكم في TradeJournal PRO. المنصة الاحترافية التي تحوّل طريقة تتبع صفقاتك وتحليل أدائك.' },
-      { id:'dashboard', dur:7000, title:'لوحة التحكم',       subtitle:'نظرة شاملة — دفعة واحدة',      voice:'لوحة التحكم تعطيك نظرة كاملة على أدائك في ثوانٍ. إجمالي الأرباح ونسبة الفوز وتطور رأس المال.' },
+      { id:'dashboard', dur:7000, title:'لوحة التحكم',       subtitle:'نظرة شاملة — دفعة واحدة',      voice:'لوحة التحكم تعطيك نظرة كاملة على أدائك في ��وانٍ. إجمالي الأرباح ونسبة الفوز وتطور رأس المال.' },
       { id:'addtrade',  dur:6500, title:'تسجيل الصفقات',     subtitle:'سريع ودقيق',                   voice:'سجّل كل صفقة في ثوانٍ. اختر السوق والاتجاه وأدخل الأسعار لترى معاينة فورية للربح أو الخسارة.' },
       { id:'analytics', dur:7000, title:'تحليل الأداء',      subtitle:'اكتشف أنماطك',                 voice:'التحليلات تكشف لك الحقيقة. أي الجلسات أفضل؟ أي الأسواق أكثر ربحاً؟ كل التفاصيل أمامك.' },
       { id:'calendar',  dur:6000, title:'التقويم البصري',    subtitle:'أداؤك يومياً',                 voice:'التقويم البصري يُظهر أيام الفوز والخسارة بلون واضح. اكتشف الأنماط والسلاسل الربحية بسرعة.' },
@@ -598,6 +599,21 @@ export default function Landing() {
   const C    = CONTENT[lang] || CONTENT.ar;
   const isRTL = lang === 'ar';
 
+  // ── Live stats pulled from the backend (real aggregates) ──
+  const [liveStats, setLiveStats] = useState(null);
+  useEffect(() => {
+    api.getNoAuth('/stats/public')
+      .then(r => { if (r && r.success && r.data) setLiveStats(r.data); })
+      .catch(() => {});
+  }, []);
+  const displayStats = C.stats.map((s, i) => {
+    if (!liveStats) return s;
+    if (i === 0 && liveStats.activeTraders != null) return Object.assign({}, s, { v: `${liveStats.activeTraders}+` });
+    if (i === 1 && liveStats.winRate != null) return Object.assign({}, s, { v: `${liveStats.winRate}%` });
+    if (i === 2 && liveStats.avgReturn != null) return Object.assign({}, s, { v: `${liveStats.avgReturn >= 0 ? '+' : ''}${liveStats.avgReturn}%` });
+    return s;
+  });
+
   const sectionLabel = {
     display:'inline-flex', alignItems:'center', gap:7, fontSize:11, fontWeight:700,
     letterSpacing:1.2, textTransform:'uppercase', color:'#00e676',
@@ -667,7 +683,7 @@ export default function Landing() {
 
         {/* Stats */}
         <div style={{ display:'flex', gap:48, justifyContent:'center', marginTop:60, flexWrap:'wrap' }}>
-          {C.stats.map(({ v, l }) => (
+          {displayStats.map(({ v, l }) => (
             <div key={l} style={{ textAlign:'center' }}>
               <div style={{ fontFamily:'monospace', fontSize:38, fontWeight:900, color:'#00e676', lineHeight:1 }}>{v}</div>
               <div style={{ fontSize:12, color:'rgba(180,200,220,0.45)', marginTop:6, fontFamily:'sans-serif' }}>{l}</div>

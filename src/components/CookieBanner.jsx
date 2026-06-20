@@ -11,6 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLang } from '../lang/LangContext';
 import { getConsent, saveConsent, hasDecided } from '../utils/cookies';
+import api from '../services/api';
 
 // ── Toggle Switch ──────────────────────────────────────────────────────────
 function Toggle({ checked, onChange, disabled }) {
@@ -75,8 +76,35 @@ export default function CookieBanner() {
     }
   }, []);
 
-  function dismiss(updatedConsent) {
+  function getVisitorId() {
+    try {
+      let id = localStorage.getItem('tj_visitor_id');
+      if (!id) {
+        id = 'v-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+        localStorage.setItem('tj_visitor_id', id);
+      }
+      return id;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function logConsent(c, decision) {
+    try {
+      api.post('/cookie-consent', {
+        visitor_id: getVisitorId(),
+        user_name: localStorage.getItem('username') || null,
+        analytics: !!c.analytics,
+        preferences: !!c.preferences,
+        savedLogin: !!c.savedLogin,
+        decision,
+      }).catch(() => {});
+    } catch (e) {}
+  }
+
+  function dismiss(updatedConsent, decision) {
     saveConsent(updatedConsent);
+    logConsent(updatedConsent, decision);
     window.dispatchEvent(new CustomEvent('cookie-consent-saved', { detail: updatedConsent }));
     setAnimating(false);
     setTimeout(() => setVisible(false), 400);
@@ -85,17 +113,17 @@ export default function CookieBanner() {
   function acceptAll() {
     const c = { ...consent, analytics: true, preferences: true, savedLogin: true };
     setConsent(c);
-    dismiss(c);
+    dismiss(c, 'accept_all');
   }
 
   function rejectAll() {
     const c = { ...consent, analytics: false, preferences: false, savedLogin: false };
     setConsent(c);
-    dismiss(c);
+    dismiss(c, 'reject_all');
   }
 
   function savePrefs() {
-    dismiss(consent);
+    dismiss(consent, 'custom');
   }
 
   if (!visible) return null;
