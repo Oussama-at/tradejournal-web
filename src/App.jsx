@@ -22,6 +22,7 @@ import {
   Activations, PasswordReset, EmailChangeRequests, Profile, Password
 } from './pages/OtherPages';
 import AdminAlerts from './pages/AdminAlerts';
+import CookieConsents from './pages/CookieConsents';
 import { Ranking, RankingPopup } from './pages/Ranking';
 import api from './services/api';
 import './index.css';
@@ -94,6 +95,7 @@ function AppLayout() {
           <Route path="/email-changes"    element={<AdminRoute><EmailChangeRequests /></AdminRoute>} />
           <Route path="/alerts"            element={<AdminRoute><AdminAlerts /></AdminRoute>} />
           <Route path="/ranking"          element={<AdminRoute><Ranking /></AdminRoute>} />
+          <Route path="/cookie-consents"  element={<AdminRoute><CookieConsents /></AdminRoute>} />
           <Route path="/my-plan"          element={<MyPlan />} />
           <Route path="/profile"          element={<Profile />} />
           <Route path="/password"         element={<Password />} />
