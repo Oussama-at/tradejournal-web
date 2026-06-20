@@ -1280,6 +1280,7 @@ export function Profile() {
 
   // First-login security setup
   const [showSecurityAlert, setShowSecurityAlert] = useState(false);
+  const [emailChangeWarn, setEmailChangeWarn] = useState('');
 
   const DEFAULTS = [
     'What is your favourite color?', 'Name of your best player?',
@@ -1397,6 +1398,7 @@ export function Profile() {
       setMsg({ type: 'success', text: '✓ Security questions saved!' });
       setA1(''); setA2(''); setUserQ1(q1); setUserQ2(q2);
       setShowSecurityAlert(false);
+      setEmailChangeWarn('');
       api.post('/log', { action: 'SECRET_ANSWERS_SET', details: 'User set security questions' }).catch(() => {});
     } else {
       setMsg({ type: 'error', text: res?.message || 'Failed' });
@@ -1407,15 +1409,26 @@ export function Profile() {
   async function startEmailChange() {
     setVerifyA1(''); setVerifyA2(''); setVerifyMsg(null);
     setNewEmail(''); setSubmitMsg(null); setVerifyToken(null);
+    let q1Set = '', q2Set = '';
     try {
       const r = await api.get('/profile');
       const uname = r?.data?.user?.user_name;
       if (uname) {
         const qr = await api.get(`/secret-questions/${uname}`).catch(() => null);
-        setUserQ1(qr?.data?.question_1 || '');
-        setUserQ2(qr?.data?.question_2 || '');
+        q1Set = qr?.data?.question_1 || '';
+        q2Set = qr?.data?.question_2 || '';
+        setUserQ1(q1Set);
+        setUserQ2(q2Set);
       }
     } catch {}
+    // Require security questions before allowing an email change —
+    // identity verification depends on answering them.
+    if (!q1Set || !q2Set) {
+      setShowSecurityAlert(true);
+      setEmailChangeWarn('⚠️ Please set up your security questions and answers (in the "Security questions" card) before changing your email. You need them to verify your identity.');
+      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
+      return;
+    }
     setEmailStep('verifying');
   }
 
@@ -1498,6 +1511,13 @@ export function Profile() {
       <div className="page-header">
         <div className="page-title">{t('my_profile')}</div>
       </div>
+
+      {emailChangeWarn && (
+        <div className="alert alert-warning emailchange-warn">
+          <span>{emailChangeWarn}</span>
+          <button type="button" className="btn btn-ghost emailchange-x" onClick={() => setEmailChangeWarn('')} aria-label="Dismiss">✕</button>
+        </div>
+      )}
 
       {showSecurityAlert && (
         <div className="alert alert-warning" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>

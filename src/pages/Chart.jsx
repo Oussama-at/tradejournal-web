@@ -115,6 +115,44 @@ const WithdrawDot = (props) => {
   );
 };
 
+function PnlChartStyles() {
+  return (
+    <style>{`
+      .pnl-chart-page .card,
+      .pnl-chart-page .stat-card {
+        animation: pnlFadeUp .5s ease both;
+        transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+      }
+      .pnl-chart-page .stat-card {
+        background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+      }
+      .pnl-chart-page .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        border-color: rgba(0,230,118,0.35);
+      }
+      .pnl-chart-page .card {
+        position: relative;
+        overflow: hidden;
+      }
+      .pnl-chart-page .card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #00e676, #00b0ff, transparent);
+        opacity: .65;
+      }
+      .pnl-chart-page .stat-value { letter-spacing: .3px; }
+      .pnl-chart-page .recharts-surface { overflow: visible; }
+      @keyframes pnlFadeUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+    `}</style>
+  );
+}
+
 export default function Chart() {
   const { t } = useLang();
   const [period, setPeriod]     = useState('all');
@@ -280,7 +318,8 @@ export default function Chart() {
   const hasData = combinedData.length > 0 || trades.length > 0;
 
   return (
-    <div>
+    <div className="pnl-chart-page">
+      <PnlChartStyles />
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div><div className="page-title">{t('chart_title')}</div></div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>

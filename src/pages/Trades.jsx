@@ -1,338 +1,387 @@
-import React, { useState, useEffect } from 'react';
-import { useLang } from '../lang/LangContext';
+import React from 'react';
 import api from '../services/api';
-import { useConfirm } from '../components/ConfirmDialog';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-// Inline sortable headers for Trades table
-function SortableTh({ label, colIdx, sortCol, sortDir, onSort }) {
-  const isActive = sortCol === colIdx;
+const COLORS = { gold: '#d4af37', silver: '#c0c0c0', bronze: '#cd7f32' };
+
+function medal(rank) {
+  if (rank === 1) return '🥇';
+  if (rank === 2) return '🥈';
+  if (rank === 3) return '🥉';
+  return '#' + rank;
+}
+
+function Avatar({ src, name, size }) {
+  const s = size || 40;
+  const style = {
+    width: s,
+    height: s,
+    borderRadius: '50%',
+    objectFit: 'cover',
+    background: 'rgba(255,255,255,0.10)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: 700,
+    flexShrink: 0,
+    fontSize: Math.round(s * 0.4),
+    border: '1px solid rgba(255,255,255,0.12)',
+  };
+  const initials = (name || 'U').charAt(0).toUpperCase();
+  if (src) return <img src={src} alt={name} style={style} />;
+  return <div style={style}>{initials}</div>;
+}
+
+// Shared loader hook
+export function useRanking() {
+  const [rows, setRows] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+  const load = React.useCallback(() => {
+    setLoading(true);
+    setError('');
+    api
+      .get('/ranking')
+      .then((r) => {
+        if (r && r.success) setRows((r.data && r.data.ranking) || []);
+        else setError((r && r.message) || 'Failed to load ranking');
+      })
+      .catch(() => setError('Failed to load ranking'))
+      .finally(() => setLoading(false));
+  }, []);
+  React.useEffect(() => {
+    load();
+  }, [load]);
+  return { rows, loading, error, reload: load };
+}
+
+// ── Animated top-3 podium ────────────────────────────────
+function Podium({ top }) {
+  const order = [top[1], top[0], top[2]]; // visual: 2nd, 1st, 3rd
+  const heights = { 1: 120, 2: 88, 3: 66 };
+  const ST = {
+    wrap: {
+      display: 'flex',
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+      gap: 18,
+      padding: '20px 0 8px',
+      flexWrap: 'wrap',
+    },
+    col: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 96 },
+    medalIcon: { fontSize: 26, lineHeight: 1 },
+    name: {
+      fontWeight: 700,
+      fontSize: 14,
+      textAlign: 'center',
+      maxWidth: 120,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+    },
+    score: { fontSize: 12, opacity: 0.7 },
+    bar: {
+      width: 92,
+      borderRadius: '10px 10px 0 0',
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      paddingTop: 8,
+      color: '#111',
+      fontWeight: 800,
+      marginTop: 4,
+    },
+  };
+  const barColor = (rank) => (rank === 1 ? COLORS.gold : rank === 2 ? COLORS.silver : COLORS.bronze);
   return (
-    <th onClick={() => onSort(colIdx)} style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-        {label}
-        <span style={{ fontSize: 10, opacity: isActive ? 1 : 0.3, color: isActive ? 'var(--green)' : 'inherit' }}>
-          {isActive ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
-        </span>
-      </span>
-    </th>
+    <div style={ST.wrap}>
+      {order.map((u, i) => {
+        if (!u) return <div key={'e' + i} style={ST.col} />;
+        const cls = 'podium-item p' + u.rank + (u.rank === 1 ? ' rank-glow' : '');
+        const barStyle = Object.assign({}, ST.bar, { height: heights[u.rank], background: barColor(u.rank) });
+        return (
+          <div key={u.id} className={cls} style={ST.col}>
+            <div style={ST.medalIcon}>{medal(u.rank)}</div>
+            <Avatar src={u.profile_pic} name={u.user_name} size={56} />
+            <div style={ST.name}>{u.user_name}</div>
+            <div style={ST.score}>Score {u.score}</div>
+            <div style={barStyle}>{u.rank}</div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
-export default function Trades() {
-  const { t } = useLang();
-  const showConfirm = useConfirm();
-  const [trades, setTrades] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [filters, setFilters] = useState({ type: 'All', status: 'All', period: 'All', search: '' });
-  const [editTrade, setEditTrade] = useState(null);
-
-  const PERIODS = [
-    { val: 'All',        label: t('all') },
-    { val: 'Today',      label: t('today') },
-    { val: 'This Week',  label: t('this_week') },
-    { val: 'This Month', label: t('this_month') },
-    { val: 'Last Month', label: t('last_month') },
-  ];
-
-  useEffect(() => { load(); }, [page, filters]);
-
-  async function load() {
-    setLoading(true);
-    try {
-      let url = `/trades?page=${page}&limit=50`;
-      if (filters.search) url += `&market=${encodeURIComponent(filters.search)}`;
-      if (filters.type !== 'All') url += `&type=${filters.type.toLowerCase()}`;
-      if (filters.status !== 'All') url += `&status=${filters.status.toLowerCase()}`;
-      if (filters.period === 'Today') url += '&filter=Daily';
-      else if (filters.period === 'This Week') url += '&filter=Weekly';
-      else if (filters.period === 'This Month') url += '&filter=Monthly';
-      else if (filters.period === 'Last Month') url += '&filter=LastMonth';
-
-      const res = await api.get(url);
-      setTrades(res?.data?.trades || []);
-      setTotal(res?.data?.total || 0);
-      setTotalPages(Math.max(1, Math.ceil((res?.data?.total || 0) / 50)));
-    } catch (e) { console.error(e); }
-    setLoading(false);
-  }
-
-  async function deleteTrade(id) {
-    const ok = await showConfirm({
-      title: `${t('delete')} #${id}?`,
-      message: t('delete_trade_confirm') || 'This trade will be permanently removed.',
-      type: 'danger', confirmLabel: t('delete'), cancelLabel: t('cancel'),
-    });
-    if (!ok) return;
-    await api.delete(`/trades/${id}`);
-    load();
-  }
-
-  async function saveEdit(body) {
-    await api.put(`/trades/${editTrade.id_trade || editTrade.id}`, body);
-    setEditTrade(null);
-    load();
-  }
-
-  const [sortCol, setSortCol] = useState(null);
-  const [sortDir, setSortDir] = useState('asc');
-
-  function handleSort(idx) {
-    if (sortCol === idx) {
-      if (sortDir === 'asc') setSortDir('desc');
-      else if (sortDir === 'desc') { setSortCol(null); setSortDir('asc'); }
-    } else { setSortCol(idx); setSortDir('asc'); }
-  }
-
-  const SORT_KEYS = ['id', 'date_trade', 'marcher', 'type_trd', 'point_entree', 'point_sortie', 'nbr_contrat', 'status', 'montant', 'sessions'];
-  const sortedTrades = sortCol === null ? trades : [...trades].sort((a, b) => {
-    const key = SORT_KEYS[sortCol];
-    if (!key) return 0;
-    const av = a[key] ?? '';
-    const bv = b[key] ?? '';
-    const cmp = typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv));
-    return sortDir === 'asc' ? cmp : -cmp;
-  });
-
-  // Auto-refresh when a new trade is saved from AddTrade page
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    window.addEventListener('trade-saved', load);
-    return () => window.removeEventListener('trade-saved', load);
-  }, [page, filters]);
-
+// ── Full admin ranking page ────────────────────────────
+export function Ranking() {
+  const { rows, loading, error, reload } = useRanking();
+  const ST = {
+    head: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 12, flexWrap: 'wrap' },
+    title: { fontSize: 18, fontWeight: 700 },
+    sub: { opacity: 0.7, fontSize: 13, marginBottom: 4 },
+    info: { opacity: 0.7, padding: 16 },
+    err: { color: '#f87171', padding: 16 },
+    uname: { fontWeight: 600 },
+    table: { width: '100%', borderCollapse: 'collapse', marginTop: 8 },
+    thL: { textAlign: 'left', padding: '10px 12px', opacity: 0.7, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.4 },
+    thR: { textAlign: 'right', padding: '10px 12px', opacity: 0.7, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.4 },
+    td: { padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.08)' },
+    tdR: { padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.08)', textAlign: 'right' },
+    userCell: { display: 'flex', alignItems: 'center', gap: 10 },
+    rankBadge: { fontWeight: 800, width: 36, display: 'inline-block', textAlign: 'center' },
+    btn: { padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'inherit', cursor: 'pointer', fontWeight: 600 },
+    scorePill: { fontWeight: 800, color: COLORS.gold },
+  };
+  const top3 = rows.slice(0, 3);
   return (
     <div>
       <div className="page-header">
-        <div className="page-title">{t('trades_title')}</div>
-        <div className="page-sub">{total} {t('total_trades_label')}</div>
+        <div className="page-title">🏆 Users Ranking</div>
       </div>
-
-      {/* Filters */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={{ flex: 1, minWidth: 180 }}>
-            <input className="input" placeholder={t('search_market')} value={filters.search}
-              onChange={e => { setFilters(f => ({ ...f, search: e.target.value })); setPage(1); }} />
-          </div>
-          <select className="select" style={{ width: 'auto' }} value={filters.type}
-            onChange={e => { setFilters(f => ({ ...f, type: e.target.value })); setPage(1); }}>
-            {[{ val: 'All', lbl: t('all') }, { val: 'Buy', lbl: t('buy') }, { val: 'Sell', lbl: t('sell') }]
-              .map(o => <option key={o.val} value={o.val}>{o.lbl}</option>)}
-          </select>
-          <select className="select" style={{ width: 'auto' }} value={filters.status}
-            onChange={e => { setFilters(f => ({ ...f, status: e.target.value })); setPage(1); }}>
-            {[{ val: 'All', lbl: t('all') }, { val: 'Win', lbl: t('win') }, { val: 'Lose', lbl: t('lose') }]
-              .map(o => <option key={o.val} value={o.val}>{o.lbl}</option>)}
-          </select>
-          <select className="select" style={{ width: 'auto' }} value={filters.period}
-            onChange={e => { setFilters(f => ({ ...f, period: e.target.value })); setPage(1); }}>
-            {PERIODS.map(p => <option key={p.val} value={p.val}>{p.label}</option>)}
-          </select>
-          <button className="btn btn-ghost" onClick={() => { setFilters({ type: 'All', status: 'All', period: 'All', search: '' }); setPage(1); }}>
-            {t('reset')}
-          </button>
-        </div>
-      </div>
-
       <div className="card">
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                {['#', t('col_date'), t('col_market'), t('col_type'), t('col_entry'),
-                  t('col_close'), t('col_qty'), t('col_status'), t('col_amount'), t('col_session')].map((h, i) => (
-                  <SortableTh key={h} label={h} colIdx={i} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-                ))}
-                <th>{t('col_actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && <tr><td colSpan={11} style={{ textAlign: 'center', padding: 32 }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>}
-              {!loading && trades.length === 0 && <tr><td colSpan={11} style={{ textAlign: 'center', color: 'var(--dim)', padding: 32 }}>{t('no_trades_found')}</td></tr>}
-              {!loading && sortedTrades.map(tr => {
-                const id = tr.id_trade || tr.id;
-                return (
-                  <tr key={id} style={{ background: tr.status === 'win' ? 'rgba(0,230,118,0.025)' : 'rgba(255,71,87,0.025)' }}>
-                    <td className="muted mono" style={{ fontSize: 12 }}>{id}</td>
-                    <td className="muted">{tr.date_trade}</td>
-                    <td style={{ fontWeight: 700 }}>{tr.marcher}</td>
-                    <td className={tr.type_trd === 'buy' ? 'green bold' : 'red bold'}>{tr.type_trd?.toUpperCase()}</td>
-                    <td className="mono">{tr.point_entree}</td>
-                    <td className="mono">{tr.point_sortie}</td>
-                    <td className="mono muted">{tr.nbr_contrat} {tr.qty_type?.includes('lot') ? 'L' : ''}</td>
-                    <td>
-                      <span className={`badge ${tr.status === 'win' ? 'badge-green' : 'badge-red'}`}>
-                        {tr.status === 'win' ? t('win')?.toUpperCase() : t('lose')?.toUpperCase()}
-                      </span>
+        <div style={ST.head}>
+          <div>
+            <div style={ST.title}>Leaderboard</div>
+            <div style={ST.sub}>Ranked by a combined score: 40% win rate + 30% total trades + 30% winning volume.</div>
+          </div>
+          <button style={ST.btn} onClick={reload}>↻ Refresh</button>
+        </div>
+
+        {loading ? (
+          <div style={ST.info}>Loading ranking…</div>
+        ) : error ? (
+          <div style={ST.err}>{error}</div>
+        ) : rows.length === 0 ? (
+          <div style={ST.info}>No trades recorded yet.</div>
+        ) : (
+          <div>
+            <Podium top={top3} />
+            <table style={ST.table}>
+              <thead>
+                <tr>
+                  <th style={ST.thL}>Rank</th>
+                  <th style={ST.thL}>User</th>
+                  <th style={ST.thR}>Win rate</th>
+                  <th style={ST.thR}>Total trades</th>
+                  <th style={ST.thR}>Winning volume</th>
+                  <th style={ST.thR}>Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((u) => (
+                  <tr key={u.id}>
+                    <td style={ST.td}>
+                      <span style={ST.rankBadge}>{medal(u.rank)}</span>
                     </td>
-                    <td className={`mono bold ${tr.status === 'win' ? 'green' : 'red'}`}>
-                      {tr.status === 'win' ? '+' : '-'}{Math.abs(tr.montant).toFixed(2)}$
-                    </td>
-                    <td className="muted">{{ LON: t('session_lon'), NY: t('session_ny'), ASI: t('session_asi') }[tr.sessions] || tr.sessions}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-ghost" style={{ padding: '3px 8px', fontSize: 11 }}
-                          onClick={() => setEditTrade(tr)}>{t('edit')}</button>
-                        <button className="btn btn-danger" style={{ padding: '3px 8px', fontSize: 11 }}
-                          onClick={() => deleteTrade(id)}>{t('delete')}</button>
+                    <td style={ST.td}>
+                      <div style={ST.userCell}>
+                        <Avatar src={u.profile_pic} name={u.user_name} size={36} />
+                        <span style={ST.uname}>{u.user_name}</span>
                       </div>
                     </td>
+                    <td style={ST.tdR}>{u.win_rate}%</td>
+                    <td style={ST.tdR}>{u.total_trades}</td>
+                    <td style={ST.tdR}>{u.sum_win}</td>
+                    <td style={ST.tdR}><span style={ST.scorePill}>{u.score}</span></td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="pagination">
-          <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>{t('prev')}</button>
-          <span className="page-info">{t('page_of')} {page} {t('of')} {totalPages} · {total} {t('total_trades_label')}</span>
-          <button className="btn btn-ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>{t('next')}</button>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
-      {editTrade && <EditModal trade={editTrade} onClose={() => setEditTrade(null)} onSave={saveEdit} />}
     </div>
   );
 }
 
-function EditModal({ trade, onClose, onSave }) {
-  const { t } = useLang();
-  const [form, setForm] = useState({
-    marcher: trade.marcher || '',
-    type_trd: trade.type_trd || 'buy',
-    point_entree: trade.point_entree || 0,
-    point_sortie: trade.point_sortie || 0,
-    montant: trade.montant || 0,
-    nbr_contrat: trade.nbr_contrat || 1,
-    qty_type: trade.qty_type || 'contract mini',
-    status: trade.status || 'win',
-    type_close: trade.type_close || 'Target',
-    sessions: trade.sessions || 'LON',
-  });
-  const [newImage, setNewImage]   = useState(null);
-  const [preview, setPreview]     = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const existingImg = trade.path || trade.image || null;
+// ── Login pop-up shown to admins & users on connect ────────────
+export function RankingPopup() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [open, setOpen] = React.useState(false);
+  const [rows, setRows] = React.useState([]);
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  async function handleSave() {
-    let body = { ...form };
-    if (newImage) {
-      setUploading(true);
-      try {
-        const upRes = await api.uploadFile('/upload', newImage);
-        if (upRes?.success) {
-          body.image      = upRes.data.url;
-          body.image_name = upRes.data.image_name || newImage.name;
+  React.useEffect(() => {
+    if (!user) return;
+    if (user.role !== 'admin') return; // ranking popup is admin-only
+    if (sessionStorage.getItem('tj_ranking_seen')) return;
+    api
+      .get('/ranking')
+      .then((r) => {
+        if (r && r.success) {
+          const list = (r.data && r.data.ranking) || [];
+          setRows(list);
+          if (list.length > 0) setOpen(true);
         }
-      } catch (e) { console.error('Image upload failed:', e); }
-      setUploading(false);
-    }
-    onSave(body);
-  }
+        sessionStorage.setItem('tj_ranking_seen', '1');
+      })
+      .catch(() => {});
+  }, [user]);
 
+  if (!open) return null;
+  const top = rows.slice(0, 5);
+  const isAdmin = user && user.role === 'admin';
+  const ST = {
+    backdrop: {
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.66)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 4000,
+      padding: 16,
+    },
+    modal: {
+      width: 'min(440px, 95vw)',
+      background: '#15171c',
+      border: '1px solid rgba(255,255,255,0.12)',
+      borderRadius: 16,
+      padding: 20,
+      boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+    },
+    title: { fontSize: 20, fontWeight: 800, textAlign: 'center', marginBottom: 2 },
+    sub: { textAlign: 'center', opacity: 0.65, fontSize: 13, marginBottom: 14 },
+    row: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '10px 12px',
+      borderRadius: 10,
+      marginBottom: 8,
+      background: 'rgba(255,255,255,0.04)',
+    },
+    rowTop: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '10px 12px',
+      borderRadius: 10,
+      marginBottom: 8,
+      background: 'rgba(212,175,55,0.10)',
+      border: '1px solid rgba(212,175,55,0.35)',
+    },
+    rank: { fontWeight: 800, width: 30, textAlign: 'center', fontSize: 16 },
+    nameWrap: { fontWeight: 700, flex: 1, overflow: 'hidden' },
+    nameText: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+    meta: { fontSize: 12, opacity: 0.7, fontWeight: 400 },
+    score: { fontWeight: 800, color: COLORS.gold },
+    actions: { display: 'flex', gap: 10, marginTop: 8 },
+    btnGhost: { flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'transparent', color: 'inherit', cursor: 'pointer', fontWeight: 700 },
+  };
+  const btnPrimary = { flex: 1, padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 700, background: COLORS.gold, color: '#111' };
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="card" style={{ width: 560, maxHeight: '92vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-          <div style={{ fontWeight: 700 }}>{t('edit_trade')} #{trade.id_trade || trade.id}</div>
-          <button className="btn btn-ghost" style={{ padding: '3px 8px' }} onClick={onClose}>✕</button>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {[
-            [t('market'), 'marcher', 'text'],
-            [t('entry'),  'point_entree', 'number'],
-            [t('col_close'), 'point_sortie', 'number'],
-            [t('amount'), 'montant', 'number'],
-            [t('qty'),    'nbr_contrat', 'number'],
-          ].map(([label, key, type]) => (
-            <div key={key} className="form-group">
-              <label className="form-label">{label}</label>
-              <input className="input" type={type} value={form[key]}
-                onChange={e => set(key, type === 'number' ? parseFloat(e.target.value) : e.target.value)} />
+    <div style={ST.backdrop} onClick={() => setOpen(false)}>
+      <div className="ranking-pop" style={ST.modal} onClick={(e) => e.stopPropagation()}>
+        <div style={ST.title}>🏆 Top Traders</div>
+        <div style={ST.sub}>Ranked by win rate, total trades & winning volume</div>
+        {top.map((u) => (
+          <div key={u.id} style={u.rank <= 3 ? ST.rowTop : ST.row}>
+            <span style={ST.rank}>{medal(u.rank)}</span>
+            <Avatar src={u.profile_pic} name={u.user_name} size={38} />
+            <div style={ST.nameWrap}>
+              <div style={ST.nameText}>{u.user_name}</div>
+              <div style={ST.meta}>{u.win_rate}% WR · {u.total_trades} trades</div>
             </div>
-          ))}
-          {[
-            [t('type'),     'type_trd',   ['buy', 'sell']],
-            [t('status'),   'status',     ['win', 'lose']],
-            [t('close_by'), 'type_close', [t('target'), t('stop_loss'), t('manual')]],
-            [t('session'),  'sessions',   ['LON', 'NY', 'ASI']],
-          ].map(([label, key, opts]) => (
-            <div key={key} className="form-group">
-              <label className="form-label">{label}</label>
-              {key === 'sessions' ? (
-                <select className="select" value={form[key]} onChange={e => set(key, e.target.value)}>
-                  <option value="LON">{t('session_lon')}</option>
-                  <option value="NY">{t('session_ny')}</option>
-                  <option value="ASI">{t('session_asi')}</option>
-                </select>
-              ) : (
-                <select className="select" value={form[key]} onChange={e => set(key, e.target.value)}>
-                  {opts.map(o => <option key={o}>{o}</option>)}
-                </select>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div style={{ marginTop: 20 }}>
-          <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>
-            {t('screenshot')}
-          </label>
-          {existingImg && !preview && (
-            <div style={{ marginBottom: 10 }}>
-              <img src={existingImg} alt="Trade screenshot"
-                style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8,
-                  border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
-                onClick={() => window.open(existingImg, '_blank')} />
-              <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 4 }}>{t('current_screenshot')}</div>
-            </div>
-          )}
-          {preview && (
-            <div style={{ marginBottom: 10 }}>
-              <img src={preview} alt="New screenshot"
-                style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8,
-                  border: '1px solid rgba(0,230,118,0.3)' }} />
-              <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4 }}>
-                {t('new_img_selected')}: {newImage?.name}
-              </div>
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <label style={{ cursor: 'pointer', flex: 1 }}>
-              <div className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }}
-                onClick={() => document.getElementById('edit-img-input').click()}>
-                {newImage ? t('change_image') : existingImg ? t('replace_screenshot') : t('add_screenshot')}
-              </div>
-              <input id="edit-img-input" type="file" accept="image/*" style={{ display: 'none' }}
-                onChange={e => {
-                  const f = e.target.files[0];
-                  if (f) { setNewImage(f); setPreview(URL.createObjectURL(f)); }
-                }} />
-            </label>
-            {(newImage || (existingImg && !preview)) && (
-              <button className="btn btn-danger" style={{ padding: '6px 12px', fontSize: 12 }}
-                onClick={() => { setNewImage(null); setPreview(null); setForm(f => ({ ...f, image: '', image_name: '' })); }}>
-                {t('remove')}
-              </button>
-            )}
+            <span style={ST.score}>{u.score}</span>
           </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-          <button className="btn btn-ghost" onClick={onClose}>{t('cancel')}</button>
-          <button className="btn btn-primary" disabled={uploading} onClick={handleSave}>
-            {uploading ? t('uploading') : t('save_changes')}
+        ))}
+        <div style={ST.actions}>
+          {isAdmin ? (
+            <button
+              style={btnPrimary}
+              onClick={() => {
+                setOpen(false);
+                navigate('/ranking');
+              }}
+            >
+              View full ranking
+            </button>
+          ) : null}
+          <button style={ST.btnGhost} onClick={() => setOpen(false)}>
+            Close
           </button>
         </div>
       </div>
     </div>
   );
 }
+
+// ── Twitter-style profile photo viewer (view / change) ───────
+export function PhotoViewModal({ avatarSrc, initials, userName, onClose, onChange }) {
+  const ST = {
+    backdrop: {
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.82)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 4200,
+      padding: 20,
+    },
+    close: {
+      position: 'absolute',
+      top: 16,
+      right: 20,
+      fontSize: 30,
+      lineHeight: 1,
+      color: '#fff',
+      background: 'transparent',
+      border: 'none',
+      cursor: 'pointer',
+    },
+    photo: {
+      width: 'min(360px, 80vw)',
+      height: 'min(360px, 80vw)',
+      borderRadius: '50%',
+      objectFit: 'cover',
+      boxShadow: '0 10px 50px rgba(0,0,0,0.6)',
+      background: 'rgba(255,255,255,0.08)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 90,
+      fontWeight: 800,
+      color: '#fff',
+      border: '3px solid rgba(255,255,255,0.15)',
+    },
+    name: { color: '#fff', marginTop: 16, fontSize: 18, fontWeight: 700 },
+    actions: { display: 'flex', gap: 12, marginTop: 18 },
+    btn: { padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 700, background: '#22c55e', color: '#062b12' },
+    btnGhost: { padding: '10px 18px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.3)', background: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 700 },
+  };
+  const stop = (e) => e.stopPropagation();
+  return (
+    <div style={ST.backdrop} onClick={onClose}>
+      <button style={ST.close} onClick={onClose} aria-label="Close">×</button>
+      {avatarSrc ? (
+        <img src={avatarSrc} alt={userName} style={ST.photo} onClick={stop} />
+      ) : (
+        <div style={ST.photo} onClick={stop}>{initials}</div>
+      )}
+      <div style={ST.name} onClick={stop}>{userName}</div>
+      <div style={ST.actions} onClick={stop}>
+        <button
+          style={ST.btn}
+          onClick={() => {
+            onClose();
+            if (onChange) onChange();
+          }}
+        >
+          Change photo
+        </button>
+        {avatarSrc ? (
+          <button style={ST.btnGhost} onClick={() => window.open(avatarSrc, '_blank')}>
+            Open full size
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export default Ranking;

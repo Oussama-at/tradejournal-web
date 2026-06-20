@@ -1,48 +1,117 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-// ── Colours per alert type ────────────────────────────────
+// Auto-dismiss countdown (seconds)
+const AUTO_DISMISS_SEC = 5;
+
+// Colours per alert type
 const TYPE_STYLES = {
-  info:    { bg: 'rgba(0,180,255,0.13)',  border: '#00b4ff', icon: 'ℹ',  text: '#7dd6f7' },
-  warning: { bg: 'rgba(255,180,0,0.13)', border: '#ffb400', icon: '⚠',  text: '#ffd060' },
-  success: { bg: 'rgba(0,230,118,0.13)', border: '#00e676', icon: '✓',  text: '#00e676' },
-  danger:  { bg: 'rgba(244,67,54,0.13)', border: '#f44336', icon: '✕',  text: '#f77066' },
+  info:    { bg: 'linear-gradient(135deg, rgba(0,180,255,0.18), rgba(0,180,255,0.07))', border: '#00b4ff', icon: 'ℹ', text: '#bde9fb', bar: '#00b4ff' },
+  warning: { bg: 'linear-gradient(135deg, rgba(255,180,0,0.18), rgba(255,180,0,0.07))', border: '#ffb400', icon: '⚠', text: '#ffe2a6', bar: '#ffb400' },
+  success: { bg: 'linear-gradient(135deg, rgba(0,230,118,0.18), rgba(0,230,118,0.07))', border: '#00e676', icon: '✓', text: '#9af5c4', bar: '#00e676' },
+  danger:  { bg: 'linear-gradient(135deg, rgba(244,67,54,0.18), rgba(244,67,54,0.07))', border: '#f44336', icon: '✕', text: '#ffb3ac', bar: '#f44336' },
 };
 
-// ── Single banner item ────────────────────────────────────
-function Banner({ alert, onDismiss }) {
+// Single floating toast with a 5s countdown
+function Toast({ alert, onDismiss }) {
   const s = TYPE_STYLES[alert.type] || TYPE_STYLES.info;
+  const [remaining, setRemaining] = useState(AUTO_DISMISS_SEC);
+  const [leaving, setLeaving] = useState(false);
+  const closedRef = useRef(false);
+
+  const close = useCallback(() => {
+    if (closedRef.current) return;
+    closedRef.current = true;
+    setLeaving(true);
+    setTimeout(() => onDismiss(alert.id), 260);
+  }, [alert.id, onDismiss]);
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setRemaining(r => {
+        if (r <= 1) { clearInterval(tick); close(); return 0; }
+        return r - 1;
+      });
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [close]);
+
+  const pct = (remaining / AUTO_DISMISS_SEC) * 100;
+
+  const wrapStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    minWidth: 280,
+    maxWidth: 380,
+    padding: '10px 12px 13px',
+    borderRadius: 12,
+    background: s.bg,
+    border: `1px solid ${s.border}`,
+    borderLeft: `4px solid ${s.border}`,
+    boxShadow: '0 14px 36px rgba(0,0,0,0.45)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
+    color: s.text,
+    position: 'relative',
+    overflow: 'hidden',
+    animation: leaving
+      ? 'alertJumpOut .25s ease forwards'
+      : 'alertJumpIn .45s cubic-bezier(.22,1.4,.5,1) both',
+  };
+  const iconStyle = { fontSize: 18, lineHeight: 1, flexShrink: 0 };
+  const msgStyle = { flex: 1, fontSize: 13.5, fontWeight: 600, lineHeight: 1.35 };
+  const countStyle = {
+    flexShrink: 0,
+    width: 22,
+    height: 22,
+    borderRadius: '50%',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 11,
+    fontWeight: 800,
+    color: s.border,
+    border: `1.5px solid ${s.border}`,
+  };
+  const closeStyle = {
+    flexShrink: 0,
+    background: 'transparent',
+    border: 'none',
+    color: s.text,
+    cursor: 'pointer',
+    fontSize: 17,
+    lineHeight: 1,
+    opacity: 0.8,
+    padding: 2,
+  };
+  const barStyle = {
+    position: 'absolute',
+    left: 0,
+    bottom: 0,
+    height: 3,
+    width: `${pct}%`,
+    background: s.bar,
+    transition: 'width 1s linear',
+    opacity: 0.9,
+  };
+
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      padding: '10px 18px',
-      background: s.bg,
-      borderLeft: `3px solid ${s.border}`,
-      borderBottom: '1px solid rgba(255,255,255,0.05)',
-      animation: 'alertSlideIn 0.3s ease',
-    }}>
-      <span style={{ fontSize: 16, color: s.border, flexShrink: 0 }}>{s.icon}</span>
-      <span style={{ flex: 1, fontSize: 13, color: '#dce8f0', lineHeight: 1.45 }}>
-        {alert.message}
-      </span>
-      <button
-        onClick={() => onDismiss(alert.id)}
-        style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          color: '#7a8a9a', fontSize: 16, lineHeight: 1, padding: '0 2px',
-          flexShrink: 0,
-        }}
-        title="Dismiss"
-      >×</button>
+    <div style={wrapStyle}>
+      <span style={iconStyle}>{s.icon}</span>
+      <span style={msgStyle}>{alert.message}</span>
+      <span style={countStyle}>{remaining}</span>
+      <button onClick={close} title="Close" style={closeStyle}>×</button>
+      <div style={barStyle} />
     </div>
   );
 }
 
-// ── Main component ────────────────────────────────────────
+// Main component
 export default function AlertBanner() {
   const { user } = useAuth();
-  const [alerts, setAlerts]       = useState([]);
+  const [alerts, setAlerts] = useState([]);
   const [dismissed, setDismissed] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('dismissed_alerts') || '[]'); }
     catch { return []; }
@@ -57,30 +126,54 @@ export default function AlertBanner() {
 
   useEffect(() => {
     fetchAlerts();
-    const id = setInterval(fetchAlerts, 60_000); // refresh every minute
+    const id = setInterval(fetchAlerts, 60000); // refresh every minute
     return () => clearInterval(id);
   }, [fetchAlerts]);
 
   const handleDismiss = (id) => {
-    const next = [...dismissed, id];
-    setDismissed(next);
-    try { sessionStorage.setItem('dismissed_alerts', JSON.stringify(next)); } catch {}
+    setDismissed(prev => {
+      const next = prev.includes(id) ? prev : [...prev, id];
+      try { sessionStorage.setItem('dismissed_alerts', JSON.stringify(next)); } catch {}
+      return next;
+    });
   };
 
   const visible = alerts.filter(a => !dismissed.includes(a.id));
   if (!visible.length) return null;
 
+  const containerStyle = {
+    position: 'fixed',
+    top: 16,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 5000,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+    alignItems: 'center',
+    maxWidth: '92vw',
+    pointerEvents: 'none',
+  };
+  const itemStyle = { pointerEvents: 'auto' };
+
   return (
     <>
       <style>{`
-        @keyframes alertSlideIn {
-          from { opacity: 0; transform: translateY(-6px); }
-          to   { opacity: 1; transform: translateY(0); }
+        @keyframes alertJumpIn {
+          0%   { opacity: 0; transform: translateY(-26px) scale(.9); }
+          60%  { opacity: 1; transform: translateY(4px) scale(1.02); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes alertJumpOut {
+          from { opacity: 1; transform: translateY(0) scale(1); }
+          to   { opacity: 0; transform: translateY(-16px) scale(.92); }
         }
       `}</style>
-      <div style={{ width: '100%' }}>
+      <div style={containerStyle}>
         {visible.map(a => (
-          <Banner key={a.id} alert={a} onDismiss={handleDismiss} />
+          <div key={a.id} style={itemStyle}>
+            <Toast alert={a} onDismiss={handleDismiss} />
+          </div>
         ))}
       </div>
     </>

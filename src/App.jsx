@@ -45,7 +45,7 @@ function isExpired(sub) {
 
 // ── Protected app shell ──────────────────────────────────
 function AppLayout() {
-  const { user, sub } = useAuth();
+  const { user, sub, loading } = useAuth();
   const [capInfo, setCapInfo] = useState(null);
 
   useEffect(() => {
@@ -60,6 +60,10 @@ function AppLayout() {
     }
   }, [user]);
 
+  // Wait for auth to initialize before deciding the user is logged out,
+  // otherwise a page refresh/deep-link to a protected route bounces to /login
+  // (and then back to the dashboard) before the session is restored.
+  if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
 
   // If user is blocked or subscription expired → show blocked page
