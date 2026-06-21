@@ -96,7 +96,17 @@ function DetailsModal({ row, onClose }) {
         <DetailRow label="Preferences"><YesNo on={row.preferences} /></DetailRow>
         <DetailRow label="Saved login"><YesNo on={row.saved_login} /></DetailRow>
         <DetailRow label="IP address">{row.ip_address || '—'}</DetailRow>
-        <DetailRow label="Browser"><span style={uaValue}>{row.user_agent || '—'}</span></DetailRow>
+        <DetailRow label="Device">{row.device_type || '—'}</DetailRow>
+        <DetailRow label="OS">{row.os || '—'}</DetailRow>
+        <DetailRow label="Browser">{row.browser || '—'}</DetailRow>
+        <DetailRow label="Screen">{row.screen_size || '—'}</DetailRow>
+        <DetailRow label="Timezone">{row.timezone || '—'}</DetailRow>
+        <DetailRow label="Language">{row.lang || '—'}</DetailRow>
+        <DetailRow label="Country">{row.country || '—'}</DetailRow>
+        <DetailRow label="City">{row.city || '—'}</DetailRow>
+        <DetailRow label="Page URL"><span style={uaValue}>{row.page_url || '—'}</span></DetailRow>
+        <DetailRow label="Referrer"><span style={uaValue}>{row.referrer || '—'}</span></DetailRow>
+        <DetailRow label="User-agent"><span style={uaValue}>{row.user_agent || '—'}</span></DetailRow>
       </div>
     </div>
   );
@@ -139,7 +149,7 @@ export default function CookieConsents() {
   }, [auto, load]);
 
   const downloadCSV = useCallback(() => {
-    const headers = ['When', 'User', 'Visitor ID', 'Decision', 'Necessary', 'Analytics', 'Preferences', 'Saved login', 'IP', 'Browser'];
+    const headers = ['When', 'User', 'Visitor ID', 'Decision', 'Necessary', 'Analytics', 'Preferences', 'Saved login', 'IP', 'Device', 'OS', 'Browser', 'Screen', 'Timezone', 'Language', 'Country', 'City', 'Page URL', 'Referrer', 'User-agent'];
     const esc = (v) => '"' + (v == null ? '' : String(v)).replace(/"/g, '""') + '"';
     const lines = [headers.join(',')];
     rows.forEach(r => {
@@ -153,6 +163,16 @@ export default function CookieConsents() {
         r.preferences ? 'Yes' : 'No',
         r.saved_login ? 'Yes' : 'No',
         r.ip_address || '',
+        r.device_type || '',
+        r.os || '',
+        r.browser || '',
+        r.screen_size || '',
+        r.timezone || '',
+        r.lang || '',
+        r.country || '',
+        r.city || '',
+        r.page_url || '',
+        r.referrer || '',
         r.user_agent || '',
       ].map(esc).join(','));
     });
@@ -211,6 +231,8 @@ export default function CookieConsents() {
                   <th style={thStyle}>Preferences</th>
                   <th style={thStyle}>Saved login</th>
                   <th style={thStyle}>IP</th>
+                  <th style={thStyle}>Device</th>
+                  <th style={thStyle}>Location</th>
                   <th style={thStyle}></th>
                 </tr>
               </thead>
@@ -224,6 +246,8 @@ export default function CookieConsents() {
                     <td style={tdStyle}><YesNo on={r.preferences} /></td>
                     <td style={tdStyle}><YesNo on={r.saved_login} /></td>
                     <td style={tdStyle}><span style={ipStyle}>{r.ip_address || '—'}</span></td>
+                    <td style={tdStyle}>{r.device_type || '—'}</td>
+                    <td style={tdStyle}><span style={ipStyle}>{[r.city, r.country].filter(Boolean).join(', ') || '—'}</span></td>
                     <td style={tdStyle}><button style={detailBtnStyle} onClick={() => setSelected(r)}>Details</button></td>
                   </tr>
                 ))}

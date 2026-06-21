@@ -89,6 +89,20 @@ export default function CookieBanner() {
     }
   }
 
+  function clientMeta() {
+    try {
+      return {
+        page_url: window.location.href,
+        referrer: document.referrer || null,
+        lang: localStorage.getItem('lang') || document.documentElement.lang || null,
+        screen_size: (window.screen && window.screen.width) ? (window.screen.width + 'x' + window.screen.height) : null,
+        timezone: (typeof Intl !== 'undefined' && Intl.DateTimeFormat) ? Intl.DateTimeFormat().resolvedOptions().timeZone : null,
+      };
+    } catch (e) {
+      return {};
+    }
+  }
+
   function logConsent(c, decision) {
     try {
       api.post('/cookie-consent', {
@@ -98,6 +112,7 @@ export default function CookieBanner() {
         preferences: !!c.preferences,
         savedLogin: !!c.savedLogin,
         decision,
+        ...clientMeta(),
       }).catch(() => {});
     } catch (e) {}
   }
