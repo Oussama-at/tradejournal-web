@@ -1,49 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import api from '../services/api';
+import React, { useState, useEffect } from 'react';
 import { useLang } from '../lang/LangContext';
-import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
 
-// Real trades listing page.
-// NOTE: Trades.jsx used to be an accidental duplicate of Ranking.jsx, which is
-// why clicking "Trades" opened the leaderboard. This is the proper trades
-// table, backed by real /trades data.
-
-const SESSION_LABELS = { LON: 'London', NY: 'New York', ASI: 'Asia' };
-
-const SORT_KEYS = [
-  'date_trade', 'marcher', 'type_trd', 'status',
-  'point_entree', 'point_sortie', 'montant', 'sessions',
-];
-
-const ST = {
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
-  toolbar: { display: 'flex', gap: 8, flexWrap: 'wrap' },
-  block: { marginBottom: 16 },
-  filterRow: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' },
-  search: { flex: 1, minWidth: 200 },
-  thInner: { display: 'inline-flex', alignItems: 'center', gap: 4 },
-  arrow: { opacity: 0.5, fontSize: 11 },
-  spacerTh: { width: 44 },
-  numCell: { textAlign: 'right' },
-  market: { fontWeight: 600 },
-  delBtn: { padding: '4px 8px' },
-  empty: { textAlign: 'center', padding: 24, opacity: 0.6 },
-  errCell: { textAlign: 'center', padding: 24, color: '#f87171' },
-};
-
-function thStyle(align) {
-  return { textAlign: align || 'left', cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' };
-}
-
-function SortableTh({ children, colIdx, sortCol, sortDir, onSort, align }) {
-  const active = sortCol === colIdx;
+// Inline sortable headers for Trades table
+function SortableTh({ label, colIdx, sortCol, sortDir, onSort }) {
+  const isActive = sortCol === colIdx;
   return (
-    <th onClick={() => onSort(colIdx)} style={thStyle(align)}>
-      <span style={ST.thInner}>
-        {children}
-        <span style={ST.arrow}>
-          {active ? (sortDir === 'asc' ? '\u25B2' : '\u25BC') : '\u21C5'}
+    <th onClick={() => onSort(colIdx)} style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {label}
+        <span style={{ fontSize: 10, opacity: isActive ? 1 : 0.3, color: isActive ? 'var(--green)' : 'inherit' }}>
+          {isActive ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
         </span>
       </span>
     </th>
@@ -52,195 +20,317 @@ function SortableTh({ children, colIdx, sortCol, sortDir, onSort, align }) {
 
 export default function Trades() {
   const { t } = useLang();
-  const navigate = useNavigate();
-  const confirm = useConfirm();
-
-  const [trades, setTrades]   = useState([]);
+  const showConfirm = useConfirm();
+  const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState('');
-  const [search, setSearch]   = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // all | win | lose
-  const [sortCol, setSortCol] = useState(0);
-  const [sortDir, setSortDir] = useState('desc');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [filters, setFilters] = useState({ type: 'All', status: 'All', period: 'All', search: '' });
+  const [editTrade, setEditTrade] = useState(null);
 
-  const load = useCallback(() => {
+  const PERIODS = [
+    { val: 'All',        label: t('all') },
+    { val: 'Today',      label: t('today') },
+    { val: 'This Week',  label: t('this_week') },
+    { val: 'This Month', label: t('this_month') },
+    { val: 'Last Month', label: t('last_month') },
+  ];
+
+  useEffect(() => { load(); }, [page, filters]);
+
+  async function load() {
     setLoading(true);
-    setError('');
-    api.get('/trades?page=1&limit=9999')
-      .then(r => {
-        const list = r?.data?.trades || r?.data || [];
-        setTrades(Array.isArray(list) ? list : []);
-      })
-      .catch(() => setError(t('failed_load') || 'Failed to load trades'))
-      .finally(() => setLoading(false));
-  }, [t]);
+    try {
+      let url = `/trades?page=${page}&limit=50`;
+      if (filters.search) url += `&market=${encodeURIComponent(filters.search)}`;
+      if (filters.type !== 'All') url += `&type=${filters.type.toLowerCase()}`;
+      if (filters.status !== 'All') url += `&status=${filters.status.toLowerCase()}`;
+      if (filters.period === 'Today') url += '&filter=Daily';
+      else if (filters.period === 'This Week') url += '&filter=Weekly';
+      else if (filters.period === 'This Month') url += '&filter=Monthly';
+      else if (filters.period === 'Last Month') url += '&filter=LastMonth';
 
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    const handler = () => load();
-    window.addEventListener('trade-saved', handler);
-    return () => window.removeEventListener('trade-saved', handler);
-  }, [load]);
-
-  function handleSort(idx) {
-    if (sortCol === idx) {
-      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortCol(idx);
-      setSortDir('asc');
-    }
+      const res = await api.get(url);
+      setTrades(res?.data?.trades || []);
+      setTotal(res?.data?.total || 0);
+      setTotalPages(Math.max(1, Math.ceil((res?.data?.total || 0) / 50)));
+    } catch (e) { console.error(e); }
+    setLoading(false);
   }
 
-  async function removeTrade(tr) {
-    const id = tr.id_trade || tr.id;
-    if (!id) return;
-    const ok = await confirm({
-      title: t('delete') || 'Delete trade',
-      message: (t('confirm_delete_trade') || 'Delete this trade? This cannot be undone.'),
-      confirmText: t('delete') || 'Delete',
-      danger: true,
+  async function deleteTrade(id) {
+    const ok = await showConfirm({
+      title: `${t('delete')} #${id}?`,
+      message: t('delete_trade_confirm') || 'This trade will be permanently removed.',
+      type: 'danger', confirmLabel: t('delete'), cancelLabel: t('cancel'),
     });
     if (!ok) return;
     await api.delete(`/trades/${id}`);
     load();
   }
 
-  const filtered = trades.filter(tr => {
-    if (statusFilter !== 'all' && tr.status !== statusFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      const hay = `${tr.marcher || ''} ${tr.type_trd || ''} ${tr.sessions || ''} ${tr.date_trade || ''}`.toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    return true;
-  });
+  async function saveEdit(body) {
+    await api.put(`/trades/${editTrade.id_trade || editTrade.id}`, body);
+    setEditTrade(null);
+    load();
+  }
 
-  const sorted = [...filtered].sort((a, b) => {
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
+
+  function handleSort(idx) {
+    if (sortCol === idx) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else if (sortDir === 'desc') { setSortCol(null); setSortDir('asc'); }
+    } else { setSortCol(idx); setSortDir('asc'); }
+  }
+
+  const SORT_KEYS = ['id', 'date_trade', 'marcher', 'type_trd', 'point_entree', 'point_sortie', 'nbr_contrat', 'status', 'montant', 'sessions'];
+  const sortedTrades = sortCol === null ? trades : [...trades].sort((a, b) => {
     const key = SORT_KEYS[sortCol];
+    if (!key) return 0;
     const av = a[key] ?? '';
     const bv = b[key] ?? '';
-    const cmp = (typeof av === 'number' && typeof bv === 'number')
-      ? av - bv
-      : String(av).localeCompare(String(bv));
+    const cmp = typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv));
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
-  // Summary across the filtered set (real data)
-  const summary = filtered.reduce((acc, tr) => {
-    if (tr.status === 'win') { acc.wins++; acc.net += Math.abs(tr.montant || 0); }
-    else { acc.losses++; acc.net -= Math.abs(tr.montant || 0); }
-    return acc;
-  }, { wins: 0, losses: 0, net: 0 });
-  const total   = summary.wins + summary.losses;
-  const winRate = total > 0 ? (summary.wins / total * 100) : 0;
-  const fmt = (v) => (v >= 0 ? '+' : '-') + Math.abs(v).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '$';
-
-  const headers = [
-    t('col_date') || 'Date', t('col_market') || 'Market', t('col_type') || 'Type',
-    t('col_status') || 'Status', t('col_entry') || 'Entry', t('col_close') || 'Close',
-    t('col_amount') || 'Amount', t('col_session') || 'Session',
-  ];
+  // Auto-refresh when a new trade is saved from AddTrade page
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    window.addEventListener('trade-saved', load);
+    return () => window.removeEventListener('trade-saved', load);
+  }, [page, filters]);
 
   return (
     <div>
-      <div className="page-header" style={ST.header}>
-        <div>
-          <div className="page-title">{t('nav_trades') || 'Trades'}</div>
-          <div className="page-sub">{filtered.length} {t('trades') || 'trades'}</div>
-        </div>
-        <div style={ST.toolbar}>
-          <button className="btn btn-primary" onClick={() => navigate('/add-trade')}>+ {t('nav_add_trade') || 'Add Trade'}</button>
-          <button className="btn btn-ghost" onClick={load}>{'\u21BA '}{t('refresh') || 'Refresh'}</button>
-        </div>
-      </div>
-
-      {/* Summary stat cards (real data) */}
-      <div className="grid-4" style={ST.block}>
-        <div className="stat-card">
-          <div className="stat-label">{t('total_trades') || 'Total trades'}</div>
-          <div className="stat-value">{total}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">{t('win_rate') || 'Win rate'}</div>
-          <div className="stat-value">{winRate.toFixed(1)}%</div>
-          <div className="stat-sub">{summary.wins}W / {summary.losses}L</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">{t('net_pnl') || 'Net P&L'}</div>
-          <div className={`stat-value mono ${summary.net >= 0 ? 'green' : 'red'}`}>{fmt(summary.net)}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">{t('wins') || 'Wins'}</div>
-          <div className="stat-value green">{summary.wins}</div>
-        </div>
+      <div className="page-header">
+        <div className="page-title">{t('trades_title')}</div>
+        <div className="page-sub">{total} {t('total_trades_label')}</div>
       </div>
 
       {/* Filters */}
-      <div className="card" style={ST.block}>
-        <div style={ST.filterRow}>
-          <input
-            className="input"
-            style={ST.search}
-            placeholder={(t('search') || 'Search') + '\u2026'}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <select className="select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="all">{t('all') || 'All'}</option>
-            <option value="win">{t('win') || 'Win'}</option>
-            <option value="lose">{t('lose') || 'Lose'}</option>
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <input className="input" placeholder={t('search_market')} value={filters.search}
+              onChange={e => { setFilters(f => ({ ...f, search: e.target.value })); setPage(1); }} />
+          </div>
+          <select className="select" style={{ width: 'auto' }} value={filters.type}
+            onChange={e => { setFilters(f => ({ ...f, type: e.target.value })); setPage(1); }}>
+            {[{ val: 'All', lbl: t('all') }, { val: 'Buy', lbl: t('buy') }, { val: 'Sell', lbl: t('sell') }]
+              .map(o => <option key={o.val} value={o.val}>{o.lbl}</option>)}
           </select>
+          <select className="select" style={{ width: 'auto' }} value={filters.status}
+            onChange={e => { setFilters(f => ({ ...f, status: e.target.value })); setPage(1); }}>
+            {[{ val: 'All', lbl: t('all') }, { val: 'Win', lbl: t('win') }, { val: 'Lose', lbl: t('lose') }]
+              .map(o => <option key={o.val} value={o.val}>{o.lbl}</option>)}
+          </select>
+          <select className="select" style={{ width: 'auto' }} value={filters.period}
+            onChange={e => { setFilters(f => ({ ...f, period: e.target.value })); setPage(1); }}>
+            {PERIODS.map(p => <option key={p.val} value={p.val}>{p.label}</option>)}
+          </select>
+          <button className="btn btn-ghost" onClick={() => { setFilters({ type: 'All', status: 'All', period: 'All', search: '' }); setPage(1); }}>
+            {t('reset')}
+          </button>
         </div>
       </div>
 
-      {/* Trades table */}
       <div className="card">
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                {headers.map((h, i) => (
-                  <SortableTh key={h} colIdx={i} sortCol={sortCol} sortDir={sortDir} onSort={handleSort}
-                    align={i >= 4 ? 'right' : 'left'}>
-                    {h}
-                  </SortableTh>
+                {['#', t('col_date'), t('col_market'), t('col_type'), t('col_entry'),
+                  t('col_close'), t('col_qty'), t('col_status'), t('col_amount'), t('col_session')].map((h, i) => (
+                  <SortableTh key={h} label={h} colIdx={i} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
                 ))}
-                <th style={ST.spacerTh}></th>
+                <th>{t('col_actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {loading && (
-                <tr><td colSpan={9} style={ST.empty}>{t('loading') || 'Loading\u2026'}</td></tr>
-              )}
-              {!loading && error && (
-                <tr><td colSpan={9} style={ST.errCell}>{error}</td></tr>
-              )}
-              {!loading && !error && sorted.length === 0 && (
-                <tr><td colSpan={9} style={ST.empty}>{t('no_trades') || 'No trades recorded yet.'}</td></tr>
-              )}
-              {!loading && !error && sorted.map(tr => (
-                <tr key={tr.id_trade || tr.id}>
-                  <td className="muted">{tr.date_trade}</td>
-                  <td style={ST.market}>{tr.marcher}</td>
-                  <td className={tr.type_trd === 'buy' ? 'green bold' : 'red bold'}>{(tr.type_trd || '').toUpperCase()}</td>
-                  <td>
-                    <span className={`badge ${tr.status === 'win' ? 'badge-green' : 'badge-red'}`}>
-                      {tr.status === 'win' ? (t('win') || 'WIN').toUpperCase() : (t('lose') || 'LOSE').toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="mono" style={ST.numCell}>{tr.point_entree}</td>
-                  <td className="mono" style={ST.numCell}>{tr.point_sortie}</td>
-                  <td className={`mono bold ${tr.status === 'win' ? 'green' : 'red'}`} style={ST.numCell}>
-                    {tr.status === 'win' ? '+' : '-'}{Math.abs(tr.montant || 0).toFixed(2)}$
-                  </td>
-                  <td className="muted" style={ST.numCell}>{SESSION_LABELS[tr.sessions] || tr.sessions}</td>
-                  <td style={ST.numCell}>
-                    <button className="btn btn-ghost" style={ST.delBtn} onClick={() => removeTrade(tr)}>{'\u2715'}</button>
-                  </td>
-                </tr>
-              ))}
+              {loading && <tr><td colSpan={11} style={{ textAlign: 'center', padding: 32 }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>}
+              {!loading && trades.length === 0 && <tr><td colSpan={11} style={{ textAlign: 'center', color: 'var(--dim)', padding: 32 }}>{t('no_trades_found')}</td></tr>}
+              {!loading && sortedTrades.map(tr => {
+                const id = tr.id_trade || tr.id;
+                return (
+                  <tr key={id} style={{ background: tr.status === 'win' ? 'rgba(0,230,118,0.025)' : 'rgba(255,71,87,0.025)' }}>
+                    <td className="muted mono" style={{ fontSize: 12 }}>{id}</td>
+                    <td className="muted">{tr.date_trade}</td>
+                    <td style={{ fontWeight: 700 }}>{tr.marcher}</td>
+                    <td className={tr.type_trd === 'buy' ? 'green bold' : 'red bold'}>{tr.type_trd?.toUpperCase()}</td>
+                    <td className="mono">{tr.point_entree}</td>
+                    <td className="mono">{tr.point_sortie}</td>
+                    <td className="mono muted">{tr.nbr_contrat} {tr.qty_type?.includes('lot') ? 'L' : ''}</td>
+                    <td>
+                      <span className={`badge ${tr.status === 'win' ? 'badge-green' : 'badge-red'}`}>
+                        {tr.status === 'win' ? t('win')?.toUpperCase() : t('lose')?.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className={`mono bold ${tr.status === 'win' ? 'green' : 'red'}`}>
+                      {tr.status === 'win' ? '+' : '-'}{Math.abs(tr.montant).toFixed(2)}$
+                    </td>
+                    <td className="muted">{{ LON: t('session_lon'), NY: t('session_ny'), ASI: t('session_asi') }[tr.sessions] || tr.sessions}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-ghost" style={{ padding: '3px 8px', fontSize: 11 }}
+                          onClick={() => setEditTrade(tr)}>{t('edit')}</button>
+                        <button className="btn btn-danger" style={{ padding: '3px 8px', fontSize: 11 }}
+                          onClick={() => deleteTrade(id)}>{t('delete')}</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+        </div>
+        <div className="pagination">
+          <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>{t('prev')}</button>
+          <span className="page-info">{t('page_of')} {page} {t('of')} {totalPages} · {total} {t('total_trades_label')}</span>
+          <button className="btn btn-ghost" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>{t('next')}</button>
+        </div>
+      </div>
+
+      {editTrade && <EditModal trade={editTrade} onClose={() => setEditTrade(null)} onSave={saveEdit} />}
+    </div>
+  );
+}
+
+function EditModal({ trade, onClose, onSave }) {
+  const { t } = useLang();
+  const [form, setForm] = useState({
+    marcher: trade.marcher || '',
+    type_trd: trade.type_trd || 'buy',
+    point_entree: trade.point_entree || 0,
+    point_sortie: trade.point_sortie || 0,
+    montant: trade.montant || 0,
+    nbr_contrat: trade.nbr_contrat || 1,
+    qty_type: trade.qty_type || 'contract mini',
+    status: trade.status || 'win',
+    type_close: trade.type_close || 'Target',
+    sessions: trade.sessions || 'LON',
+  });
+  const [newImage, setNewImage]   = useState(null);
+  const [preview, setPreview]     = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const existingImg = trade.path || trade.image || null;
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  async function handleSave() {
+    let body = { ...form };
+    if (newImage) {
+      setUploading(true);
+      try {
+        const upRes = await api.uploadFile('/upload', newImage);
+        if (upRes?.success) {
+          body.image      = upRes.data.url;
+          body.image_name = upRes.data.image_name || newImage.name;
+        }
+      } catch (e) { console.error('Image upload failed:', e); }
+      setUploading(false);
+    }
+    onSave(body);
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="card" style={{ width: 560, maxHeight: '92vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={{ fontWeight: 700 }}>{t('edit_trade')} #{trade.id_trade || trade.id}</div>
+          <button className="btn btn-ghost" style={{ padding: '3px 8px' }} onClick={onClose}>✕</button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {[
+            [t('market'), 'marcher', 'text'],
+            [t('entry'),  'point_entree', 'number'],
+            [t('col_close'), 'point_sortie', 'number'],
+            [t('amount'), 'montant', 'number'],
+            [t('qty'),    'nbr_contrat', 'number'],
+          ].map(([label, key, type]) => (
+            <div key={key} className="form-group">
+              <label className="form-label">{label}</label>
+              <input className="input" type={type} value={form[key]}
+                onChange={e => set(key, type === 'number' ? parseFloat(e.target.value) : e.target.value)} />
+            </div>
+          ))}
+          {[
+            [t('type'),     'type_trd',   ['buy', 'sell']],
+            [t('status'),   'status',     ['win', 'lose']],
+            [t('close_by'), 'type_close', [t('target'), t('stop_loss'), t('manual')]],
+            [t('session'),  'sessions',   ['LON', 'NY', 'ASI']],
+          ].map(([label, key, opts]) => (
+            <div key={key} className="form-group">
+              <label className="form-label">{label}</label>
+              {key === 'sessions' ? (
+                <select className="select" value={form[key]} onChange={e => set(key, e.target.value)}>
+                  <option value="LON">{t('session_lon')}</option>
+                  <option value="NY">{t('session_ny')}</option>
+                  <option value="ASI">{t('session_asi')}</option>
+                </select>
+              ) : (
+                <select className="select" value={form[key]} onChange={e => set(key, e.target.value)}>
+                  {opts.map(o => <option key={o}>{o}</option>)}
+                </select>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 20 }}>
+          <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>
+            {t('screenshot')}
+          </label>
+          {existingImg && !preview && (
+            <div style={{ marginBottom: 10 }}>
+              <img src={existingImg} alt="Trade screenshot"
+                style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8,
+                  border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
+                onClick={() => window.open(existingImg, '_blank')} />
+              <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 4 }}>{t('current_screenshot')}</div>
+            </div>
+          )}
+          {preview && (
+            <div style={{ marginBottom: 10 }}>
+              <img src={preview} alt="New screenshot"
+                style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8,
+                  border: '1px solid rgba(0,230,118,0.3)' }} />
+              <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4 }}>
+                {t('new_img_selected')}: {newImage?.name}
+              </div>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <label style={{ cursor: 'pointer', flex: 1 }}>
+              <div className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }}
+                onClick={() => document.getElementById('edit-img-input').click()}>
+                {newImage ? t('change_image') : existingImg ? t('replace_screenshot') : t('add_screenshot')}
+              </div>
+              <input id="edit-img-input" type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => {
+                  const f = e.target.files[0];
+                  if (f) { setNewImage(f); setPreview(URL.createObjectURL(f)); }
+                }} />
+            </label>
+            {(newImage || (existingImg && !preview)) && (
+              <button className="btn btn-danger" style={{ padding: '6px 12px', fontSize: 12 }}
+                onClick={() => { setNewImage(null); setPreview(null); setForm(f => ({ ...f, image: '', image_name: '' })); }}>
+                {t('remove')}
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+          <button className="btn btn-ghost" onClick={onClose}>{t('cancel')}</button>
+          <button className="btn btn-primary" disabled={uploading} onClick={handleSave}>
+            {uploading ? t('uploading') : t('save_changes')}
+          </button>
         </div>
       </div>
     </div>
