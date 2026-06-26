@@ -88,7 +88,7 @@ export default function ChatbotWidget() {
             <span style={ST.dot} />
             <div>
               <div style={ST.title}>AI Assistant</div>
-              <div style={ST.sub}>Powered by Claude</div>
+              <div style={ST.sub}>Powered by AI</div>
             </div>
             <button style={ST.close} onClick={() => setOpen(false)}>{'\u00D7'}</button>
           </div>
