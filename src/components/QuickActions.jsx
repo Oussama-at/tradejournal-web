@@ -7,7 +7,7 @@ import { useLang } from '../lang/LangContext';
 // All actions are client-side navigations / shortcuts.
 
 const ST = {
-  fab: { position: 'fixed', bottom: 22, right: 88, zIndex: 2147482900, width: 56, height: 56, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer', background: '#161b22', color: '#fff', fontSize: 22, boxShadow: '0 6px 18px rgba(0,0,0,0.4)' },
+  fab: { position: 'fixed', bottom: 22, right: 88, zIndex: 2147482900, width: 56, height: 56, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.18)', cursor: 'pointer', background: 'linear-gradient(135deg,#6a5cff,#9b4dff)', color: '#fff', fontSize: 22, boxShadow: '0 8px 20px rgba(124,92,255,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   overlay: { position: 'fixed', inset: 0, zIndex: 2147483100, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '12vh' },
   modal: { width: 'min(560px, calc(100vw - 32px))', background: '#0d1117', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.6)', overflow: 'hidden' },
   search: { width: '100%', boxSizing: 'border-box', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '16px 18px', fontSize: 15, outline: 'none' },
@@ -80,7 +80,15 @@ export default function QuickActions() {
 
   return (
     <>
-      <button style={ST.fab} onClick={() => setOpen(true)} title="Quick actions (Ctrl+K)">{'\u26A1'}</button>
+      <style>{`
+        @keyframes tjQaGlow { 0% { box-shadow:0 8px 20px rgba(124,92,255,0.45), 0 0 0 0 rgba(124,92,255,0.5); } 70% { box-shadow:0 8px 20px rgba(124,92,255,0.45), 0 0 0 14px rgba(124,92,255,0); } 100% { box-shadow:0 8px 20px rgba(124,92,255,0.45), 0 0 0 0 rgba(124,92,255,0); } }
+        @keyframes tjBolt { 0%,100% { transform:rotate(0) scale(1); } 45% { transform:rotate(-8deg) scale(1.12); } 55% { transform:rotate(8deg) scale(1.12); } }
+        .tj-fab-qa { animation: tjQaGlow 3s ease-in-out infinite; transition: transform .2s ease, filter .2s ease; }
+        .tj-fab-qa:hover { transform: translateY(-3px) scale(1.08); filter: brightness(1.12); }
+        .tj-fab-qa:active { transform: scale(.95); }
+        .tj-fab-qa .tj-bolt { display:inline-block; animation: tjBolt 2.4s ease-in-out infinite; }
+      `}</style>
+      <button className="tj-fab-qa" style={ST.fab} onClick={() => setOpen(true)} title="Quick actions (Ctrl+K)" aria-label="Quick actions"><span className="tj-bolt">{'\u26A1'}</span></button>
       {open && (
         <div style={ST.overlay} onClick={() => setOpen(false)}>
           <div style={ST.modal} onClick={e => e.stopPropagation()}>

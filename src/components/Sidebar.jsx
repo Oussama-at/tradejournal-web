@@ -573,7 +573,7 @@ function NotificationBell({ user }) {
           position:'fixed', top:0, right:0, width:340, height:'100vh',
           background:'linear-gradient(180deg,#0a0f16 0%,#080c10 100%)',
           borderLeft:'1px solid #1e2a35', boxShadow:'-8px 0 40px rgba(0,0,0,0.6)',
-          zIndex:9999, display:'flex', flexDirection:'column', animation:'slideInPanel 0.25s ease',
+          zIndex:2147483600, display:'flex', flexDirection:'column', animation:'slideInPanel 0.25s ease',
         }}>
           {/* Header */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'18px 20px', borderBottom:'1px solid #1e2a35', flexShrink:0 }}>

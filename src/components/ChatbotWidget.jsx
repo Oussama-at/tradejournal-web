@@ -130,8 +130,16 @@ export default function ChatbotWidget() {
           </div>
         </div>
       )}
-      <button style={ST.fab} onClick={() => setOpen(o => !o)} title="AI Assistant">
-        {open ? '\u00D7' : '\u2728'}
+      <style>{`
+        @keyframes tjFloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
+        @keyframes tjPulse { 0% { box-shadow:0 8px 22px rgba(0,230,118,0.45), 0 0 0 0 rgba(0,230,118,0.5); } 70% { box-shadow:0 8px 22px rgba(0,230,118,0.45), 0 0 0 16px rgba(0,230,118,0); } 100% { box-shadow:0 8px 22px rgba(0,230,118,0.45), 0 0 0 0 rgba(0,230,118,0); } }
+        .tj-fab-chat { animation: tjPulse 2.6s ease-in-out infinite; transition: transform .2s ease, filter .2s ease; }
+        .tj-fab-chat:hover { transform: translateY(-3px) scale(1.08); filter: brightness(1.1); }
+        .tj-fab-chat:active { transform: scale(.95); }
+        .tj-fab-chat .tj-fab-emoji { display:inline-block; animation: tjFloat 3.6s ease-in-out infinite; }
+      `}</style>
+      <button className="tj-fab-chat" style={ST.fab} onClick={() => setOpen(o => !o)} title="AI Assistant" aria-label="AI Assistant">
+        <span className="tj-fab-emoji">{open ? '\u00D7' : '\uD83D\uDCAC'}</span>
       </button>
     </>
   );
