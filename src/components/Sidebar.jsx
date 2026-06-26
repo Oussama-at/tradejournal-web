@@ -10,6 +10,7 @@ const NAV = [
   { key: 'trades',    path: '/trades',          tkey: 'nav_trades',      icon: '⊟' },
   { key: 'add',       path: '/add-trade',       tkey: 'nav_add_trade',   icon: '+' },
   { key: 'capital',   path: '/capital',         tkey: 'nav_capital',     icon: '◎' },
+  { key: 'caparch',   path: '/capital-archive', tkey: 'nav_capital_archive', icon: '🗄' },
   { key: 'withdraw',  path: '/withdraw',        tkey: 'nav_withdraw',    icon: '↓' },
   { key: 'messages',  path: '/messages',        tkey: 'nav_messages',    icon: '✉' },
   { key: 'help',      path: '/help',            tkey: 'nav_help',        icon: '?' },

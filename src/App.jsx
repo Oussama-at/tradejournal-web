@@ -18,7 +18,7 @@ import AddTrade from './pages/AddTrade';
 import Subscriptions from './pages/Subscriptions';
 import MyPlan from './pages/MyPlan';
 import {
-  Capital, Withdraw, Users, Logs,
+  Capital, CapitalArchive, Withdraw, Users, Logs,
   Activations, PasswordReset, EmailChangeRequests, Profile, Password
 } from './pages/OtherPages';
 import AdminAlerts from './pages/AdminAlerts';
@@ -92,6 +92,7 @@ function AppLayout() {
           <Route path="/trades"           element={<Trades />} />
           <Route path="/add-trade"        element={<AddTrade />} />
           <Route path="/capital"          element={<Capital />} />
+          <Route path="/capital-archive"  element={<CapitalArchive />} />
           <Route path="/withdraw"         element={<Withdraw />} />
           <Route path="/users"            element={<AdminRoute><Users /></AdminRoute>} />
           <Route path="/subscriptions"    element={<AdminRoute><Subscriptions /></AdminRoute>} />

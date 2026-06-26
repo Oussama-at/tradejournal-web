@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useLang } from '../lang/LangContext';
 import { useAuth } from '../context/AuthContext';
 import DatePicker from '../components/DatePicker';
+import ImageLightbox from '../components/ImageLightbox';
 
 
 const FREE_TRADE_LIMIT = 6;
@@ -232,6 +233,7 @@ function UpgradeModal({ onClose }) {
    (crop dialog is Profile photo only)
 ───────────────────────────────────────────── */
 function ScreenshotSection({ image, preview, onImageSave, onRemove, t }) {
+  const [lightbox, setLightbox] = React.useState(false);
   const fileInputRef = useRef(null);
 
   function handleFileChange(e) {
@@ -261,7 +263,7 @@ function ScreenshotSection({ image, preview, onImageSave, onRemove, t }) {
             <img
               src={preview}
               alt="preview"
-              onClick={() => window.open(preview, '_blank')}
+              onClick={() => setLightbox(true)}
               style={{
                 width: '100%', borderRadius: 8, marginBottom: 8,
                 maxHeight: 200, objectFit: 'cover', cursor: 'zoom-in',
@@ -304,6 +306,9 @@ function ScreenshotSection({ image, preview, onImageSave, onRemove, t }) {
           </button>
         )}
       </div>
+      {lightbox && preview && (
+        <ImageLightbox src={preview} name="trade-screenshot" onClose={() => setLightbox(false)} />
+      )}
     </>
   );
 }

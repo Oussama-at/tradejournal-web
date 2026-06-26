@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useLang } from '../lang/LangContext';
 import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
+import ImageLightbox from '../components/ImageLightbox';
+import { exportToExcel, tradeColumns } from '../utils/exportExcel';
+
+const TRADES_EXPORT_BTN = { marginTop: 10 };
 
 // Inline sortable headers for Trades table
 function SortableTh({ label, colIdx, sortCol, sortDir, onSort }) {
@@ -59,6 +63,23 @@ export default function Trades() {
     setLoading(false);
   }
 
+  const [exporting, setExporting] = useState(false);
+  async function exportAllXls() {
+    setExporting(true);
+    try {
+      const res = await api.get('/trades?page=1&limit=100000');
+      const rows = res?.data?.trades || [];
+      exportToExcel({
+        filename: `trades-export-${new Date().toISOString().substring(0, 10)}.xls`,
+        title: 'TradeJournal PRO \u2014 Trades Export',
+        subtitle: `${rows.length} trades   Generated: ${new Date().toLocaleString()}`,
+        columns: tradeColumns(),
+        rows,
+      });
+    } catch (e) { console.error(e); }
+    setExporting(false);
+  }
+
   async function deleteTrade(id) {
     const ok = await showConfirm({
       title: `${t('delete')} #${id}?`,
@@ -108,6 +129,9 @@ export default function Trades() {
       <div className="page-header">
         <div className="page-title">{t('trades_title')}</div>
         <div className="page-sub">{total} {t('total_trades_label')}</div>
+        <button className="btn btn-ghost" disabled={exporting} onClick={exportAllXls} style={TRADES_EXPORT_BTN}>
+          {exporting ? '\u2026' : '\u2193 ' + (t('export_excel') || 'Export Excel')}
+        </button>
       </div>
 
       {/* Filters */}
@@ -215,6 +239,7 @@ function EditModal({ trade, onClose, onSave }) {
   const [newImage, setNewImage]   = useState(null);
   const [preview, setPreview]     = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
   const existingImg = trade.path || trade.image || null;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -291,7 +316,7 @@ function EditModal({ trade, onClose, onSave }) {
               <img src={existingImg} alt="Trade screenshot"
                 style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8,
                   border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
-                onClick={() => window.open(existingImg, '_blank')} />
+                onClick={() => setLightbox({ src: existingImg, name: trade.image_name || 'trade-screenshot' })} />
               <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 4 }}>{t('current_screenshot')}</div>
             </div>
           )}
@@ -327,6 +352,7 @@ function EditModal({ trade, onClose, onSave }) {
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+          {lightbox && <ImageLightbox src={lightbox.src} name={lightbox.name} onClose={() => setLightbox(null)} />}
           <button className="btn btn-ghost" onClick={onClose}>{t('cancel')}</button>
           <button className="btn btn-primary" disabled={uploading} onClick={handleSave}>
             {uploading ? t('uploading') : t('save_changes')}

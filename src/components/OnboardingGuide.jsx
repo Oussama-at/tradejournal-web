@@ -158,7 +158,7 @@ export default function OnboardingGuide() {
 }
 
 const S = {
-  card: { position: 'fixed', right: 20, bottom: 20, width: 340, maxWidth: 'calc(100vw - 40px)', background: '#11181f', border: '1px solid rgba(0,230,118,0.25)', borderRadius: 14, padding: 16, zIndex: 1200, boxShadow: '0 12px 40px rgba(0,0,0,0.5)', color: '#e8edf3' },
+  card: { position: 'fixed', right: 20, bottom: 96, width: 340, maxWidth: 'calc(100vw - 40px)', background: '#11181f', border: '1px solid rgba(0,230,118,0.25)', borderRadius: 14, padding: 16, zIndex: 1200, boxShadow: '0 12px 40px rgba(0,0,0,0.5)', color: '#e8edf3' },
   header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   headTitle: { fontSize: 15, fontWeight: 700 },
   iconBtn: { background: 'transparent', border: 'none', color: '#7a8a9a', fontSize: 20, cursor: 'pointer', lineHeight: 1, padding: 0 },
@@ -176,5 +176,5 @@ const S = {
   goBtn: { background: '#00e676', color: '#06210f', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
   doneTag: { fontSize: 11, color: '#00e676', fontWeight: 700, flexShrink: 0 },
   finishBtn: { marginTop: 12, width: '100%', background: 'transparent', border: '1px solid rgba(0,230,118,0.4)', color: '#00e676', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
-  pill: { position: 'fixed', right: 20, bottom: 20, background: '#11181f', border: '1px solid rgba(0,230,118,0.4)', color: '#00e676', borderRadius: 22, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', zIndex: 1200, boxShadow: '0 8px 24px rgba(0,0,0,0.45)' },
+  pill: { position: 'fixed', right: 20, bottom: 96, background: '#11181f', border: '1px solid rgba(0,230,118,0.4)', color: '#00e676', borderRadius: 22, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', zIndex: 1200, boxShadow: '0 8px 24px rgba(0,0,0,0.45)' },
 };

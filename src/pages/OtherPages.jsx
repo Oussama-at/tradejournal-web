@@ -7,6 +7,17 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { useLang } from '../lang/LangContext';
 import { useAuth } from '../context/AuthContext';
 import DatePicker from '../components/DatePicker';
+import { exportToExcel, tradeColumns } from '../utils/exportExcel';
+
+const CAP_MODAL_OVERLAY = { position: 'fixed', inset: 0, zIndex: 2147483100, background: 'rgba(3,6,10,0.7)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 };
+const CAP_MODAL_BOX = { width: '100%', maxWidth: 420, background: '#0f1620', border: '1px solid rgba(0,230,118,0.25)', borderRadius: 14, padding: 22, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' };
+const CAP_MODAL_TITLE = { fontSize: 18, fontWeight: 800, color: '#e8edf3', marginBottom: 6 };
+const CAP_MODAL_HINT = { fontSize: 13, color: '#93a1ad', marginBottom: 16, lineHeight: 1.5 };
+const CAP_MODAL_INPUT = { width: '100%', marginBottom: 18 };
+const CAP_MODAL_ACTIONS = { display: 'flex', gap: 10, justifyContent: 'flex-end' };
+const ARCH_MSG = { marginBottom: 14 };
+const ARCH_EMPTY = { opacity: 0.65, lineHeight: 1.6 };
+const ARCH_ACTIONS = { display: 'flex', gap: 6, flexWrap: 'wrap' };
 
 // ── Reusable SortableTable ─────────────────────────────────────────────────
 function SortableTable({ headers, sortableCount, rows, rowKey, renderRow }) {
@@ -118,6 +129,8 @@ export function Capital() {
   const [current, setCurrent] = useState(null);
   const [newCap, setNewCap] = useState('');
   const [msg, setMsg] = useState(null);
+  const [adjusting, setAdjusting] = useState(null);
+  const [adjVal, setAdjVal] = useState('');
 
   useEffect(() => { load(); }, []);
 
@@ -132,6 +145,14 @@ export function Capital() {
     const res = await api.post('/capital', { capital_depart: +newCap, capital_now: +newCap });
     if (res?.success) { setMsg({ type: 'success', text: '✓ Capital added!' }); setNewCap(''); load(); }
     else setMsg({ type: 'error', text: res?.message || 'Failed' });
+  }
+
+  function openAdjust(c) { setAdjusting(c); setAdjVal(String(c.capital_now ?? '')); }
+  async function saveAdjust() {
+    if (adjVal === '' || isNaN(Number(adjVal))) { setMsg({ type: 'error', text: 'Please enter a valid amount' }); return; }
+    const res = await api.put(`/capital/${adjusting.id}/adjust`, { capital_now: Number(adjVal) });
+    if (res?.success) { setMsg({ type: 'success', text: '\u2713 Capital adjusted successfully!' }); setAdjusting(null); load(); }
+    else setMsg({ type: 'error', text: res?.message || 'Adjust failed' });
   }
 
   const showConfirm = useConfirm();
@@ -213,7 +234,8 @@ export function Capital() {
                       ) : (
                         <button className="btn btn-primary" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => activate(c.id)}>{ t('activate') || 'Activate' }</button>
                       )}
-                      <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => deleteCapital(c.id)}>Delete</button>
+                      <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => openAdjust(c)}>{ t('adjust') || 'Adjust' }</button>
+                      <button className="btn btn-danger" onClick={() => deleteCapital(c.id)}>Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -222,6 +244,142 @@ export function Capital() {
           />
         </div>
       </div>
+
+      {adjusting && (
+        <div
+          onClick={() => setAdjusting(null)}
+          style={CAP_MODAL_OVERLAY}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={CAP_MODAL_BOX}
+          >
+            <div style={CAP_MODAL_TITLE}>
+              {t('adjust_capital') || 'Adjust Capital'}
+            </div>
+            <div style={CAP_MODAL_HINT}>
+              {t('adjust_capital_hint') || 'Update the current value of this capital (for deposits, withdrawals or a manual correction).'}
+            </div>
+            <input
+              className="input" type="number" autoFocus
+              value={adjVal} onChange={e => setAdjVal(e.target.value)}
+              placeholder="Current value ($)"
+              style={CAP_MODAL_INPUT}
+            />
+            <div style={CAP_MODAL_ACTIONS}>
+              <button className="btn btn-ghost" onClick={() => setAdjusting(null)}>{t('cancel') || 'Cancel'}</button>
+              <button className="btn btn-primary" onClick={saveAdjust}>{t('save') || 'Save'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Capital Archive: deleted capitals with all their trades ─────────────────
+// Restore (re-activate + re-add all trades), Delete permanently, or Export to Excel.
+export function CapitalArchive() {
+  const { t } = useLang();
+  const [archives, setArchives] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState(null);
+  const showConfirm = useConfirm();
+
+  useEffect(() => { load(); }, []);
+  async function load() {
+    setLoading(true);
+    const r = await api.get('/capital-archive');
+    setArchives(r?.data?.archives || []);
+    setLoading(false);
+  }
+
+  async function restore(a) {
+    const ok = await showConfirm({
+      title: t('restore_capital') || 'Restore this capital?',
+      message: t('restore_capital_msg') || 'This reactivates the capital and re-adds all of its trades to your journal.',
+      type: 'warning', confirmLabel: t('restore') || 'Restore', cancelLabel: t('cancel') || 'Cancel',
+    });
+    if (!ok) return;
+    const r = await api.post(`/capital-archive/${a.id}/restore`, {});
+    if (r?.success) { setMsg({ type: 'success', text: '\u2713 Capital restored with all its trades.' }); load(); }
+    else setMsg({ type: 'error', text: r?.message || 'Restore failed' });
+  }
+
+  async function removePermanent(a) {
+    const ok = await showConfirm({
+      title: t('delete_permanently') || 'Delete permanently?',
+      message: t('delete_permanently_msg') || 'This permanently deletes the archived capital and all of its trades. This cannot be undone.',
+      type: 'danger', confirmLabel: t('delete') || 'Delete', cancelLabel: t('cancel') || 'Cancel',
+    });
+    if (!ok) return;
+    const r = await api.delete(`/capital-archive/${a.id}`);
+    if (r?.success) { setMsg({ type: 'success', text: '\u2713 Archived capital permanently deleted.' }); load(); }
+    else setMsg({ type: 'error', text: r?.message || 'Delete failed' });
+  }
+
+  function exportXls(a) {
+    const trades = Array.isArray(a.trades_snapshot) ? a.trades_snapshot : [];
+    const created = (a.date_creation || '').substring(0, 10);
+    const deleted = (a.date_delete || '').substring(0, 10);
+    exportToExcel({
+      filename: `capital-archive-${a.id}-${deleted || 'export'}.xls`,
+      title: 'TradeJournal PRO \u2014 Capital Archive',
+      subtitle: `Starting: ${a.capital_initial}$   Final: ${a.capital_now}$   Created: ${created}   Archived: ${deleted}   Trades: ${trades.length}`,
+      columns: tradeColumns(),
+      rows: trades,
+    });
+  }
+
+  return (
+    <div>
+      <div className="page-header">{t('nav_capital_archive') || 'Capital Archive'}</div>
+      {msg && <div className={`alert alert-${msg.type}`} style={ARCH_MSG}>{msg.text}</div>}
+      {loading ? (
+        <div className="card">Loading…</div>
+      ) : archives.length === 0 ? (
+        <div className="card" style={ARCH_EMPTY}>
+          {t('no_archived_capital') || 'No deleted capitals yet. When you delete a capital, it will appear here with all of its trades \u2014 you can then restore it, export it to Excel, or delete it permanently.'}
+        </div>
+      ) : (
+        <div className="card">
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t('col_starting') || 'Starting'}</th>
+                  <th>{t('col_current') || 'Final'}</th>
+                  <th>{t('col_created') || 'Created'}</th>
+                  <th>{t('archived_on') || 'Archived'}</th>
+                  <th>{t('trades') || 'Trades'}</th>
+                  <th>{t('col_actions') || 'Actions'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {archives.map(a => {
+                  const trades = Array.isArray(a.trades_snapshot) ? a.trades_snapshot : [];
+                  return (
+                    <tr key={a.id}>
+                      <td className="mono">{Number(a.capital_initial || 0).toLocaleString()}$</td>
+                      <td className="mono">{Number(a.capital_now || 0).toLocaleString()}$</td>
+                      <td className="muted">{(a.date_creation || '').substring(0, 10)}</td>
+                      <td className="muted">{(a.date_delete || '').substring(0, 10)}</td>
+                      <td className="mono">{trades.length}</td>
+                      <td>
+                        <div style={ARCH_ACTIONS}>
+                          <button className="btn btn-primary" onClick={() => restore(a)}>{t('restore') || 'Restore'}</button>
+                          <button className="btn btn-ghost" onClick={() => exportXls(a)}>{'\u2193'} Excel</button>
+                          <button className="btn btn-danger" onClick={() => removePermanent(a)}>{t('delete_permanently') || 'Delete permanently'}</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
