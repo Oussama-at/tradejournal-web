@@ -37,6 +37,9 @@ const translations = {
     nav_cookie_consents: 'Cookie Consents',
     nav_password:       'Update Password',
     nav_profile:        'My Profile',
+    nav_messages:       'Messages',
+    nav_help:           'Help Center',
+    nav_admin_help:     'Help Articles',
     nav_myplan:         'My Plan',
     logout:             'Logout',
 
@@ -354,6 +357,9 @@ const translations = {
     nav_cookie_consents: 'موافقات الكوكيز',
     nav_password:       'تحديث كلمة المرور',
     nav_profile:        'ملفي الشخصي',
+    nav_messages:       'الرسائل',
+    nav_help:           'مركز المساعدة',
+    nav_admin_help:     'مقالات المساعدة',
     nav_myplan:         'خطتي',
     logout:             'تسجيل الخروج',
 
@@ -670,6 +676,9 @@ const translations = {
     nav_cookie_consents: 'Cookies',
     nav_password:       'Modifier le mot de passe',
     nav_profile:        'Mon profil',
+    nav_messages:       'Messages',
+    nav_help:           'Centre d\'aide',
+    nav_admin_help:     'Articles d\'aide',
     nav_myplan:         'Mon abonnement',
     logout:             'Déconnexion',
 
@@ -731,7 +740,7 @@ const translations = {
     cancel:             'Annuler',
     save_changes:       'Enregistrer',
     uploading:          'Téléchargement...',
-    market:             'Marché',
+    market:             'March��',
     entry:              'Entrée',
     amount:             'Montant ($)',
     qty:                'Qté',

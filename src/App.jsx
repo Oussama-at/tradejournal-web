@@ -25,6 +25,11 @@ import AdminAlerts from './pages/AdminAlerts';
 import CookieConsents from './pages/CookieConsents';
 import { Ranking, RankingPopup } from './pages/Ranking';
 import { Terms, Privacy } from './pages/Legal';
+import HelpCenter from './pages/HelpCenter';
+import AdminHelp from './pages/AdminHelp';
+import Messages from './pages/Messages';
+import ChatbotWidget from './components/ChatbotWidget';
+import QuickActions from './components/QuickActions';
 import api from './services/api';
 import './index.css';
 import { LangProvider } from './lang/LangContext';
@@ -100,9 +105,14 @@ function AppLayout() {
           <Route path="/my-plan"          element={<MyPlan />} />
           <Route path="/profile"          element={<Profile />} />
           <Route path="/password"         element={<Password />} />
+          <Route path="/help"             element={<HelpCenter />} />
+          <Route path="/messages"         element={<Messages />} />
+          <Route path="/admin/help"       element={<AdminRoute><AdminHelp /></AdminRoute>} />
           <Route path="*"                 element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+      <ChatbotWidget />
+      <QuickActions />
     </div>
   );
 }
