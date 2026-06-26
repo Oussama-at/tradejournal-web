@@ -638,6 +638,28 @@ function NotificationBell({ user }) {
 export default function Sidebar({ capitalInfo }) {
   const { user, logout, sub, avatar } = useAuth();
   const { lang, t, setLang } = useLang();
+
+  // Unread messages badge (support + direct), polled in the background.
+  const [msgUnread, setMsgUnread] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const poll = () => {
+      Promise.all([
+        api.get('/dm/unread-count').catch(() => null),
+        api.get('/support/unread-count').catch(() => null),
+      ]).then(([dm, sup]) => {
+        if (!alive) return;
+        setMsgUnread((dm?.data?.count || 0) + (sup?.data?.count || 0));
+      });
+    };
+    poll();
+    const id = setInterval(poll, 12000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+  const msgBadgeStyle = {
+    marginLeft: 'auto', background: '#ff4757', color: '#fff', borderRadius: 10,
+    fontSize: 11, fontWeight: 800, padding: '1px 7px', lineHeight: 1.6,
+  };
   const isAdmin  = user?.role === 'admin';
   const navigate = useNavigate();
 
@@ -711,6 +733,7 @@ export default function Sidebar({ capitalInfo }) {
             >
               <span className="nav-icon">{item.icon}</span>
               {t(item.tkey)}
+              {item.key === 'messages' && msgUnread > 0 && <span style={msgBadgeStyle}>{msgUnread}</span>}
               {item.admin && <span className="admin-tag">ADMIN</span>}
             </NavLink>
           );

@@ -28,8 +28,18 @@ const ST = {
   empty: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5, fontSize: 14, textAlign: 'center', padding: 20 },
   search: { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', padding: '9px 11px', fontSize: 13, marginBottom: 8, outline: 'none' },
   found: { padding: '8px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13.5, color: '#e8edf3' },
+  foundRow: { display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 13.5, color: '#e8edf3' },
+  avatarImg: { width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.15)' },
+  avatarFb: { width: 26, height: 26, borderRadius: '50%', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#1d6f4a,#0f4d33)', color: '#bafad4', fontSize: 12, fontWeight: 800 },
   mini: { padding: 14, opacity: 0.5, fontSize: 13 },
 };
+
+function Avatar({ name, pic }) {
+  const [err, setErr] = useState(false);
+  const initial = (name || '?').trim().charAt(0).toUpperCase();
+  if (pic && !err) return <img src={pic} alt="" style={ST.avatarImg} onError={() => setErr(true)} />;
+  return <span style={ST.avatarFb}>{initial}</span>;
+}
 
 function fmt(ts) {
   if (!ts) return '';
@@ -98,6 +108,7 @@ function SupportAdmin() {
   }, []);
   useEffect(() => { loadThreads(); const id = setInterval(loadThreads, 15000); return () => clearInterval(id); }, [loadThreads]);
   useEffect(() => { if (sel) loadMsgs(sel.user_id); }, [sel, loadMsgs]);
+  useEffect(() => { if (!sel) return; const id = setInterval(() => loadMsgs(sel.user_id), 6000); return () => clearInterval(id); }, [sel, loadMsgs]);
   async function send(body) {
     const r = await api.post('/admin/support/messages/' + sel.user_id, { body });
     if (r && r.success) setMessages(m => [...m, r.data.message]);
@@ -108,7 +119,7 @@ function SupportAdmin() {
         {threads.length === 0 && <div style={ST.mini}>No support messages yet.</div>}
         {threads.map(t => (
           <div key={t.user_id} style={ST.convo(sel && sel.user_id === t.user_id)} onClick={() => setSel(t)}>
-            <div style={ST.convoName}>{t.user_name}{t.unread > 0 && <span style={ST.badge}>{t.unread}</span>}</div>
+            <div style={ST.convoName}><Avatar name={t.user_name} pic={t.profile_pic} />{t.user_name}{t.unread > 0 && <span style={ST.badge}>{t.unread}</span>}</div>
             <div style={ST.convoLast}>{t.last_body}</div>
           </div>
         ))}
@@ -141,6 +152,8 @@ function DirectMessages({ myId }) {
   }, []);
   useEffect(() => { loadConvos(); const id = setInterval(loadConvos, 15000); return () => clearInterval(id); }, [loadConvos]);
   useEffect(() => { if (sel) loadMsgs(sel.user_id); }, [sel, loadMsgs]);
+  // Poll the open thread so new incoming messages appear without clicking back.
+  useEffect(() => { if (!sel) return; const id = setInterval(() => loadMsgs(sel.user_id), 6000); return () => clearInterval(id); }, [sel, loadMsgs]);
 
   useEffect(() => {
     const term = q.trim();
@@ -162,12 +175,15 @@ function DirectMessages({ myId }) {
       <div style={ST.side}>
         <input style={ST.search} placeholder="Find a user to message..." value={q} onChange={e => setQ(e.target.value)} />
         {found.map(u => (
-          <div key={'f' + u.id} style={ST.found} onClick={() => startWith(u)}>{'\u2709 ' + u.user_name}</div>
+          <div key={'f' + u.id} style={ST.foundRow} onClick={() => startWith(u)}>
+            <Avatar name={u.user_name} pic={u.profile_pic} />
+            <span>{u.user_name}</span>
+          </div>
         ))}
         {found.length === 0 && convos.length === 0 && <div style={ST.mini}>No conversations yet. Search a user to start.</div>}
         {found.length === 0 && convos.map(c => (
           <div key={c.user_id} style={ST.convo(sel && sel.user_id === c.user_id)} onClick={() => setSel(c)}>
-            <div style={ST.convoName}>{c.user_name}{c.unread > 0 && <span style={ST.badge}>{c.unread}</span>}</div>
+            <div style={ST.convoName}><Avatar name={c.user_name} pic={c.profile_pic} />{c.user_name}{c.unread > 0 && <span style={ST.badge}>{c.unread}</span>}</div>
             <div style={ST.convoLast}>{fmt(c.last_at)}</div>
           </div>
         ))}

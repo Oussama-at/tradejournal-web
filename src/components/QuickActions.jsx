@@ -7,8 +7,8 @@ import { useLang } from '../lang/LangContext';
 // All actions are client-side navigations / shortcuts.
 
 const ST = {
-  fab: { position: 'fixed', bottom: 22, right: 88, zIndex: 1190, width: 56, height: 56, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer', background: '#161b22', color: '#fff', fontSize: 22, boxShadow: '0 6px 18px rgba(0,0,0,0.4)' },
-  overlay: { position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '12vh' },
+  fab: { position: 'fixed', bottom: 22, right: 88, zIndex: 2147482900, width: 56, height: 56, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer', background: '#161b22', color: '#fff', fontSize: 22, boxShadow: '0 6px 18px rgba(0,0,0,0.4)' },
+  overlay: { position: 'fixed', inset: 0, zIndex: 2147483100, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '12vh' },
   modal: { width: 'min(560px, calc(100vw - 32px))', background: '#0d1117', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.6)', overflow: 'hidden' },
   search: { width: '100%', boxSizing: 'border-box', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '16px 18px', fontSize: 15, outline: 'none' },
   list: { maxHeight: '50vh', overflowY: 'auto', padding: 8 },

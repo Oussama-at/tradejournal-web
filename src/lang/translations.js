@@ -135,6 +135,7 @@ const translations = {
     free_limit_banner:  'Free plan:',
     trades_used:        'trades used',
     free_limit_reached: 'Free plan limit reached',
+    free_last_trade:    'Only 1 free trade left! Upgrade to keep going.',
     upgrade_pro:        'Upgrade to PRO →',
 
     // Capital
@@ -455,6 +456,7 @@ const translations = {
     free_limit_banner:  'الحساب المجاني:',
     trades_used:        'صفقات مستخدمة',
     free_limit_reached: 'تم بلوغ حد الحساب المجاني',
+    free_last_trade:    'بقيت صفقة مجانية واحدة فقط! قم بالترقية للمتابعة.',
     upgrade_pro:        'ترقية إلى PRO ←',
 
     // Capital
@@ -770,6 +772,7 @@ const translations = {
     free_limit_banner:  'Plan gratuit :',
     trades_used:        'trades utilisés',
     free_limit_reached: 'Limite du plan gratuit atteinte',
+    free_last_trade:    'Plus qu\'un seul trade gratuit ! Passez à la version complète.',
     upgrade_pro:        'Passer à PRO →',
 
     capital_title:      'Archive capital',

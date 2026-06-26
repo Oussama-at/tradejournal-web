@@ -7,8 +7,8 @@ import { useAuth } from '../context/AuthContext';
 // Answers help/how-to, analyzes the user's own stats, and can navigate the app.
 
 const ST = {
-  fab: { position: 'fixed', bottom: 22, right: 22, zIndex: 1200, width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#00e676,#00b45f)', color: '#06210f', fontSize: 24, boxShadow: '0 6px 22px rgba(0,230,118,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  panel: { position: 'fixed', bottom: 88, right: 22, zIndex: 1200, width: 'min(380px, calc(100vw - 32px))', height: 'min(560px, calc(100vh - 130px))', background: '#0d1117', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, boxShadow: '0 18px 50px rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  fab: { position: 'fixed', bottom: 22, right: 22, zIndex: 2147483000, width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#00e676,#00b45f)', color: '#06210f', fontSize: 24, boxShadow: '0 6px 22px rgba(0,230,118,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  panel: { position: 'fixed', bottom: 88, right: 22, zIndex: 2147483000, width: 'min(380px, calc(100vw - 32px))', height: 'min(560px, calc(100vh - 130px))', background: '#0d1117', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, boxShadow: '0 18px 50px rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
   head: { padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg,rgba(0,230,118,0.12),transparent)' },
   dot: { width: 9, height: 9, borderRadius: '50%', background: '#00e676', boxShadow: '0 0 8px #00e676' },
   title: { fontWeight: 800, fontSize: 14, color: '#fff' },

@@ -336,8 +336,10 @@ export default function AddTrade() {
 
   useEffect(() => {
     if (!isLifetime) {
-      api.get('/trades?page=1&limit=1').then(r => {
-        setTradeCount(r?.data?.total ?? 0);
+      // Persistent counter: counts how many trades were EVER added on the free plan,
+      // independent of capital being deleted/re-added.
+      api.get('/trades/free-usage').then(r => {
+        setTradeCount(r?.data?.used ?? 0);
       }).catch(() => setTradeCount(0));
     }
   }, [isLifetime]);
@@ -486,9 +488,11 @@ export default function AddTrade() {
             <span>
               {tradeCount >= FREE_TRADE_LIMIT
                 ? `🔒 ${t('free_limit_reached')} (${FREE_TRADE_LIMIT}/${FREE_TRADE_LIMIT}). ${t('upgrade_pro')}`
-                : `⚠️ ${t('free_limit_banner')} ${tradeCount}/${FREE_TRADE_LIMIT} ${t('trades_used')}`}
+                : (FREE_TRADE_LIMIT - tradeCount === 1)
+                  ? `⚠️ ${t('free_last_trade')} (${tradeCount}/${FREE_TRADE_LIMIT}). ${t('upgrade_pro')}`
+                  : `⚠️ ${t('free_limit_banner')} ${tradeCount}/${FREE_TRADE_LIMIT} ${t('trades_used')}`}
             </span>
-            {tradeCount >= FREE_TRADE_LIMIT && (
+            {(tradeCount >= FREE_TRADE_LIMIT || FREE_TRADE_LIMIT - tradeCount === 1) && (
               <button type="button" onClick={() => setShowUpgrade(true)}
                 style={{ background: 'linear-gradient(135deg,#00e676,#00c853)', color: '#080c10', fontWeight: 800, fontSize: 12, border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', marginLeft: 12, whiteSpace: 'nowrap' }}>
                 {t('upgrade_pro')}

@@ -1158,6 +1158,11 @@ export function EmailChangeRequests() {
   const { t } = useLang();
   const showConfirm = useConfirm();
   const [reqs, setReqs] = useState([]);
+  const [toast, setToast] = useState(null);
+  function showToast(type, text) {
+    setToast({ type, text });
+    setTimeout(() => setToast(null), 4500);
+  }
   useEffect(() => { load(); }, []);
   async function load() {
     const res = await api.get('/admin/email-change-requests');
@@ -1173,7 +1178,14 @@ export function EmailChangeRequests() {
     });
     if (!ok) return;
     const res = await api.post(`/admin/email-change-requests/${id}/approve`, {});
-    if (res?.success) load();
+    if (res?.success) {
+      // Update the row instantly — no full reload, no section change.
+      const applied = res?.data?.new_email || newEmail;
+      setReqs(rs => rs.map(r => r.id === id ? { ...r, status: 'approved', current_email: applied } : r));
+      showToast('success', `✅ ${userName}'s email updated to ${applied}`);
+    } else {
+      showToast('error', res?.message || 'Failed to approve');
+    }
   }
   async function reject(id, userName) {
     const ok = await showConfirm({
@@ -1184,12 +1196,23 @@ export function EmailChangeRequests() {
       cancelLabel: 'Cancel',
     });
     if (!ok) return;
-    await api.post(`/admin/email-change-requests/${id}/reject`, {});
-    load();
+    const res = await api.post(`/admin/email-change-requests/${id}/reject`, {});
+    if (res?.success !== false) {
+      setReqs(rs => rs.map(r => r.id === id ? { ...r, status: 'rejected' } : r));
+      showToast('error', `❌ Rejected ${userName}'s email change`);
+    }
   }
   const counts = reqs.reduce((a, r) => { a[r.status] = (a[r.status] || 0) + 1; return a; }, {});
+  const toastStyle = {
+    position: 'fixed', top: 20, right: 20, zIndex: 4000,
+    padding: '12px 18px', borderRadius: 10, fontSize: 14, fontWeight: 600,
+    maxWidth: 360, color: '#fff', boxShadow: '0 10px 34px rgba(0,0,0,0.45)',
+    background: toast?.type === 'success' ? '#1f9d55' : '#c0392b',
+    animation: 'fadeIn .2s ease',
+  };
   return (
     <div>
+      {toast && <div style={toastStyle}>{toast.text}</div>}
       <div className="page-header"><div className="page-title">✉️ Email Change Requests</div></div>
       <div className="grid-4" style={{ marginBottom: 20 }}>
         {[['Total', reqs.length, 'blue'], ['Pending', counts.pending || 0, 'orange'], ['Approved', counts.approved || 0, 'green'], ['Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
