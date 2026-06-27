@@ -21,6 +21,9 @@ function SortableTh({ children, sortCol, colIdx, sortDir, onSort }) {
 
 const fmt = (v) => (v >= 0 ? '+' : '') + v.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '$';
 const pClass = (v) => v >= 0 ? 'green' : 'red';
+const RECON_CARD = { marginBottom: 16, padding: '14px 18px' };
+const RECON_ROW = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, fontSize: 13 };
+const RECON_NOTE = { fontSize: 12, marginLeft: 6 };
 
 export default function Dashboard() {
   const { t } = useLang();
@@ -102,11 +105,7 @@ export default function Dashboard() {
     } catch (e) { console.error(e); }
   }
 
-  const allSums = trades.reduce((acc, tr) => {
-    if (tr.status === 'win') { acc.wins++; acc.sumWin += tr.montant; }
-    else { acc.losses++; acc.sumLose += tr.montant; }
-    return acc;
-  }, { wins: 0, losses: 0, sumWin: 0, sumLose: 0 });
+  // Win/loss stats now come from /stats (scoped to the active capital) — see statWins/statLosses below.
 
   // Table sort state
   const [sortCol, setSortCol] = useState(null);
@@ -130,9 +129,17 @@ export default function Dashboard() {
   const capDep   = capital?.capital_depart || 0;
   const capNet   = capNow - capDep;
   const roi      = capDep > 0 ? ((capNet / capDep) * 100) : 0;
-  const todayPnl = stats?.today_profit || 0;
-  const winRate  = (allSums.wins + allSums.losses) > 0
-    ? (allSums.wins / (allSums.wins + allSums.losses) * 100) : 0;
+  const totalWithdrawn = capital?.total_withdrawn || 0;
+  // Trading P&L + win/loss counts come from /stats — already scoped to the
+  // ACTIVE capital on the backend, and reflect the selected period.
+  const tradingPnl = stats?.net_pnl ?? 0;
+  const statWins   = stats?.count_win ?? 0;
+  const statLosses = stats?.count_lose ?? 0;
+  const statTotal  = statWins + statLosses;
+  const winRate    = statTotal > 0 ? (statWins / statTotal * 100) : 0;
+  // Starting + Trading P&L − Withdrawals should equal the current capital.
+  const reconciledCapital = capDep + tradingPnl - totalWithdrawn;
+  const reconMismatch = capital && Math.abs(reconciledCapital - capNow) > 0.01;
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
@@ -179,15 +186,40 @@ export default function Dashboard() {
 
       {/* Stat cards */}
       <div className="grid-4" style={{ marginBottom: 20 }}>
-        <StatCard label={t('today_pnl') || 'Today P&L'} value={todayPnl} fmt={fmt} pClass={pClass}
-          sub={t('todays_performance') || "Today's performance"} />
+        <StatCard label={t('total_pnl') || 'Trading P&L'} value={tradingPnl} fmt={fmt} pClass={pClass}
+          sub={`${statTotal} ${t('total_trades_label') || 'trades'}`} />
         <StatCard label={t('win_rate')} value={winRate} fmt={v => v.toFixed(1) + '%'} pClass={v => v >= 50 ? 'green' : 'red'}
-          sub={`${allSums.wins}W / ${allSums.losses}L (${allSums.wins + allSums.losses} total)`} />
-        <StatCard label={t('total_pnl')} value={capNet} fmt={fmt} pClass={pClass}
-          sub={`${allSums.wins + allSums.losses} ${t('total_trades_label') || 'trades'}`} />
+          sub={`${statWins}W / ${statLosses}L (${statTotal} total)`} />
+        <StatCard label={t('withdrawals') || 'Withdrawals'} value={totalWithdrawn}
+          fmt={v => (v > 0 ? '-' : '') + v.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '$'}
+          pClass={() => ''} sub={t('total_withdrawn') || 'Total withdrawn'} />
         <StatCard label={t('capital')} value={capNow} fmt={v => v.toLocaleString() + '$'} pClass={v => v >= capDep ? 'green' : 'red'}
           sub={`${roi >= 0 ? '+' : ''}${roi.toFixed(2)}% ROI`} mono />
       </div>
+
+      {/* Capital reconciliation: Starting + Trading P&L − Withdrawals = Current */}
+      {period === 'all' && capital && (
+        <div className="card" style={RECON_CARD}>
+          <div style={RECON_ROW}>
+            <span className="muted">{t('starting_capital') || 'Starting capital'}</span>
+            <span className="mono bold">{capDep.toLocaleString()}$</span>
+            <span className="muted">+</span>
+            <span className="muted">{t('total_pnl') || 'Trading P&L'}</span>
+            <span className={`mono bold ${pClass(tradingPnl)}`}>{fmt(tradingPnl)}</span>
+            <span className="muted">−</span>
+            <span className="muted">{t('withdrawals') || 'Withdrawals'}</span>
+            <span className="mono bold">{totalWithdrawn.toLocaleString()}$</span>
+            <span className="muted">=</span>
+            <span className="muted">{t('capital') || 'Current capital'}</span>
+            <span className={`mono bold ${capNow >= capDep ? 'green' : 'red'}`}>{capNow.toLocaleString()}$</span>
+            {reconMismatch && (
+              <span className="red" style={RECON_NOTE}>
+                ⚠ {t('recon_note') || 'includes a manual capital adjustment'}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Chart */}
       {chartData.length >= 1 && (

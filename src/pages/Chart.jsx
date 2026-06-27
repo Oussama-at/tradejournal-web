@@ -189,12 +189,16 @@ export default function Chart() {
 
   const load = useCallback(async () => {
     try {
-      const [tradesRes, withdrawRes] = await Promise.all([
+      const [tradesRes, withdrawRes, capRes] = await Promise.all([
         api.get('/trades?page=1&limit=9999'),
         api.get('/withdraw'),
+        api.get('/capital/current').catch(() => null),
       ]);
       const rawTrades = tradesRes?.data?.trades || [];
-      const rawWithdrawals = withdrawRes?.data?.withdrawals || [];
+      // Scope withdrawals to the ACTIVE capital only (trades are already scoped server-side)
+      const activeCapId = capRes?.data?.capital?.id ?? null;
+      const rawWithdrawals = (withdrawRes?.data?.withdrawals || [])
+        .filter(w => activeCapId == null || w.capital_id === activeCapId);
       const allTrades = filterByPeriod(rawTrades);
       const allWithdrawals = filterByPeriod(rawWithdrawals, true);
       setTrades(allTrades);
