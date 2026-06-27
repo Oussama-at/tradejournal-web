@@ -8,6 +8,53 @@ import { useLang } from '../lang/LangContext';
 import { useAuth } from '../context/AuthContext';
 import DatePicker from '../components/DatePicker';
 import { exportToExcel, tradeColumns } from '../utils/exportExcel';
+import ExportButton from '../components/ExportButton';
+
+const EXPORT_HEADER_ROW = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' };
+const EXPORT_HEADER_ACTIONS = { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' };
+
+// ── Excel export column sets (shared) ──────────────────────────────────────
+const USERS_EXPORT_COLUMNS = [
+  { key: 'id', label: 'ID' },
+  { key: 'user_name', label: 'User' },
+  { key: 'email', label: 'Email', format: v => v || '' },
+  { key: 'role', label: 'Role' },
+  { key: 'license', label: 'License', format: (_v, u) => (!u.license_key ? 'Pending' : u.is_active ? 'Active' : 'Expired') },
+  { key: 'access', label: 'Access', format: (_v, u) => (u.blocked ? 'Blocked' : 'OK') },
+  { key: 'created_at', label: 'Created', format: v => (v || '').substring(0, 10) },
+];
+const WITHDRAW_EXPORT_COLUMNS = [
+  { key: 'created_at', label: 'Date', format: v => (v || '').substring(0, 10) },
+  { key: 'amount', label: 'Amount', align: 'right', format: v => Number(v || 0).toFixed(2) },
+  { key: 'note', label: 'Note', format: v => v || '' },
+];
+const LOGS_EXPORT_COLUMNS = [
+  { key: 'created_at', label: 'Date', format: v => (v || '').substring(0, 16).replace('T', ' ') },
+  { key: 'action', label: 'Action' },
+  { key: 'user_name', label: 'User' },
+  { key: 'details', label: 'Details', format: v => v || '' },
+];
+const ACTIVATIONS_EXPORT_COLUMNS = [
+  { key: 'id', label: 'ID' },
+  { key: 'user_name', label: 'User' },
+  { key: 'device_id', label: 'Device' },
+  { key: 'requested_at', label: 'Date', format: (_v, r) => (r.requested_at || r.created_at || '').substring(0, 10) },
+  { key: 'status', label: 'Status' },
+];
+const PWD_RESET_EXPORT_COLUMNS = [
+  { key: 'id', label: 'ID' },
+  { key: 'user_name', label: 'User' },
+  { key: 'created_at', label: 'Date', format: v => (v || '').substring(0, 10) },
+  { key: 'status', label: 'Status' },
+];
+const EMAIL_CHANGE_EXPORT_COLUMNS = [
+  { key: 'id', label: 'ID' },
+  { key: 'user_name', label: 'User' },
+  { key: 'current_email', label: 'Current Email', format: v => v || '' },
+  { key: 'new_email', label: 'Requested Email', format: v => v || '' },
+  { key: 'created_at', label: 'Date', format: v => (v || '').substring(0, 10) },
+  { key: 'status', label: 'Status' },
+];
 
 const CAP_MODAL_OVERLAY = { position: 'fixed', inset: 0, zIndex: 2147483100, background: 'rgba(3,6,10,0.7)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 };
 const CAP_MODAL_BOX = { width: '100%', maxWidth: 420, background: '#0f1620', border: '1px solid rgba(0,230,118,0.25)', borderRadius: 14, padding: 22, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' };
@@ -416,7 +463,15 @@ export function Withdraw() {
 
   return (
     <div>
-      <div className="page-header"><div className="page-title">{t('withdraw_title')}</div></div>
+      <div className="page-header" style={EXPORT_HEADER_ROW}>
+        <div className="page-title">{t('withdraw_title')}</div>
+        <ExportButton
+          filename={`withdrawals-${new Date().toISOString().substring(0, 10)}.xls`}
+          title="TradeJournal PRO \u2014 Withdrawals"
+          columns={WITHDRAW_EXPORT_COLUMNS}
+          rows={history}
+        />
+      </div>
       <div className="grid-2" style={{ marginBottom: 20 }}>
         <div className="stat-card"><div className="stat-label">{t('available_capital')}</div><div className="stat-value green mono">{capNow.toLocaleString()}$</div></div>
         <div className="stat-card"><div className="stat-label">{t('total_withdrawn')}</div><div className="stat-value red mono">{parseFloat(totalW).toFixed(2)}$</div></div>
@@ -818,7 +873,16 @@ export function Users() {
           <div className="page-title">{t('users_title')}</div>
           <div className="page-sub">{users.length} {t('users_count')}</div>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>{t('add_user')}</button>
+        <div style={EXPORT_HEADER_ACTIONS}>
+          <ExportButton
+            filename={`users-${new Date().toISOString().substring(0, 10)}.xls`}
+            title="TradeJournal PRO \u2014 Users"
+            subtitle={`${filtered.length} users   Generated: ${new Date().toLocaleString()}`}
+            columns={USERS_EXPORT_COLUMNS}
+            rows={filtered}
+          />
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>{t('add_user')}</button>
+        </div>
       </div>
 
       {/* ── Search ──────────────────────────────��──────────────────────── */}
@@ -1038,6 +1102,13 @@ export function Logs() {
     <div>
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div className="page-title">{t('logs_title')}</div>
+        <ExportButton
+          filename={`logs-${new Date().toISOString().substring(0, 10)}.xls`}
+          title="TradeJournal PRO \u2014 Activity Logs"
+          subtitle={`${filtered.length} log entries   Generated: ${new Date().toLocaleString()}`}
+          columns={LOGS_EXPORT_COLUMNS}
+          rows={filtered}
+        />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
           <button className={`btn ${showFilters ? 'btn-primary' : 'btn-ghost'}`}
@@ -1175,7 +1246,16 @@ export function Activations() {
   const counts = data.reduce((a, r) => { a[r.status] = (a[r.status] || 0) + 1; return a; }, {});
   return (
     <div>
-      <div className="page-header"><div className="page-title">{t('activations_title')}</div></div>
+      <div className="page-header" style={EXPORT_HEADER_ROW}>
+        <div className="page-title">{t('activations_title')}</div>
+        <ExportButton
+          filename={`activation-requests-${new Date().toISOString().substring(0, 10)}.xls`}
+          title="TradeJournal PRO \u2014 Activation Requests"
+          subtitle={`${data.length} requests   Generated: ${new Date().toLocaleString()}`}
+          columns={ACTIVATIONS_EXPORT_COLUMNS}
+          rows={data}
+        />
+      </div>
       <div className="grid-4" style={{ marginBottom: 20 }}>
         {[[t('total') || 'Total', data.length, 'blue'], [t('pending') || 'Pending', counts.pending || 0, 'orange'], [t('approved') || 'Approved', (counts.activated || 0) + (counts.approved || 0), 'green'], [t('rejected') || 'Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
           <div key={l} className="stat-card"><div className="stat-label">{l}</div><div className={`stat-value ${c}`}>{v}</div></div>
@@ -1276,7 +1356,16 @@ export function PasswordReset() {
         </div>
       )}
 
-      <div className="page-header"><div className="page-title">{t('pwd_resets_title')}</div></div>
+      <div className="page-header" style={EXPORT_HEADER_ROW}>
+        <div className="page-title">{t('pwd_resets_title')}</div>
+        <ExportButton
+          filename={`password-resets-${new Date().toISOString().substring(0, 10)}.xls`}
+          title="TradeJournal PRO \u2014 Password Reset Requests"
+          subtitle={`${reqs.length} requests   Generated: ${new Date().toLocaleString()}`}
+          columns={PWD_RESET_EXPORT_COLUMNS}
+          rows={reqs}
+        />
+      </div>
       <div className="grid-4" style={{ marginBottom: 20 }}>
         {[[t('total') || 'Total', reqs.length, 'blue'], [t('pending') || 'Pending', counts.pending || 0, 'orange'], [t('approved') || 'Approved', counts.approved || 0, 'green'], [t('rejected') || 'Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
           <div key={l} className="stat-card"><div className="stat-label">{l}</div><div className={`stat-value ${c}`}>{v}</div></div>
@@ -1371,7 +1460,16 @@ export function EmailChangeRequests() {
   return (
     <div>
       {toast && <div style={toastStyle}>{toast.text}</div>}
-      <div className="page-header"><div className="page-title">✉️ Email Change Requests</div></div>
+      <div className="page-header" style={EXPORT_HEADER_ROW}>
+        <div className="page-title">✉️ Email Change Requests</div>
+        <ExportButton
+          filename={`email-change-requests-${new Date().toISOString().substring(0, 10)}.xls`}
+          title="TradeJournal PRO \u2014 Email Change Requests"
+          subtitle={`${reqs.length} requests   Generated: ${new Date().toLocaleString()}`}
+          columns={EMAIL_CHANGE_EXPORT_COLUMNS}
+          rows={reqs}
+        />
+      </div>
       <div className="grid-4" style={{ marginBottom: 20 }}>
         {[['Total', reqs.length, 'blue'], ['Pending', counts.pending || 0, 'orange'], ['Approved', counts.approved || 0, 'green'], ['Rejected', counts.rejected || 0, 'red']].map(([l, v, c]) => (
           <div key={l} className="stat-card"><div className="stat-label">{l}</div><div className={`stat-value ${c}`}>{v}</div></div>
@@ -1570,7 +1668,7 @@ export function Profile() {
     }
   }
 
-  // ── Security questions ────────────────────────────────────────────────
+  // ── Security questions ─────────────────────────�����──────────────────────
   async function saveQuestions() {
     if (!q1 || !a1 || !q2 || !a2) { setMsg({ type: 'error', text: 'All fields required' }); return; }
     if (q1 === q2) { setMsg({ type: 'error', text: 'Questions must be different' }); return; }
@@ -1859,7 +1957,7 @@ export function Profile() {
         </div>
       </div>
 
-      {/* ── All users' security questions (view list + edit) ──────────── */}
+      {/* ─�� All users' security questions (view list + edit) ──────────── */}
       <AllSecurityQuestions
         t={t}
         isAdmin={profile?.role === 'admin'}

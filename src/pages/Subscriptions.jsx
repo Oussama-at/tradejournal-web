@@ -3,9 +3,21 @@ import api from '../services/api';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useLang } from '../lang/LangContext';
 import DatePicker from '../components/DatePicker';
+import ExportButton from '../components/ExportButton';
+
+const SUBS_HEADER_ACTIONS = { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' };
 
 const PACK_OPTIONS = ['trial', '6months', '1year', 'lifetime'];
 const PACK_LABELS  = { trial: '24h Trial', '6months': '6 Months', '1year': '1 Year', lifetime: 'Lifetime' };
+
+const SUBS_EXPORT_COLUMNS = [
+  { key: 'user_name', label: 'User' },
+  { key: 'pack', label: 'Pack', format: v => PACK_LABELS[v] || v },
+  { key: 'expires_at', label: 'Expires', format: (v, s) => (s.pack === 'lifetime' ? '\u221E' : (v || '').substring(0, 10)) },
+  { key: 'days_left', label: 'Days Left', align: 'right', format: (_v, s) => { if (s.pack === 'lifetime') return '\u221E'; const d = daysLeft(s.expires_at); return d === null ? '\u2014' : d; } },
+  { key: 'payment_method', label: 'Payment', format: (v, s) => (s.pack === 'trial' ? 'Free' : v || '\u2014') },
+  { key: 'status', label: 'Status', format: (_v, s) => getSubStatus(s) },
+];
 
 const PAYMENT_OPTIONS = {
   trial:     null,
@@ -325,9 +337,18 @@ export default function Subscriptions() {
           <div className="page-title">{t('subs_title') || 'Subscriptions'}</div>
           <div className="page-sub">{subs.length} {t('total_subscriptions') || 'total subscriptions'}</div>
         </div>
-        <button className="btn btn-primary" onClick={() => { setShowAdd(true); loadUsers(); }}>
-          + {t('assign_pack') || 'Assign Pack'}
-        </button>
+        <div style={SUBS_HEADER_ACTIONS}>
+          <ExportButton
+            filename={`subscriptions-${new Date().toISOString().substring(0, 10)}.xls`}
+            title="TradeJournal PRO \u2014 Subscriptions"
+            subtitle={`${filtered.length} subscriptions   Generated: ${new Date().toLocaleString()}`}
+            columns={SUBS_EXPORT_COLUMNS}
+            rows={filtered}
+          />
+          <button className="btn btn-primary" onClick={() => { setShowAdd(true); loadUsers(); }}>
+            + {t('assign_pack') || 'Assign Pack'}
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

@@ -2,8 +2,18 @@ import React from 'react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ExportButton from '../components/ExportButton';
 
 const COLORS = { gold: '#d4af37', silver: '#c0c0c0', bronze: '#cd7f32' };
+
+const RANKING_EXPORT_COLUMNS = [
+  { key: 'rank', label: 'Rank', align: 'right' },
+  { key: 'user_name', label: 'User' },
+  { key: 'win_rate', label: 'Win rate', align: 'right', format: v => `${v}%` },
+  { key: 'total_trades', label: 'Total trades', align: 'right' },
+  { key: 'sum_win', label: 'Winning volume', align: 'right' },
+  { key: 'score', label: 'Score', align: 'right' },
+];
 
 function medal(rank) {
   if (rank === 1) return '🥇';
@@ -146,6 +156,17 @@ export function Ranking() {
             <div style={ST.title}>Leaderboard</div>
             <div style={ST.sub}>Ranked by a combined score: 40% win rate + 30% total trades + 30% winning volume.</div>
           </div>
+          <span>
+            <ExportButton
+              filename={`ranking-${new Date().toISOString().substring(0, 10)}.xls`}
+              title="TradeJournal PRO \u2014 Users Ranking"
+              subtitle={`${rows.length} users   Generated: ${new Date().toLocaleString()}`}
+              columns={RANKING_EXPORT_COLUMNS}
+              rows={rows}
+              className="btn"
+              style={ST.btn}
+            />
+          </span>
           <button style={ST.btn} onClick={reload}>↻ Refresh</button>
         </div>
 

@@ -1,6 +1,23 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
 import { useLang } from '../lang/LangContext';
+import ExportButton from '../components/ExportButton';
+
+const COOKIE_EXPORT_COLUMNS = [
+  { key: 'created_at', label: 'When' },
+  { key: 'user_name', label: 'User', format: v => v || 'Guest' },
+  { key: 'decision', label: 'Decision' },
+  { key: 'necessary', label: 'Necessary', format: v => (v ? 'Yes' : 'No') },
+  { key: 'analytics', label: 'Analytics', format: v => (v ? 'Yes' : 'No') },
+  { key: 'preferences', label: 'Preferences', format: v => (v ? 'Yes' : 'No') },
+  { key: 'saved_login', label: 'Saved login', format: v => (v ? 'Yes' : 'No') },
+  { key: 'ip_address', label: 'IP', format: v => v || '' },
+  { key: 'device_type', label: 'Device', format: v => v || '' },
+  { key: 'os', label: 'OS', format: v => v || '' },
+  { key: 'browser', label: 'Browser', format: v => v || '' },
+  { key: 'country', label: 'Country', format: v => v || '' },
+  { key: 'city', label: 'City', format: v => v || '' },
+];
 
 const statsRow = { display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 };
 const headerRow = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' };
@@ -197,6 +214,15 @@ export default function CookieConsents() {
             <span style={auto ? liveDot : liveDotOff} />
             {auto ? 'Live' : 'Paused'}
           </label>
+          <ExportButton
+            filename={`cookie-consents-${new Date().toISOString().slice(0, 10)}.xls`}
+            title="TradeJournal PRO \u2014 Cookie Consents"
+            subtitle={`${rows.length} records   Generated: ${new Date().toLocaleString()}`}
+            columns={COOKIE_EXPORT_COLUMNS}
+            rows={rows}
+            className="btn"
+            style={dlBtnStyle}
+          />
           <button style={dlBtnStyle} onClick={downloadCSV} disabled={!rows.length}>⬇ Download CSV</button>
           <button className="btn" onClick={() => load()}>↻ Refresh</button>
         </div>

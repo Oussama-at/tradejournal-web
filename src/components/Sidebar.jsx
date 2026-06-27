@@ -664,6 +664,45 @@ export default function Sidebar({ capitalInfo }) {
   const isAdmin  = user?.role === 'admin';
   const navigate = useNavigate();
 
+  // Per-section counters shown as badges directly on the nav items, so the
+  // user can see how many new items a section holds before opening it.
+  const [navCounts, setNavCounts] = useState({ trades: 0, activations: 0, password_resets: 0, email_changes: 0 });
+  useEffect(() => {
+    let alive = true;
+    const poll = () => {
+      const jobs = [api.get('/trades?page=1&limit=1').catch(() => null)];
+      if (isAdmin) jobs.push(api.get('/admin/pending-counts').catch(() => null));
+      Promise.all(jobs).then((res) => {
+        if (!alive) return;
+        const tradesRes = res[0];
+        const pend = isAdmin ? (res[1]?.data || {}) : {};
+        setNavCounts({
+          trades: tradesRes?.data?.total || 0,
+          activations: pend.activations || 0,
+          password_resets: pend.password_resets || 0,
+          email_changes: pend.email_changes || 0,
+        });
+      });
+    };
+    poll();
+    const id = setInterval(poll, 30000);
+    return () => { alive = false; clearInterval(id); };
+  }, [isAdmin]);
+
+  // Red badge = unread / pending ("new notifications"); muted badge = a plain total.
+  const navAlertBadgeStyle = { marginLeft: 'auto', background: '#ff4757', color: '#fff', borderRadius: 10, fontSize: 11, fontWeight: 800, padding: '1px 7px', lineHeight: 1.6 };
+  const navTotalBadgeStyle = { marginLeft: 'auto', background: 'rgba(255,255,255,0.10)', color: '#9fb3c8', borderRadius: 10, fontSize: 11, fontWeight: 700, padding: '1px 7px', lineHeight: 1.6 };
+  const sectionBadgeFor = (key) => {
+    switch (key) {
+      case 'messages':    return { count: msgUnread, total: false };
+      case 'trades':      return { count: navCounts.trades, total: true };
+      case 'act':         return { count: navCounts.activations, total: false };
+      case 'passreset':   return { count: navCounts.password_resets, total: false };
+      case 'emailchange': return { count: navCounts.email_changes, total: false };
+      default:            return { count: 0, total: false };
+    }
+  };
+
   const packInfo = sub ? PACK_LABELS[sub.pack] : null;
 
   // For lifetime: just show label + never expires
@@ -734,7 +773,15 @@ export default function Sidebar({ capitalInfo }) {
             >
               <span className="nav-icon">{item.icon}</span>
               {t(item.tkey)}
-              {item.key === 'messages' && msgUnread > 0 && <span style={msgBadgeStyle}>{msgUnread}</span>}
+              {(() => {
+                const { count, total } = sectionBadgeFor(item.key);
+                if (!count) return null;
+                return (
+                  <span style={total ? navTotalBadgeStyle : navAlertBadgeStyle}>
+                    {count > 99 ? '99+' : count}
+                  </span>
+                );
+              })()}
               {item.admin && <span className="admin-tag">ADMIN</span>}
             </NavLink>
           );
