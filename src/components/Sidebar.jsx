@@ -569,6 +569,11 @@ function NotificationBell({ user }) {
       </button>
 
       {open && (
+        <>
+        {/* While the notifications drawer is open, hide the floating AI/Quick-action
+            buttons so they don't bleed through the translucent footer and cover
+            the "Mark all as read" text. */}
+        <style>{`.tj-fab-chat, .tj-fab-qa { display: none !important; }`}</style>
         <div ref={panelRef} style={{
           position:'fixed', top:0, right:0, width:340, height:'100vh',
           background:'linear-gradient(180deg,#0a0f16 0%,#080c10 100%)',
@@ -630,6 +635,7 @@ function NotificationBell({ user }) {
             )}
           </div>
         </div>
+        </>
       )}
     </>
   );
