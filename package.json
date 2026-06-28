@@ -8,7 +8,8 @@
     "react-intl": "^6.8.9",
     "react-router-dom": "^6.22.0",
     "react-scripts": "5.0.1",
-    "recharts": "^2.10.0"
+    "recharts": "^2.10.0",
+    "xlsx-js-style": "^1.2.0"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -17,15 +18,26 @@
     "test:coverage": "react-scripts test --coverage --watchAll=false",
     "test:unit": "react-scripts test --testPathPattern=src/__tests__/unit --watchAll=false",
     "test:integration": "react-scripts test --testPathPattern=src/__tests__/integration --watchAll=false",
-    "test:e2e": "playwright test", 
+    "test:e2e": "playwright test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
-    "extends": ["react-app", "react-app/jest"]
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
   },
   "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   },
   "jest": {
     "collectCoverageFrom": [
@@ -36,9 +48,9 @@
     ],
     "coverageThreshold": {
       "global": {
-        "branches":   50,
-        "functions":  50,
-        "lines":      50,
+        "branches": 50,
+        "functions": 50,
+        "lines": 50,
         "statements": 50
       }
     }
