@@ -14,8 +14,8 @@ const SUBS_EXPORT_COLUMNS = [
   { key: 'user_name', label: 'User' },
   { key: 'pack', label: 'Pack', format: v => PACK_LABELS[v] || v },
   { key: 'expires_at', label: 'Expires', format: (v, s) => (s.pack === 'lifetime' ? '\u221E' : (v || '').substring(0, 10)) },
-  { key: 'days_left', label: 'Days Left', align: 'right', format: (_v, s) => { if (s.pack === 'lifetime') return '\u221E'; const d = daysLeft(s.expires_at); return d === null ? '\u2014' : d; } },
-  { key: 'payment_method', label: 'Payment', format: (v, s) => (s.pack === 'trial' ? 'Free' : v || '\u2014') },
+  { key: 'days_left', label: 'Days Left', align: 'right', format: (_v, s) => { if (s.pack === 'lifetime') return '\u221E'; const d = daysLeft(s.expires_at); return d === null ? '—' : d; } },
+  { key: 'payment_method', label: 'Payment', format: (v, s) => (s.pack === 'trial' ? 'Free' : v || '—') },
   { key: 'status', label: 'Status', format: (_v, s) => getSubStatus(s) },
 ];
 
@@ -340,7 +340,7 @@ export default function Subscriptions() {
         <div style={SUBS_HEADER_ACTIONS}>
           <ExportButton
             filename={`subscriptions-${new Date().toISOString().substring(0, 10)}.xls`}
-            title="TradeJournal PRO \u2014 Subscriptions"
+            title="TradeJournal PRO — Subscriptions"
             subtitle={`${filtered.length} subscriptions   Generated: ${new Date().toLocaleString()}`}
             columns={SUBS_EXPORT_COLUMNS}
             rows={filtered}

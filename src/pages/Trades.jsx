@@ -71,7 +71,7 @@ export default function Trades() {
       const rows = res?.data?.trades || [];
       exportToExcel({
         filename: `trades-export-${new Date().toISOString().substring(0, 10)}.xls`,
-        title: 'TradeJournal PRO \u2014 Trades Export',
+        title: 'TradeJournal PRO — Trades Export',
         subtitle: `${rows.length} trades   Generated: ${new Date().toLocaleString()}`,
         columns: tradeColumns(),
         rows,

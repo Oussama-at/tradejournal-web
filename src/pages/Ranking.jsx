@@ -159,7 +159,7 @@ export function Ranking() {
           <span>
             <ExportButton
               filename={`ranking-${new Date().toISOString().substring(0, 10)}.xls`}
-              title="TradeJournal PRO \u2014 Users Ranking"
+              title="TradeJournal PRO — Users Ranking"
               subtitle={`${rows.length} users   Generated: ${new Date().toLocaleString()}`}
               columns={RANKING_EXPORT_COLUMNS}
               rows={rows}

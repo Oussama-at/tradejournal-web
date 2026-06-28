@@ -216,7 +216,7 @@ export default function CookieConsents() {
           </label>
           <ExportButton
             filename={`cookie-consents-${new Date().toISOString().slice(0, 10)}.xls`}
-            title="TradeJournal PRO \u2014 Cookie Consents"
+            title="TradeJournal PRO — Cookie Consents"
             subtitle={`${rows.length} records   Generated: ${new Date().toLocaleString()}`}
             columns={COOKIE_EXPORT_COLUMNS}
             rows={rows}

@@ -214,7 +214,7 @@ export function Capital() {
     const res = await api.put(`/capital/${id}/status`, { status: 'active' });
     if (res && res.success === false) {
       if (res.message === 'ACTIVE_CAPITAL_EXISTS') {
-        setMsg({ type: 'error', text: '\u26A0 You already have an active capital. You cannot activate two capitals at once \u2014 disable the active one first.' });
+        setMsg({ type: 'error', text: '\u26A0 You already have an active capital. You cannot activate two capitals at once — disable the active one first.' });
       } else {
         setMsg({ type: 'error', text: res.message || 'Activation failed' });
       }
@@ -380,7 +380,7 @@ export function CapitalArchive() {
     const deleted = (a.date_delete || '').substring(0, 10);
     exportToExcel({
       filename: `capital-archive-${a.id}-${deleted || 'export'}.xls`,
-      title: 'TradeJournal PRO \u2014 Capital Archive',
+      title: 'TradeJournal PRO — Capital Archive',
       subtitle: `Starting: ${a.capital_initial}$   Final: ${a.capital_now}$   Created: ${created}   Archived: ${deleted}   Trades: ${trades.length}`,
       columns: tradeColumns(),
       rows: trades,
@@ -395,7 +395,7 @@ export function CapitalArchive() {
         <div className="card">Loading…</div>
       ) : archives.length === 0 ? (
         <div className="card" style={ARCH_EMPTY}>
-          {t('no_archived_capital') || 'No deleted capitals yet. When you delete a capital, it will appear here with all of its trades \u2014 you can then restore it, export it to Excel, or delete it permanently.'}
+          {t('no_archived_capital') || 'No deleted capitals yet. When you delete a capital, it will appear here with all of its trades — you can then restore it, export it to Excel, or delete it permanently.'}
         </div>
       ) : (
         <div className="card">
@@ -476,7 +476,7 @@ export function Withdraw() {
         <div className="page-title">{t('withdraw_title')}</div>
         <ExportButton
           filename={`withdrawals-${new Date().toISOString().substring(0, 10)}.xls`}
-          title="TradeJournal PRO \u2014 Withdrawals"
+          title="TradeJournal PRO — Withdrawals"
           columns={WITHDRAW_EXPORT_COLUMNS}
           rows={history}
         />
@@ -885,7 +885,7 @@ export function Users() {
         <div style={EXPORT_HEADER_ACTIONS}>
           <ExportButton
             filename={`users-${new Date().toISOString().substring(0, 10)}.xls`}
-            title="TradeJournal PRO \u2014 Users"
+            title="TradeJournal PRO — Users"
             subtitle={`${filtered.length} users   Generated: ${new Date().toLocaleString()}`}
             columns={USERS_EXPORT_COLUMNS}
             rows={filtered}
@@ -1113,7 +1113,7 @@ export function Logs() {
         <div className="page-title">{t('logs_title')}</div>
         <ExportButton
           filename={`logs-${new Date().toISOString().substring(0, 10)}.xls`}
-          title="TradeJournal PRO \u2014 Activity Logs"
+          title="TradeJournal PRO — Activity Logs"
           subtitle={`${filtered.length} log entries   Generated: ${new Date().toLocaleString()}`}
           columns={LOGS_EXPORT_COLUMNS}
           rows={filtered}
@@ -1259,7 +1259,7 @@ export function Activations() {
         <div className="page-title">{t('activations_title')}</div>
         <ExportButton
           filename={`activation-requests-${new Date().toISOString().substring(0, 10)}.xls`}
-          title="TradeJournal PRO \u2014 Activation Requests"
+          title="TradeJournal PRO — Activation Requests"
           subtitle={`${data.length} requests   Generated: ${new Date().toLocaleString()}`}
           columns={ACTIVATIONS_EXPORT_COLUMNS}
           rows={data}
@@ -1369,7 +1369,7 @@ export function PasswordReset() {
         <div className="page-title">{t('pwd_resets_title')}</div>
         <ExportButton
           filename={`password-resets-${new Date().toISOString().substring(0, 10)}.xls`}
-          title="TradeJournal PRO \u2014 Password Reset Requests"
+          title="TradeJournal PRO — Password Reset Requests"
           subtitle={`${reqs.length} requests   Generated: ${new Date().toLocaleString()}`}
           columns={PWD_RESET_EXPORT_COLUMNS}
           rows={reqs}
@@ -1473,7 +1473,7 @@ export function EmailChangeRequests() {
         <div className="page-title">✉️ Email Change Requests</div>
         <ExportButton
           filename={`email-change-requests-${new Date().toISOString().substring(0, 10)}.xls`}
-          title="TradeJournal PRO \u2014 Email Change Requests"
+          title="TradeJournal PRO — Email Change Requests"
           subtitle={`${reqs.length} requests   Generated: ${new Date().toLocaleString()}`}
           columns={EMAIL_CHANGE_EXPORT_COLUMNS}
           rows={reqs}
