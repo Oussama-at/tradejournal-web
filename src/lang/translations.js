@@ -55,6 +55,7 @@ const translations = {
     avg_win:            'Avg Win',
     avg_loss:           'Avg Loss',
     capital:            'Capital',
+    net_worth:          'Net Worth',
     no_trades:          'No trades yet',
     monthly_pnl:        'Monthly P&L',
 
@@ -377,6 +378,7 @@ const translations = {
     avg_win:            'متوسط الفوز',
     avg_loss:           'متوسط الخسارة',
     capital:            'رأس المال',
+    net_worth:          'صافي القيمة',
     no_trades:          'لا توجد صفقات بعد',
     monthly_pnl:        'الربح/الخسارة الشهري',
 
@@ -697,6 +699,7 @@ const translations = {
     avg_win:            'Gain moyen',
     avg_loss:           'Perte moyenne',
     capital:            'Capital',
+    net_worth:          'Valeur nette',
     no_trades:          'Aucun trade pour le moment',
     monthly_pnl:        'P&L mensuel',
 

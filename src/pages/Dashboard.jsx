@@ -198,7 +198,7 @@ export default function Dashboard() {
         <StatCard label={t('withdrawals') || 'Withdrawals'} value={totalWithdrawn}
           fmt={v => (v > 0 ? '-' : '') + v.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '$'}
           pClass={() => ''} sub={t('total_withdrawn') || 'Total withdrawn'} />
-        <StatCard label={t('capital')} value={capNow} fmt={v => v.toLocaleString() + '$'} pClass={v => v >= capDep ? 'green' : 'red'}
+        <StatCard label={t('net_worth') || 'Net Worth'} value={capNow} fmt={v => v.toLocaleString() + '$'} pClass={v => v >= capDep ? 'green' : 'red'}
           sub={`${roi >= 0 ? '+' : ''}${roi.toFixed(2)}% ROI`} mono />
       </div>
 
