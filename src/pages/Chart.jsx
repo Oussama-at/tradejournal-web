@@ -195,10 +195,12 @@ export default function Chart() {
         api.get('/capital/current').catch(() => null),
       ]);
       const rawTrades = tradesRes?.data?.trades || [];
-      // Scope withdrawals to the ACTIVE capital only (trades are already scoped server-side)
+      // Scope withdrawals to the ACTIVE capital only (trades are already scoped server-side).
+      // No active capital  → show NOTHING (server also returns an empty list now).
       const activeCapId = capRes?.data?.capital?.id ?? null;
-      const rawWithdrawals = (withdrawRes?.data?.withdrawals || [])
-        .filter(w => activeCapId == null || w.capital_id === activeCapId);
+      const rawWithdrawals = activeCapId == null
+        ? []
+        : (withdrawRes?.data?.withdrawals || []).filter(w => w.capital_id === activeCapId);
       const allTrades = filterByPeriod(rawTrades);
       const allWithdrawals = filterByPeriod(rawWithdrawals, true);
       setTrades(allTrades);
