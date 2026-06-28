@@ -101,7 +101,12 @@ export default function Dashboard() {
         cum += net;
         return { day: day.substring(5), cumul: parseFloat(cum.toFixed(2)), net: parseFloat(net.toFixed(2)) };
       });
-      setChartData(cd);
+      // Prepend a $0 origin so even a single trade renders as a LINE
+      // (same styling as the P&L Chart page) instead of a lone dot.
+      const cdWithOrigin = cd.length > 0
+        ? [{ day: '', cumul: 0, net: 0 }, ...cd]
+        : cd;
+      setChartData(cdWithOrigin);
     } catch (e) { console.error(e); }
   }
 
