@@ -94,7 +94,7 @@ export default function Dashboard() {
       filtered.forEach(tr => {
         const day = (tr.date_trade || '').substring(0, 10);
         if (!byDay[day]) byDay[day] = 0;
-        byDay[day] += tr.status === 'win' ? tr.montant : -Math.abs(tr.montant);
+        byDay[day] += tr.status === 'win' ? tr.montant : tr.status === 'lose' ? -Math.abs(tr.montant) : 0;
       });
       let cum = 0;
       const cd = Object.entries(byDay).sort().map(([day, net]) => {
@@ -278,14 +278,14 @@ export default function Dashboard() {
                     {tr.type_trd?.toUpperCase()}
                   </td>
                   <td>
-                    <span className={`badge ${tr.status === 'win' ? 'badge-green' : 'badge-red'}`}>
-                      {tr.status === 'win' ? t('win')?.toUpperCase() : t('lose')?.toUpperCase()}
+                    <span className={`badge ${tr.status === 'win' ? 'badge-green' : tr.status === 'lose' ? 'badge-red' : ''}`}>
+                      {tr.status === 'win' ? t('win')?.toUpperCase() : tr.status === 'lose' ? t('lose')?.toUpperCase() : 'BE'}
                     </span>
                   </td>
                   <td className="mono">{tr.point_entree}</td>
                   <td className="mono">{tr.point_sortie}</td>
-                  <td className={`mono bold ${tr.status === 'win' ? 'green' : 'red'}`}>
-                    {tr.status === 'win' ? '+' : '-'}{Math.abs(tr.montant).toFixed(2)}$
+                  <td className={`mono bold ${tr.status === 'win' ? 'green' : tr.status === 'lose' ? 'red' : ''}`}>
+                    {tr.status === 'win' ? '+' : tr.status === 'lose' ? '-' : ''}{Math.abs(tr.montant).toFixed(2)}$
                   </td>
                   <td className="muted">{{ LON: 'London', NY: 'New York', ASI: 'Asia' }[tr.sessions] || tr.sessions}</td>
                 </tr>

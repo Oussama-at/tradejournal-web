@@ -209,7 +209,7 @@ export default function Chart() {
       allTrades.forEach(t => {
         const day = (t.date_trade || '').substring(0, 10);
         if (!byDay[day]) byDay[day] = 0;
-        byDay[day] += t.status === 'win' ? t.montant : -Math.abs(t.montant);
+        byDay[day] += t.status === 'win' ? t.montant : t.status === 'lose' ? -Math.abs(t.montant) : 0;
       });
 
       // Build per-day withdrawals map
@@ -253,7 +253,7 @@ export default function Chart() {
       allTrades.forEach(t => {
         const m = (t.date_trade || '').substring(0, 7);
         if (!byMonth[m]) byMonth[m] = 0;
-        byMonth[m] += t.status === 'win' ? t.montant : -Math.abs(t.montant);
+        byMonth[m] += t.status === 'win' ? t.montant : t.status === 'lose' ? -Math.abs(t.montant) : 0;
       });
       // Monthly withdrawals
       const wByMonth = {};
@@ -275,7 +275,7 @@ export default function Chart() {
         const day = (t.date_trade || '').substring(0, 10);
         if (!dailyMap[day]) dailyMap[day] = { profit: 0, loss: 0 };
         if (t.status === 'win') dailyMap[day].profit += t.montant;
-        else dailyMap[day].loss += Math.abs(t.montant);
+        else if (t.status === 'lose') dailyMap[day].loss += Math.abs(t.montant);
       });
       const dl = Object.entries(dailyMap).sort().map(([day, { profit, loss }]) => ({
         day: day.substring(5),
@@ -297,24 +297,24 @@ export default function Chart() {
 
   // Stats
   const wins   = trades.filter(t => t.status === 'win').length;
-  const losses = trades.filter(t => t.status !== 'win').length;
+  const losses = trades.filter(t => t.status === 'lose').length;
   const total  = wins + losses;
   const wr     = total > 0 ? (wins / total * 100) : 0;
   const sessMap = {};
   trades.forEach(t => {
     const s = t.sessions || 'Unknown';
     if (!sessMap[s]) sessMap[s] = 0;
-    sessMap[s] += t.status === 'win' ? t.montant : -Math.abs(t.montant);
+    sessMap[s] += t.status === 'win' ? t.montant : t.status === 'lose' ? -Math.abs(t.montant) : 0;
   });
   const mktMap = {};
   trades.forEach(t => {
     const m = t.marcher || 'Unknown';
     if (!mktMap[m]) mktMap[m] = 0;
-    mktMap[m] += t.status === 'win' ? t.montant : -Math.abs(t.montant);
+    mktMap[m] += t.status === 'win' ? t.montant : t.status === 'lose' ? -Math.abs(t.montant) : 0;
   });
   const topMarkets = Object.entries(mktMap).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 5);
 
-  const totalPnl = trades.reduce((s, t) => s + (t.status === 'win' ? t.montant : -Math.abs(t.montant)), 0);
+  const totalPnl = trades.reduce((s, t) => s + (t.status === 'win' ? t.montant : t.status === 'lose' ? -Math.abs(t.montant) : 0), 0);
   const totalWithdrawn = withdrawals.reduce((s, w) => s + parseFloat(w.amount || 0), 0);
   const netCapital = totalPnl - totalWithdrawn;
   const daysWithWithdrawals = combinedData.filter(d => d.withdrawAmount > 0);

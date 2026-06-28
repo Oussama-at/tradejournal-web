@@ -211,7 +211,16 @@ export function Capital() {
   }
 
   async function activate(id) {
-    await api.put(`/capital/${id}/status`, { status: 'active' });
+    const res = await api.put(`/capital/${id}/status`, { status: 'active' });
+    if (res && res.success === false) {
+      if (res.message === 'ACTIVE_CAPITAL_EXISTS') {
+        setMsg({ type: 'error', text: '\u26A0 You already have an active capital. You cannot activate two capitals at once \u2014 disable the active one first.' });
+      } else {
+        setMsg({ type: 'error', text: res.message || 'Activation failed' });
+      }
+      return;
+    }
+    setMsg({ type: 'success', text: '\u2713 Capital activated' });
     load();
   }
 

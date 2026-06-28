@@ -573,7 +573,10 @@ function NotificationBell({ user }) {
         {/* While the notifications drawer is open, hide the floating AI/Quick-action
             buttons so they don't bleed through the translucent footer and cover
             the "Mark all as read" text. */}
-        <style>{`.tj-fab-chat, .tj-fab-qa { display: none !important; }`}</style>
+        <style>{`
+          .tj-fab-chat, .tj-fab-qa { display: none !important; }
+          .notif-footer-btn { background: #141c26 !important; position: relative; z-index: 1; }
+        `}</style>
         <div ref={panelRef} style={{
           position:'fixed', top:0, right:0, width:340, height:'100vh',
           background:'linear-gradient(180deg,#0a0f16 0%,#080c10 100%)',
@@ -628,10 +631,10 @@ function NotificationBell({ user }) {
           {/* Footer */}
           <div style={{ padding:'12px 16px', borderTop:'1px solid #1e2a35', flexShrink:0 }}>
             {tab === 'notifs' && unreadNotifs.length > 0 && (
-              <button onClick={markAllRead} style={{ width:'100%', padding:'9px', background:'rgba(255,255,255,0.04)', border:'1px solid #1e2a35', borderRadius:7, color:'#7a8a9a', cursor:'pointer', fontSize:12, fontWeight:600 }}>✓ Mark all as read</button>
+              <button className="notif-footer-btn" onClick={markAllRead} style={{ width:'100%', padding:'9px', background:'rgba(255,255,255,0.04)', border:'1px solid #1e2a35', borderRadius:7, color:'#7a8a9a', cursor:'pointer', fontSize:12, fontWeight:600 }}>✓ Mark all as read</button>
             )}
             {tab === 'alerts' && visibleAlerts.length > 0 && (
-              <button onClick={() => visibleAlerts.forEach(a => dismissAlert(a.id))} style={{ width:'100%', padding:'9px', background:'rgba(255,255,255,0.04)', border:'1px solid #1e2a35', borderRadius:7, color:'#7a8a9a', cursor:'pointer', fontSize:12, fontWeight:600 }}>Dismiss all</button>
+              <button className="notif-footer-btn" onClick={() => visibleAlerts.forEach(a => dismissAlert(a.id))} style={{ width:'100%', padding:'9px', background:'rgba(255,255,255,0.04)', border:'1px solid #1e2a35', borderRadius:7, color:'#7a8a9a', cursor:'pointer', fontSize:12, fontWeight:600 }}>Dismiss all</button>
             )}
           </div>
         </div>
