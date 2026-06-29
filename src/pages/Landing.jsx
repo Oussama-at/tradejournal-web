@@ -1,3 +1,4 @@
+import BrandLogo from '../components/BrandLogo';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -637,7 +638,7 @@ export default function Landing() {
       <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(8,12,16,0.88)', backdropFilter:'blur(16px)', borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'0 40px', height:64, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         {/* Logo */}
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:34, height:34, background:'#00e676', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:11, color:'#080c10', fontFamily:'monospace', letterSpacing:-1 }}>TJ</div>
+          <div style={{ width:34, height:34, background:'#00e676', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:11, color:'#080c10', fontFamily:'monospace', letterSpacing:-1 }}><BrandLogo /></div>
           <span style={{ fontWeight:800, fontSize:17 }}>Trade<span style={{ color:'#00e676' }}>Journal</span> PRO</span>
         </div>
         {/* Actions — always LTR order */}
@@ -774,7 +775,7 @@ export default function Landing() {
       {/* ── FOOTER ── */}
       <footer style={{ position:'relative', zIndex:1, borderTop:'1px solid rgba(255,255,255,0.06)', padding:'26px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:28, height:28, background:'#00e676', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:10, color:'#080c10', fontFamily:'monospace' }}>TJ</div>
+          <div style={{ width:28, height:28, background:'#00e676', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:10, color:'#080c10', fontFamily:'monospace' }}><BrandLogo /></div>
           <span style={{ fontSize:14, fontWeight:600 }}>TradeJournal PRO</span>
         </div>
         <div style={{ fontSize:12, color:'rgba(180,200,220,0.3)' }}>{C.footerCopy}</div>

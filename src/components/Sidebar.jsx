@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 import { useLang } from '../lang/LangContext';
@@ -730,7 +731,7 @@ export default function Sidebar({ capitalInfo }) {
     <aside className="sidebar">
       <div className="sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="brand-icon">TJ</div>
+          <div className="brand-icon"><BrandLogo /></div>
           <div>
             <div className="brand-name">TradeJournal</div>
             <div className="brand-sub">PRO · v2.0</div>

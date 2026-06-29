@@ -1,3 +1,4 @@
+import BrandLogo from '../components/BrandLogo';
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
@@ -123,7 +124,7 @@ export default function Register() {
       <div className="login-box" style={{ maxWidth: 520 }}>
         {/* Header */}
         <div className="login-header">
-          <div className="login-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>TJ</div>
+          <div className="login-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}><BrandLogo /></div>
           <h1 className="login-title">Create Account</h1>
           <p className="login-sub">Join TradeJournal PRO</p>
         </div>

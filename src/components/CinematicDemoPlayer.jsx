@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo';
 // ═══════════════════════════════════════════════════════════════
 //  CinematicDemoPlayer — professional video-style animated demo
 //  Arabic voice: uses speechSynthesis with proper lang + fallback
@@ -131,7 +132,7 @@ function SceneIntro({ lang, pct }) {
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:32, direction: isAr?'rtl':'ltr' }}>
       {/* Logo */}
       <div style={{ opacity: pct > 0.05 ? 1 : 0, transform: pct > 0.05 ? 'scale(1)' : 'scale(0.7)', transition:'all 0.6s cubic-bezier(.34,1.56,.64,1)' }}>
-        <div style={{ width:80, height:80, background:'var(--green)', borderRadius:20, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:900, color:'#080c10', fontFamily:'var(--font-mono)', boxShadow:'0 0 60px rgba(0,230,118,0.4)' }}>TJ</div>
+        <div style={{ width:80, height:80, background:'var(--green)', borderRadius:20, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:900, color:'#080c10', fontFamily:'var(--font-mono)', boxShadow:'0 0 60px rgba(0,230,118,0.4)' }}><BrandLogo /></div>
       </div>
       {/* Words appearing */}
       <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
@@ -577,7 +578,7 @@ export default function CinematicDemoPlayer({ lang = 'en' }) {
             </div>
             <div style={{ width:1, height:16, background:'rgba(255,255,255,0.1)', margin:'0 4px' }}/>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <div style={{ width:20, height:20, background:'var(--green)', borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:9, color:'#080c10', fontFamily:'var(--font-mono)' }}>TJ</div>
+              <div style={{ width:20, height:20, background:'var(--green)', borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:9, color:'#080c10', fontFamily:'var(--font-mono)' }}><BrandLogo /></div>
               <span style={{ fontSize:12, fontWeight:700 }}>Trade<span style={{ color:'var(--green)' }}>Journal</span> PRO</span>
             </div>
           </div>

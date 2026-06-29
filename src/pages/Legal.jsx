@@ -1,3 +1,4 @@
+import BrandLogo from '../components/BrandLogo';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -35,7 +36,7 @@ function LegalLayout({ title, children }) {
       <div style={ST.wrap}>
         <div style={ST.top}>
           <div style={ST.logo} onClick={() => navigate('/')}>
-            <div style={ST.logoBox}>TJ</div>
+            <div style={ST.logoBox}><BrandLogo /></div>
             <span style={ST.logoText}>TradeJournal PRO</span>
           </div>
           <button style={ST.backBtn} onClick={() => navigate('/')}>{'\u2190'} Home</button>

@@ -1,3 +1,4 @@
+import BrandLogo from '../components/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -322,7 +323,7 @@ export default function Login() {
       </div>
       <div className="login-box">
         <div className="login-header">
-          <div className="login-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>TJ</div>
+          <div className="login-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}><BrandLogo /></div>
           <h1 className="login-title">TradeJournal <span>PRO</span></h1>
           <p className="login-sub">Sign in to your account</p>
         </div>
