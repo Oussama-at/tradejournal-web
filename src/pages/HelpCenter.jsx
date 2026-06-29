@@ -47,7 +47,7 @@ export default function HelpCenter() {
         {active.loading ? <div style={ST.empty}>Loading...</div> : (
           <>
             <h1 style={ST.artTitle}>{active.title}</h1>
-            <div style={ST.meta}>{active.category}</div>
+            <div style={ST.meta}>{active.category}{active.author_name ? ' · Written by ' + active.author_name : ''}</div>
             <div style={ST.body}>{active.body}</div>
           </>
         )}
