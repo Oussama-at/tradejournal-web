@@ -3,32 +3,40 @@ import api from '../services/api';
 import { useLang } from '../lang/LangContext';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faTableColumns, faChartLine, faRightLeft, faPlus, faWallet,
+  faBoxArchive, faMoneyBillTransfer, faEnvelope, faCircleQuestion,
+  faUsers, faCreditCard, faIdCard, faClipboardList, faUserCheck,
+  faUnlockKeyhole, faEnvelopeOpenText, faBullhorn, faTrophy,
+  faPenToSquare, faCookieBite, faLock, faUser, faRightFromBracket,
+} from '@fortawesome/free-solid-svg-icons';
 
 const NAV = [
-  { key: 'dash',      path: '/',                tkey: 'nav_dashboard',   icon: '▦' },
-  { key: 'chart',     path: '/chart',           tkey: 'nav_chart',       icon: '↗' },
-  { key: 'trades',    path: '/trades',          tkey: 'nav_trades',      icon: '⊟' },
-  { key: 'add',       path: '/add-trade',       tkey: 'nav_add_trade',   icon: '+' },
-  { key: 'capital',   path: '/capital',         tkey: 'nav_capital',     icon: '◎' },
-  { key: 'caparch',   path: '/capital-archive', tkey: 'nav_capital_archive', icon: '🗄' },
-  { key: 'withdraw',  path: '/withdraw',        tkey: 'nav_withdraw',    icon: '↓' },
-  { key: 'messages',  path: '/messages',        tkey: 'nav_messages',    icon: '✉' },
-  { key: 'help',      path: '/help',            tkey: 'nav_help',        icon: '?' },
+  { key: 'dash',      path: '/',                tkey: 'nav_dashboard',   icon: faTableColumns },
+  { key: 'chart',     path: '/chart',           tkey: 'nav_chart',       icon: faChartLine },
+  { key: 'trades',    path: '/trades',          tkey: 'nav_trades',      icon: faRightLeft },
+  { key: 'add',       path: '/add-trade',       tkey: 'nav_add_trade',   icon: faPlus },
+  { key: 'capital',   path: '/capital',         tkey: 'nav_capital',     icon: faWallet },
+  { key: 'caparch',   path: '/capital-archive', tkey: 'nav_capital_archive', icon: faBoxArchive },
+  { key: 'withdraw',  path: '/withdraw',        tkey: 'nav_withdraw',    icon: faMoneyBillTransfer },
+  { key: 'messages',  path: '/messages',        tkey: 'nav_messages',    icon: faEnvelope },
+  { key: 'help',      path: '/help',            tkey: 'nav_help',        icon: faCircleQuestion },
   null,
-  { key: 'users',     path: '/users',           tkey: 'nav_users',       icon: '⊞', admin: true },
-  { key: 'subs',      path: '/subscriptions',   tkey: 'nav_subs',        icon: '💳', admin: true },
-  { key: 'myplan',    path: '/my-plan',         tkey: 'nav_myplan',      icon: '💳', userOnly: true },
-  { key: 'logs',      path: '/logs',            tkey: 'nav_logs',        icon: '≡', admin: true },
-  { key: 'act',       path: '/activations',     tkey: 'nav_activations', icon: '★', admin: true },
-  { key: 'passreset',   path: '/password-resets', tkey: 'nav_pwd_resets',     icon: '⟳', admin: true },
-  { key: 'emailchange', path: '/email-changes',   tkey: 'nav_email_changes',  icon: '✉️', admin: true },
-  { key: 'alerts',   path: '/alerts',          tkey: 'nav_alerts',      icon: '📢', admin: true },
-  { key: 'ranking',  path: '/ranking',         tkey: 'nav_ranking',     icon: '🏆', admin: true },
-  { key: 'adminhelp', path: '/admin/help',      tkey: 'nav_admin_help',  icon: '📝', admin: true },
-  { key: 'cookies',  path: '/cookie-consents', tkey: 'nav_cookie_consents', icon: '🍪', admin: true },
+  { key: 'users',     path: '/users',           tkey: 'nav_users',       icon: faUsers, admin: true },
+  { key: 'subs',      path: '/subscriptions',   tkey: 'nav_subs',        icon: faCreditCard, admin: true },
+  { key: 'myplan',    path: '/my-plan',         tkey: 'nav_myplan',      icon: faIdCard, userOnly: true },
+  { key: 'logs',      path: '/logs',            tkey: 'nav_logs',        icon: faClipboardList, admin: true },
+  { key: 'act',       path: '/activations',     tkey: 'nav_activations', icon: faUserCheck, admin: true },
+  { key: 'passreset',   path: '/password-resets', tkey: 'nav_pwd_resets',     icon: faUnlockKeyhole, admin: true },
+  { key: 'emailchange', path: '/email-changes',   tkey: 'nav_email_changes',  icon: faEnvelopeOpenText, admin: true },
+  { key: 'alerts',   path: '/alerts',          tkey: 'nav_alerts',      icon: faBullhorn, admin: true },
+  { key: 'ranking',  path: '/ranking',         tkey: 'nav_ranking',     icon: faTrophy, admin: true },
+  { key: 'adminhelp', path: '/admin/help',      tkey: 'nav_admin_help',  icon: faPenToSquare, admin: true },
+  { key: 'cookies',  path: '/cookie-consents', tkey: 'nav_cookie_consents', icon: faCookieBite, admin: true },
   null,
-  { key: 'pass',      path: '/password',        tkey: 'nav_password',    icon: '🔒' },
-  { key: 'profile',   path: '/profile',         tkey: 'nav_profile',     icon: '👤' },
+  { key: 'pass',      path: '/password',        tkey: 'nav_password',    icon: faLock },
+  { key: 'profile',   path: '/profile',         tkey: 'nav_profile',     icon: faUser },
 ];
 
 const PACK_LABELS = {
@@ -780,7 +788,7 @@ export default function Sidebar({ capitalInfo }) {
               end={item.path === '/'}
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             >
-              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-icon"><FontAwesomeIcon icon={item.icon} fixedWidth /></span>
               {t(item.tkey)}
               {(() => {
                 const { count, total } = sectionBadgeFor(item.key);
@@ -801,7 +809,7 @@ export default function Sidebar({ capitalInfo }) {
       <LangSwitcher lang={lang} setLang={setLang} />
 
       <button className="sidebar-logout" onClick={logout}>
-        ⏻ {t('logout')}
+        <FontAwesomeIcon icon={faRightFromBracket} /> {t('logout')}
       </button>
     </aside>
   );
