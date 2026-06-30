@@ -332,17 +332,17 @@ export default function Chart() {
           {PERIODS.map(p => (
             <button key={p.val} className={`btn ${period === p.val ? 'btn-primary' : 'btn-ghost'}`}
               style={{ padding: '6px 14px' }} onClick={() => setPeriod(p.val)}>
-              {p.label}
+              {t({today:'today_btn',week:'week',month:'month',all:'all_time',custom:'custom'}[p.val]) || p.label}
             </button>
           ))}
           {period === 'custom' && (
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 10px' }}>
-              <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>FROM</span>
+              <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{t('from')}</span>
               <DatePicker
                 style={{ padding: '4px 8px', fontSize: 12, width: 130, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, colorScheme: 'dark', color: 'var(--text)' }}
                 value={customFrom} onChange={v => setCustomFrom(v)} placeholder="From" />
               <span style={{ color: 'var(--muted)', fontSize: 14, fontWeight: 300 }}>→</span>
-              <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>TO</span>
+              <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{t('to')}</span>
               <DatePicker
                 style={{ padding: '4px 8px', fontSize: 12, width: 130, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, colorScheme: 'dark', color: 'var(--text)' }}
                 value={customTo} onChange={v => setCustomTo(v)} placeholder="To" />
@@ -391,11 +391,11 @@ export default function Chart() {
         <div className="card" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ fontWeight: 700 }}>Cumulative P&L{hasWithdrawals ? ' & Withdrawals' : ''}</div>
+              <div style={{ fontWeight: 700 }}>{t('cumulative_pnl_w')}{hasWithdrawals ? ' & ' + t('withdrawals') : ''}</div>
               {period !== 'all' && (
                 <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12,
                   background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
-                  { period === 'today' ? 'Today' : period === 'week' ? 'This Week' : period === 'month' ? 'This Month' : `${customFrom} → ${customTo}` }
+                  { period === 'today' ? t('today') : period === 'week' ? t('this_week') : period === 'month' ? t('this_month') : `${customFrom} → ${customTo}` }
                 </span>
               )}
             </div>
@@ -403,11 +403,11 @@ export default function Chart() {
               <div style={{ display: 'flex', gap: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
                   <div style={{ width: 12, height: 3, borderRadius: 99, background: totalPnl >= 0 ? 'var(--green)' : 'var(--red)' }} />
-                  Trading P&L
+                  {t('trading_pnl')}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--orange)' }} />
-                  Withdrawal
+                  {t('withdrawal')}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
                   <div style={{ width: 12, height: 2, borderRadius: 99, background: 'var(--blue)', borderTop: '2px dashed var(--blue)' }} />
@@ -567,7 +567,7 @@ export default function Chart() {
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>{label}</div>
                     {payload.map((p, i) => (
                       <div key={i} style={{ fontWeight: 700, color: p.name === 'withdrawn' ? 'var(--orange)' : p.value >= 0 ? 'var(--green)' : 'var(--red)', fontFamily: 'var(--font-mono)', fontSize: 12, marginBottom: 2 }}>
-                        {p.name === 'withdrawn' ? 'Withdrawn' : 'P&L'}: {p.name === 'withdrawn' ? '-' : p.value >= 0 ? '+' : ''}{Math.abs(p.value).toFixed(2)}$
+                        {p.name === 'withdrawn' ? t('withdrawn') : 'P&L'}: {p.name === 'withdrawn' ? '-' : p.value >= 0 ? '+' : ''}{Math.abs(p.value).toFixed(2)}$
                       </div>
                     ))}
                   </div>
@@ -587,7 +587,7 @@ export default function Chart() {
                 <div style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--green)' }} /> P&L
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--muted)' }}>
-                <div style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--orange)', opacity: 0.7 }} /> Withdrawals
+                <div style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--orange)', opacity: 0.7 }} /> {t('withdrawals')}
               </div>
             </div>
           )}
@@ -598,7 +598,7 @@ export default function Chart() {
           <div className="card">
             <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('by_session')}</div>
             {Object.entries(sessMap).map(([sess, pnl]) => {
-              const sessLabel = { LON: 'London', NY: 'New York', ASI: 'Asia' }[sess] || sess;
+              var _sk = { LON: 'session_lon', NY: 'session_ny', ASI: 'session_asi', London: 'session_lon', 'New York': 'session_ny', Asia: 'session_asi' }[sess]; const sessLabel = _sk ? t(_sk) : sess;
               return (
               <div key={sess} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>

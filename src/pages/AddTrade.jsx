@@ -25,6 +25,7 @@ const SESSION_TKEYS = { LON: 'session_lon', NY: 'session_ny', ASI: 'session_asi'
    MarketSelector component
 ───────────────────────────────────────────── */
 function MarketSelector({ value, onChange }) {
+  const { t } = useLang();
   const [activeCat, setActiveCat] = React.useState('FUTURES');
   const [query, setQuery] = React.useState('');
 
@@ -58,7 +59,7 @@ function MarketSelector({ value, onChange }) {
             padding: '9px 0', fontSize: 13, color: 'var(--text)',
             outline: 'none',
           }}
-          placeholder="Search symbol..."
+          placeholder={t('search_symbol')}
           value={query}
           onChange={handleSearch}
         />
@@ -103,7 +104,7 @@ function MarketSelector({ value, onChange }) {
       }}>
         {filteredList.length === 0 ? (
           <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '1.5rem', color: 'var(--muted)', fontSize: 13 }}>
-            No results
+            {t('no_results')}
           </div>
         ) : filteredList.map(m => (
           <button
@@ -168,7 +169,7 @@ function UpgradeModal({ onClose }) {
         }}>🔒</div>
 
         <div style={{ fontSize: 22, fontWeight: 800, color: '#e8edf3', marginBottom: 6 }}>
-          Free Plan Limit Reached
+          {t('free_limit_reached')}
         </div>
         <div style={{ fontSize: 14, color: '#5a7a9a', marginBottom: 24 }}>
           You have used all {FREE_TRADE_LIMIT} free trades
@@ -255,7 +256,7 @@ function ScreenshotSection({ image, preview, onImageSave, onRemove, t }) {
     <>
 
       <div className="card">
-        <div style={{ fontWeight: 700, marginBottom: 12 }}>Screenshot</div>
+        <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('screenshot')}</div>
 
         {/* Preview of the chosen/cropped image */}
         {preview && (
@@ -269,10 +270,10 @@ function ScreenshotSection({ image, preview, onImageSave, onRemove, t }) {
                 maxHeight: 200, objectFit: 'cover', cursor: 'zoom-in',
                 border: '1px solid rgba(0,230,118,0.2)',
               }}
-              title="Click to view full size"
+              title={t('click_full_size')}
             />
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, textAlign: 'center' }}>
-              🔍 Click to view full size
+              🔍 {t('click_full_size')}
             </div>
           </>
         )}
@@ -292,7 +293,7 @@ function ScreenshotSection({ image, preview, onImageSave, onRemove, t }) {
           style={{ width: '100%', justifyContent: 'center' }}
           onClick={openPicker}
         >
-          📷 {image ? 'Change image' : 'Choose image'}
+          {image ? t('change_image') : t('choose_image')}
         </button>
 
         {image && (
@@ -302,7 +303,7 @@ function ScreenshotSection({ image, preview, onImageSave, onRemove, t }) {
             style={{ width: '100%', marginTop: 8, justifyContent: 'center' }}
             onClick={onRemove}
           >
-            ✕ Remove
+            {t('remove')}
           </button>
         )}
       </div>
@@ -518,7 +519,7 @@ export default function AddTrade() {
                   <button type="button"
                     onClick={() => set('marcher', '')}
                     style={{ background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.3)', color: 'var(--red)', borderRadius: 6, padding: '3px 10px', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-                    ✕ Reset
+                    {t('clear')}
                   </button>
                 )}
               </div>
@@ -537,7 +538,7 @@ export default function AddTrade() {
                           background: form.type_trd === d ? (d === 'buy' ? 'var(--green)' : 'var(--red)') : 'var(--bg3)',
                           color: form.type_trd === d ? (d === 'buy' ? '#080c10' : '#fff') : 'var(--muted)' }}
                         onClick={() => set('type_trd', d)}>
-                        {d.toUpperCase()}
+                        {t(d)?.toUpperCase()}
                       </button>
                     ))}
                   </div>
@@ -551,7 +552,7 @@ export default function AddTrade() {
                           background: form.status === s ? (s === 'win' ? 'var(--green)' : 'var(--red)') : 'var(--bg3)',
                           color: form.status === s ? (s === 'win' ? '#080c10' : '#fff') : 'var(--muted)' }}
                         onClick={() => set('status', s)}>
-                        {s.toUpperCase()}
+                        {t(s)?.toUpperCase()}
                       </button>
                     ))}
                   </div>
@@ -562,7 +563,7 @@ export default function AddTrade() {
                 <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 6, background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.35)', color: '#ffd060', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <span style={{ fontSize: 16, flexShrink: 0 }}>⚠</span>
                   <div>
-                    <div style={{ fontWeight: 700, marginBottom: 4 }}>Inconsistent Trade Logic</div>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>{t('inconsistent_logic')}</div>
                     <div style={{ fontSize: 12, opacity: 0.9 }}>{logicWarning}</div>
                     <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
                       <button type="button"
@@ -575,7 +576,7 @@ export default function AddTrade() {
                           }
                         }}
                         style={{ background: 'rgba(255,180,0,0.2)', border: '1px solid rgba(255,180,0,0.4)', color: '#ffd060', borderRadius: 5, padding: '4px 10px', fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
-                        Auto-correct Result
+                        {t('auto_correct')}
                       </button>
                     </div>
                   </div>
@@ -587,7 +588,7 @@ export default function AddTrade() {
             <div className="card">
               <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('prices_amount')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                {[['Entry Price', 'point_entree'], ['Close Price', 'point_sortie'], ['Amount ($)', 'montant']].map(([label, key]) => (
+                {[[t('entry_price'), 'point_entree'], [t('close_price'), 'point_sortie'], [t('amount'), 'montant']].map(([label, key]) => (
                   <div key={key} className="form-group">
                     <label className="form-label">{label}</label>
                     <input className="input mono" type="number" step="any" placeholder="0"
@@ -627,20 +628,20 @@ export default function AddTrade() {
                         || (form.status === 'lose' && o === 'Target');
                       return (
                         <option key={o} value={o} disabled={disabled}>
-                          {o}{disabled ? ' — N/A' : ''}
+                          {({Target:t('target'),'Stop Loss':t('stop_loss'),'Break Even':t('break_even'),Manual:t('manual')})[o] || o}{disabled ? ' — ' + t('not_applicable') : ''}
                         </option>
                       );
                     })}
                   </select>
                   {form.type_close === 'Break Even' && (
                     <div className="muted" style={beHintStyle}>
-                      🛡️ Stop moved into profit to secure the gain — counts as a win even though Target wasn’t reached.
+                      🛡️ {t('break_even_hint')}
                     </div>
                   )}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Date</label>
-                  <DatePicker value={form.date_trade} onChange={v => set('date_trade', v)} placeholder="Select trade date" />
+                  <label className="form-label">{t('date')}</label>
+                  <DatePicker value={form.date_trade} onChange={v => set('date_trade', v)} placeholder={t('select_trade_date')} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">{t('contract')}</label>
@@ -662,10 +663,10 @@ export default function AddTrade() {
                 {/* QTY field — integer-only for mini/micro */}
                 <div className="form-group">
                   <label className="form-label">
-                    QTY{' '}
+                    {t('qty')}{' '}
                     {isIntQty
-                      ? <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>(e.g. 1, 2, 3)</span>
-                      : <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>(e.g. 0.5, 0.01)</span>
+                      ? <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>{t('qty_hint_int')}</span>
+                      : <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400 }}>{t('qty_hint_dec')}</span>
                     }
                   </label>
                   <input
@@ -756,10 +757,10 @@ export default function AddTrade() {
               <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('summary')}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
                 {[
-                  ['Market', form.marcher || '—'],
-                  ['Direction', form.type_trd?.toUpperCase()],
-                  ['Result', form.status?.toUpperCase()],
-                  ['Session', form.sessions],
+                  [t('market'), form.marcher || '—'],
+                  [t('direction'), form.type_trd ? t(form.type_trd) : '—'],
+                  [t('result'), form.status ? t(form.status) : '—'],
+                  [t('session'), t(SESSION_TKEYS[form.sessions]) || form.sessions],
                 ].map(([k, v]) => (
                   <div key={k} style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span className="muted">{k}</span>

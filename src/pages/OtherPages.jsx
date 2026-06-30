@@ -489,12 +489,12 @@ export function Withdraw() {
         <div className="card">
           <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('new_withdrawal')}</div>
           <div className="form-group" style={{ marginBottom: 10 }}>
-            <label className="form-label">Amount ($)</label>
+            <label className="form-label">{t('amount')}</label>
             <input className="input" type="number" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} />
           </div>
           <div className="form-group" style={{ marginBottom: 12 }}>
-            <label className="form-label">Note (optional)</label>
-            <input className="input" placeholder="Reason..." value={note} onChange={e => setNote(e.target.value)} />
+            <label className="form-label">{t('note_optional')}</label>
+            <input className="input" placeholder={t('reason_placeholder')} value={note} onChange={e => setNote(e.target.value)} />
           </div>
           {msg && <div className={`alert alert-${msg.type}`} style={{ marginBottom: 8 }}>{msg.text}</div>}
           <button className="btn btn-primary" onClick={doWithdraw} style={{ width: '100%', justifyContent: 'center' }}>{t('withdraw_btn')}</button>

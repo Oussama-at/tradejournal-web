@@ -292,7 +292,7 @@ export default function Dashboard() {
                   <td className={`mono bold ${tr.status === 'win' ? 'green' : tr.status === 'lose' ? 'red' : ''}`}>
                     {tr.status === 'win' ? '+' : tr.status === 'lose' ? '-' : ''}{Math.abs(tr.montant).toFixed(2)}$
                   </td>
-                  <td className="muted">{{ LON: 'London', NY: 'New York', ASI: 'Asia' }[tr.sessions] || tr.sessions}</td>
+                  <td className="muted">{(function(){var _k={LON:'session_lon',NY:'session_ny',ASI:'session_asi',London:'session_lon','New York':'session_ny',Asia:'session_asi'}[tr.sessions];return _k?t(_k):tr.sessions;})()}</td>
                 </tr>
               ))}
             </tbody>

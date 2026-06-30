@@ -195,7 +195,7 @@ export default function Trades() {
                     <td className={`mono bold ${tr.status === 'win' ? 'green' : 'red'}`}>
                       {tr.status === 'win' ? '+' : '-'}{Math.abs(tr.montant).toFixed(2)}$
                     </td>
-                    <td className="muted">{{ LON: t('session_lon'), NY: t('session_ny'), ASI: t('session_asi') }[tr.sessions] || tr.sessions}</td>
+                    <td className="muted">{{ LON: t('session_lon'), NY: t('session_ny'), ASI: t('session_asi'), London: t('session_lon'), 'New York': t('session_ny'), Asia: t('session_asi') }[tr.sessions] || tr.sessions}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-ghost" style={{ padding: '3px 8px', fontSize: 11 }}

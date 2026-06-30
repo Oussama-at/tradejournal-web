@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import { useLang } from '../lang/LangContext';
 
 // Public/learner help center. Reads admin-managed articles from the DB.
 
@@ -19,6 +20,7 @@ const ST = {
 };
 
 export default function HelpCenter() {
+  const { t } = useLang();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
@@ -43,11 +45,11 @@ export default function HelpCenter() {
   if (active) {
     return (
       <div style={ST.wrap}>
-        <button style={ST.back} onClick={() => setActive(null)}>{'\u2190 Back to help'}</button>
-        {active.loading ? <div style={ST.empty}>Loading...</div> : (
+        <button style={ST.back} onClick={() => setActive(null)}>{t('back_to_help')}</button>
+        {active.loading ? <div style={ST.empty}>{t('loading')}</div> : (
           <>
             <h1 style={ST.artTitle}>{active.title}</h1>
-            <div style={ST.meta}>{active.category}{active.author_name ? ' · Written by ' + active.author_name : ''}</div>
+            <div style={ST.meta}>{active.category}{active.author_name ? ' · ' + t('written_by') + ' ' + active.author_name : ''}</div>
             <div style={ST.body}>{active.body}</div>
           </>
         )}
@@ -61,12 +63,12 @@ export default function HelpCenter() {
 
   return (
     <div style={ST.wrap}>
-      <h1 style={ST.h1}>Help Center</h1>
-      <div style={ST.lead}>Guides and answers for using TradeJournal PRO. Need more? Use the AI assistant or the Messages page.</div>
-      <input style={ST.search} placeholder="Search help articles..." value={q} onChange={e => setQ(e.target.value)} />
+      <h1 style={ST.h1}>{t('nav_help')}</h1>
+      <div style={ST.lead}>{t('help_center_lead')}</div>
+      <input style={ST.search} placeholder={t('search_help')} value={q} onChange={e => setQ(e.target.value)} />
 
-      {loading ? <div style={ST.empty}>Loading...</div> :
-        filtered.length === 0 ? <div style={ST.empty}>No articles yet.</div> :
+      {loading ? <div style={ST.empty}>{t('loading')}</div> :
+        filtered.length === 0 ? <div style={ST.empty}>{t('no_articles')}</div> :
         cats.map(cat => (
           <div key={cat}>
             <div style={ST.cat}>{cat}</div>
