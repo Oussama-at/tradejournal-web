@@ -181,7 +181,7 @@ export default function Trades() {
                 return (
                   <tr key={id} style={{ background: tr.status === 'win' ? 'rgba(0,230,118,0.025)' : 'rgba(255,71,87,0.025)' }}>
                     <td className="muted mono" style={{ fontSize: 12 }}>{id}</td>
-                    <td className="muted">{tr.date_trade}</td>
+                    <td className="muted">{(tr.date_trade || '').substring(0, 10)}</td>
                     <td style={{ fontWeight: 700 }}>{tr.marcher}</td>
                     <td className={tr.type_trd === 'buy' ? 'green bold' : 'red bold'}>{tr.type_trd?.toUpperCase()}</td>
                     <td className="mono">{tr.point_entree}</td>

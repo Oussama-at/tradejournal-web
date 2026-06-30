@@ -198,8 +198,8 @@ export default function Dashboard() {
         <StatCard label={t('withdrawals') || 'Withdrawals'} value={totalWithdrawn}
           fmt={v => (v > 0 ? '-' : '') + v.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '$'}
           pClass={() => ''} sub={t('total_withdrawn') || 'Total withdrawn'} />
-        <StatCard label={t('capital')} value={capNow} fmt={v => v.toLocaleString() + '$'} pClass={v => v >= capDep ? 'green' : 'red'}
-          sub={`${roi >= 0 ? '+' : ''}${roi.toFixed(2)}% ROI`} mono />
+        <StatCard label={t('current_capital')} value={capNow} fmt={v => v.toLocaleString() + '$'} pClass={v => v >= capDep ? 'green' : 'red'}
+          sub={`${roi >= 0 ? '+' : ''}${roi.toFixed(2)}% ${t('col_roi')}`} mono />
       </div>
 
       {/* Capital reconciliation: Starting + Trading P&L − Withdrawals = Current */}
@@ -277,7 +277,7 @@ export default function Dashboard() {
               {sortedTrades.map(tr => (
                 <tr key={tr.id_trade || tr.id}
                   style={{ background: tr.status === 'win' ? 'rgba(0,230,118,0.03)' : 'rgba(255,71,87,0.03)' }}>
-                  <td className="muted">{tr.date_trade}</td>
+                  <td className="muted">{(tr.date_trade || '').substring(0, 10)}</td>
                   <td style={{ fontWeight: 600 }}>{tr.marcher}</td>
                   <td className={tr.type_trd === 'buy' ? 'green bold' : 'red bold'}>
                     {tr.type_trd?.toUpperCase()}
